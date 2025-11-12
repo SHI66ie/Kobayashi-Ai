@@ -1,7 +1,7 @@
 {
-  "name": "gr-cup-racing-analytics",
+  "name": "kobayashi-ai",
   "version": "1.0.0",
-  "description": "Toyota GR Cup Racing Analytics Dashboard for Hackathon",
+  "description": "KobayashiAI - Toyota GR Cup Racing Analytics Dashboard with AI-Powered Insights",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
@@ -41,6 +41,6 @@
     "dashboard",
     "hackathon"
   ],
-  "author": "Hackathon Team",
+  "author": "KobayashiAI Team",
   "license": "MIT"
 }
