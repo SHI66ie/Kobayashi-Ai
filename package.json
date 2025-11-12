@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "convert-csv": "node scripts/convert-csv-to-json.js"
+    "convert-csv": "node scripts/convert-csv-to-json.js",
+    "convert-large-csv": "node scripts/convert-large-csv-to-json.js"
   },
   "dependencies": {
     "@types/node": "^20.0.0",
