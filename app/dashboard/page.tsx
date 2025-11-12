@@ -29,21 +29,57 @@ export default function DashboardPage() {
     setRaceData({ loading: true, error: null, data: [] })
     
     try {
-      // Try to load race results from our API
-      const response = await fetch(`/api/data/${selectedTrack}/Race 1/00_Results GR Cup Race 1 Official_Anonymized.CSV`)
+      // Map track IDs to their proper case for API paths
+      const trackMap: Record<string, string> = {
+        'barber': 'barber',
+        'cota': 'COTA',
+        'indianapolis': 'indianapolis',
+        'road-america': 'road-america',
+        'sebring': 'sebring',
+        'sonoma': 'Sonoma',
+        'vir': 'virginia-international-raceway'
+      }
       
-      if (response.ok) {
-        const csvText = await response.text()
-        console.log('Loaded race data:', csvText.substring(0, 200) + '...')
+      const apiTrack = trackMap[selectedTrack] || selectedTrack
+      const raceNum = selectedRace === 'R1' ? '1' : '2'
+      
+      // Try to load race results from our API with proper path
+      const paths = [
+        `/api/data/${apiTrack}/Race ${raceNum}/03_GR Cup Race ${raceNum} Official Results.CSV`,
+        `/api/data/${apiTrack}/05_Results by Class GR Cup Race ${raceNum} Official_Anonymized.CSV`,
+        `/api/data/${apiTrack}/Race ${raceNum}/00_Results GR Cup Race ${raceNum} Official_Anonymized.CSV`
+      ]
+      
+      let success = false
+      let csvText = ''
+      
+      for (const path of paths) {
+        try {
+          console.log(`Trying to fetch: ${path}`)
+          const response = await fetch(path)
+          
+          if (response.ok) {
+            csvText = await response.text()
+            console.log(`✓ Successfully loaded from: ${path}`)
+            console.log('Data preview:', csvText.substring(0, 200) + '...')
+            success = true
+            break
+          }
+        } catch (e) {
+          console.log(`✗ Failed: ${path}`)
+        }
+      }
+      
+      if (success) {
         setRaceData({ loading: false, error: null, data: [{ csvText }] })
       } else {
-        throw new Error(`Failed to load data: ${response.status}`)
+        throw new Error('No valid data paths found')
       }
     } catch (error) {
       console.error('Error loading race data:', error)
       setRaceData({ 
         loading: false, 
-        error: `Unable to load race data for ${selectedTrack}. This is a demo - data loading from trddev.com is in progress.`, 
+        error: `Data loading is in progress. The API is fetching ZIP files from trddev.com and extracting CSV data. This may take a moment on first load. Check browser console for details.`, 
         data: [] 
       })
     }
