@@ -6,12 +6,33 @@ const readline = require('readline');
 const extractedDir = path.join(__dirname, '../Data/extracted');
 const outputDir = path.join(__dirname, '../Data/json');
 
-// Large telemetry files to process
+// Large telemetry files to process (all tracks)
 const largeTelemetryFiles = [
+  // Barber
   'barber2/R1_barber_telemetry_data.csv',
   'barber2/R2_barber_telemetry_data.csv',
+  'barber-motorsports-park/barber/R1_barber_telemetry_data.csv',
+  'barber-motorsports-park/barber/R2_barber_telemetry_data.csv',
+  // COTA
   'COTA/Race 1b/R1_cota_telemetry_data.csv',
-  'COTA/Race 2b/R2_cota_telemetry_data.csv'
+  'COTA/Race 2b/R2_cota_telemetry_data.csv',
+  'circuit-of-the-americas/COTA/Race 1/R1_cota_telemetry_data.csv',
+  'circuit-of-the-americas/COTA/Race 2/R2_cota_telemetry_data.csv',
+  // Indianapolis
+  'indianapolis/Indianapolis/Indianapolis/Race 1/R1_indianapolis_motor_speedway_telemetry.csv',
+  'indianapolis/Indianapolis/Indianapolis/Race 2/R2_indianapolis_motor_speedway_telemetry.csv',
+  // Road America
+  'road-america/Road America/Road America/Race 1/R1_road_america_telemetry_data.csv',
+  'road-america/Road America/Road America/Race 2/R2_road_america_telemetry_data.csv',
+  // Sebring
+  'sebring/Sebring/Sebring/Race 1/sebring_telemetry_R1.csv',
+  'sebring/Sebring/Sebring/Race 2/sebring_telemetry_R2.csv',
+  // Sonoma
+  'sonoma/Sonoma/Race 1/sonoma_telemetry_R1.csv',
+  'sonoma/Sonoma/Race 2/sonoma_telemetry_R2.csv',
+  // VIR
+  'virginia-international-raceway/virginia-international-raceway/VIR/Race 1/R1_vir_telemetry_data.csv',
+  'virginia-international-raceway/virginia-international-raceway/VIR/Race 2/R2_vir_telemetry_data.csv'
 ];
 
 // Chunk size: split large files into smaller JSON files of N rows each
