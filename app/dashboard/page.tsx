@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Car, Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download } from 'lucide-react'
+import SetupGuide from '../components/SetupGuide'
 
 interface RaceData {
   loading: boolean
@@ -10,19 +11,19 @@ interface RaceData {
 }
 
 export default function DashboardPage() {
-  const [selectedTrack, setSelectedTrack] = useState('cota')
+  const [selectedTrack, setSelectedTrack] = useState('barber')
   const [selectedRace, setSelectedRace] = useState('R1')
   const [isReplaying, setIsReplaying] = useState(false)
   const [raceData, setRaceData] = useState<RaceData>({ loading: false, error: null, data: [] })
 
   const tracks = [
-    { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama' },
-    { id: 'cota', name: 'Circuit of the Americas', location: 'Texas' },
-    { id: 'indianapolis', name: 'Indianapolis Motor Speedway', location: 'Indiana' },
-    { id: 'road-america', name: 'Road America', location: 'Wisconsin' },
-    { id: 'sebring', name: 'Sebring International Raceway', location: 'Florida' },
-    { id: 'sonoma', name: 'Sonoma Raceway', location: 'California' },
-    { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia' }
+    { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama', available: true },
+    { id: 'cota', name: 'Circuit of the Americas', location: 'Texas', available: false },
+    { id: 'indianapolis', name: 'Indianapolis Motor Speedway', location: 'Indiana', available: false },
+    { id: 'road-america', name: 'Road America', location: 'Wisconsin', available: false },
+    { id: 'sebring', name: 'Sebring International Raceway', location: 'Florida', available: false },
+    { id: 'sonoma', name: 'Sonoma Raceway', location: 'California', available: false },
+    { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia', available: false }
   ]
 
   const loadRaceData = async () => {
@@ -132,8 +133,8 @@ This is a demo report. Full AI analysis coming soon!`
                 title="Select Track"
               >
                 {tracks.map(track => (
-                  <option key={track.id} value={track.id}>
-                    {track.name}
+                  <option key={track.id} value={track.id} disabled={!track.available}>
+                    {track.name} {track.available ? '✅' : '⚠️ (Setup Required)'}
                   </option>
                 ))}
               </select>
@@ -222,12 +223,8 @@ This is a demo report. Full AI analysis coming soon!`
         )}
 
         {raceData.error && (
-          <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 mb-8">
-            <h3 className="font-semibold text-red-400 mb-2">Data Loading Status</h3>
-            <p className="text-red-300">{raceData.error}</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Note: This is a development version. The remote data loading system is being configured.
-            </p>
+          <div className="mb-8">
+            <SetupGuide />
           </div>
         )}
 
