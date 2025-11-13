@@ -13,9 +13,9 @@ This project uses **18+ GB** of Toyota GR Cup racing data, including:
 Due to the large size (18+ GB), the data is **NOT** stored in this Git repository. Instead, it's hosted on:
 
 ### **Google Drive**
-- The complete dataset is available on Google Drive
-- Contact the repository owner for access link
-- Download and place in the `Data/` folder of your local clone
+- **Download Link**: [Toyota GR Cup Data (18+ GB)](https://drive.google.com/drive/folders/1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou?usp=sharing)
+- Download the complete dataset from Google Drive
+- Extract/place files in the `Data/` folder of your local clone
 
 ## 📁 Local Data Structure
 
