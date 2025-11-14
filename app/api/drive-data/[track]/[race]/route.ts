@@ -215,6 +215,10 @@ export async function GET(
       }
     }
 
+    // Find PDF files for enhanced analysis
+    const pdfFiles = trackFiles.filter(f => f.name?.toLowerCase().endsWith('.pdf'))
+    console.log(`📄 Found ${pdfFiles.length} PDF files for analysis:`, pdfFiles.map(f => f.name))
+
     return NextResponse.json({
       track,
       race,
@@ -229,6 +233,12 @@ export async function GET(
         chunkSize: telemetryInfo.chunkSize,
         source: 'Google Drive'
       } : { available: false },
+      pdfDocuments: pdfFiles.map(f => ({
+        name: f.name,
+        size: f.size,
+        id: f.id,
+        downloadUrl: `${DRIVE_PROXY_URL}/download/${f.id}`
+      })),
       availableFiles: trackFiles.map(f => ({ name: f.name, size: f.size }))
     })
 
