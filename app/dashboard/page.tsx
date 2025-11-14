@@ -6,6 +6,8 @@ import SetupGuide from '../components/SetupGuide'
 import AIToolsPanel from '../components/AIToolsPanel'
 import AdvancedAIPanel from '../components/AdvancedAIPanel'
 import VoiceControlPanel from '../components/VoiceControlPanel'
+import TrackMapViewer from '../components/TrackMapViewer'
+import WeatherControls from '../components/WeatherControls'
 
 interface RaceData {
   loading: boolean
@@ -436,6 +438,30 @@ DEMO DATA (Placeholder):
             />
           </div>
         )}
+
+        {/* Track Map Viewer */}
+        <div className="mb-8">
+          <TrackMapViewer 
+            track={selectedTrack}
+            pdfUrl={raceData.data[0]?.pdfDocuments?.[0]?.downloadUrl}
+            mapData={{
+              corners: selectedTrack === 'barber' ? 17 : selectedTrack === 'cota' ? 20 : selectedTrack === 'indianapolis' ? 14 : 12,
+              length: selectedTrack === 'road-america' ? '4.048 miles' : '3.7 km',
+              direction: selectedTrack === 'cota' ? 'Counter-clockwise' : 'Clockwise',
+              elevation: selectedTrack === 'sonoma' ? '160 ft' : 'Moderate',
+              surface: 'Asphalt',
+              sectors: 3
+            }}
+          />
+        </div>
+
+        {/* Weather Controls */}
+        <div className="mb-8">
+          <WeatherControls
+            initialWeather={raceData.data[0]?.weather}
+            onWeatherChange={(weather) => console.log('Weather changed:', weather)}
+          />
+        </div>
 
         {/* Generated Report Display */}
         {generatedReport && (
