@@ -439,31 +439,138 @@ DEMO DATA (Placeholder):
 
         {/* Generated Report Display */}
         {generatedReport && (
-          <div className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-lg p-6 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-purple-400 text-lg flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                AI Analysis Report
-              </h3>
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black border border-gray-700 rounded-2xl p-6 mb-8 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-bold text-2xl flex items-center space-x-2 text-white">
+                  <Trophy className="w-6 h-6 text-racing-red" />
+                  <span>Race Analysis Report</span>
+                </h3>
+                <p className="text-sm text-gray-400 mt-1">AI-Powered Performance Insights</p>
+              </div>
               <button
                 onClick={() => setGeneratedReport(null)}
-                className="text-gray-400 hover:text-white text-sm"
+                className="text-gray-400 hover:text-white text-sm bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg transition-colors"
               >
                 ✕ Close
               </button>
             </div>
-            <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
-                {generatedReport}
-              </pre>
+            
+            {/* Formatted Report Content */}
+            <div className="space-y-4">
+              {generatedReport.split('\n\n').map((section, idx) => {
+                // Header lines (contains "═" or title keywords)
+                if (section.includes('═══') || section.match(/^(Track:|Race:|Generated:|Data Source:|AI Model:)/m)) {
+                  return (
+                    <div key={idx} className="bg-gray-900/70 rounded-xl p-4 border border-gray-700">
+                      <div className="space-y-1 text-sm">
+                        {section.split('\n').map((line, lineIdx) => {
+                          if (line.includes('═══')) return null
+                          if (line.match(/^(Track|Race|Generated|Data Source|AI Model|Tokens Used|Powered by):/)) {
+                            const [label, ...value] = line.split(':')
+                            return (
+                              <div key={lineIdx} className="flex items-start justify-between">
+                                <span className="text-gray-400 font-medium">{label}:</span>
+                                <span className="text-white">{value.join(':').trim()}</span>
+                              </div>
+                            )
+                          }
+                          return line.trim() && (
+                            <p key={lineIdx} className="text-gray-300">{line}</p>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+                
+                // AI Analysis section
+                if (section.includes('AI-POWERED ANALYSIS') || section.includes('🤖')) {
+                  return (
+                    <div key={idx} className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 rounded-xl p-5 border border-purple-500/30">
+                      <h4 className="text-lg font-bold text-purple-300 mb-4 flex items-center space-x-2">
+                        <span>🤖</span>
+                        <span>AI-Powered Analysis</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {section.split('\n').slice(1).map((line, lineIdx) => {
+                          if (!line.trim() || line.includes('═══') || line.includes('🤖')) return null
+                          
+                          // Numbered sections
+                          if (line.match(/^\d+\./)) {
+                            return (
+                              <div key={lineIdx} className="flex items-start space-x-2">
+                                <span className="text-racing-red font-bold mt-1">▸</span>
+                                <p className="text-gray-200 text-sm leading-relaxed">
+                                  {line.replace(/^\d+\.\s*/, '').replace(/\*\*/g, '')}
+                                </p>
+                              </div>
+                            )
+                          }
+                          
+                          // Bullet points
+                          if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+                            return (
+                              <div key={lineIdx} className="flex items-start space-x-2 pl-4">
+                                <span className="text-racing-blue mt-1">•</span>
+                                <p className="text-gray-300 text-sm leading-relaxed">
+                                  {line.replace(/^[\s-•]+/, '')}
+                                </p>
+                              </div>
+                            )
+                          }
+                          
+                          return (
+                            <p key={lineIdx} className="text-gray-300 text-sm leading-relaxed">
+                              {line.replace(/\*\*/g, '')}
+                            </p>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+                
+                // PDF Documents section
+                if (section.includes('Available Reference Documents')) {
+                  return (
+                    <div key={idx} className="bg-gray-900/70 rounded-xl p-4 border border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center space-x-2">
+                        <Trophy className="w-4 h-4" />
+                        <span>Reference Documents</span>
+                      </h4>
+                      <ul className="space-y-1 text-sm text-gray-300">
+                        {section.split('\n').slice(1).map((line, lineIdx) => 
+                          line.trim() && <li key={lineIdx}>{line}</li>
+                        )}
+                      </ul>
+                    </div>
+                  )
+                }
+                
+                // Regular sections
+                if (section.trim()) {
+                  return (
+                    <div key={idx} className="text-gray-300 text-sm leading-relaxed">
+                      {section}
+                    </div>
+                  )
+                }
+                
+                return null
+              })}
             </div>
-            <div className="mt-4 flex items-center justify-end space-x-3">
+
+            <div className="mt-6 pt-6 border-t border-gray-700 flex items-center justify-between">
+              <div className="text-xs text-gray-500">
+                <p>✨ Generated by RaceMind AI</p>
+              </div>
               <button
                 onClick={exportReport}
-                className="bg-racing-blue hover:bg-racing-blue/80 px-4 py-2 rounded text-sm flex items-center space-x-2"
+                className="bg-racing-blue hover:bg-racing-blue/80 px-6 py-3 rounded-lg text-sm font-semibold flex items-center space-x-2 transition-colors"
               >
                 <Download className="w-4 h-4" />
-                <span>Download Report</span>
+                <span>Download Full Report</span>
               </button>
             </div>
           </div>

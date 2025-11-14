@@ -117,8 +117,9 @@ export default function AIToolsPanel({ raceData, track, race }: AIToolsPanelProp
       <div className="flex items-center mb-6">
         <Brain className="w-6 h-6 text-racing-blue mr-3" />
         <h2 className="text-xl font-bold">AI Analysis Tools</h2>
-        <span className="ml-auto text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-          Powered by Gemini
+        <span className="ml-auto text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full border border-green-500/30 flex items-center space-x-1">
+          <span>⚡</span>
+          <span>Powered by Groq AI</span>
         </span>
       </div>
 
@@ -174,25 +175,86 @@ export default function AIToolsPanel({ raceData, track, race }: AIToolsPanelProp
         ) : (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-lg">Analysis Results</h3>
+              <h3 className="font-semibold text-lg flex items-center space-x-2">
+                <span className="text-2xl">🏁</span>
+                <span>AI Analysis Report</span>
+              </h3>
               <button
                 onClick={() => setResult(null)}
-                className="text-sm text-gray-400 hover:text-white"
+                className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded transition-colors"
               >
                 Clear
               </button>
             </div>
-            <div className="bg-gray-800/50 rounded p-4 max-h-[400px] overflow-y-auto">
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap">
-                {result.prediction || result.coaching || result.strategy || JSON.stringify(result, null, 2)}
-              </pre>
-            </div>
-            {result.metadata && (
-              <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
-                <span>Model: {result.metadata.model}</span>
-                <span>Tokens: {result.metadata.tokensUsed}</span>
+            
+            {/* Formatted Results Display */}
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+              {/* Main Content */}
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-5 border border-gray-700 shadow-lg">
+                <div className="prose prose-invert max-w-none">
+                  {(result.prediction || result.coaching || result.strategy || '').split('\n\n').map((section: string, idx: number) => {
+                    // Check if section is a heading (starts with number or **text**)
+                    if (section.match(/^\d+\.\s+\*\*.*\*\*/)) {
+                      const [, title, ...content] = section.split(/\n/)
+                      return (
+                        <div key={idx} className="mb-4">
+                          <h4 className="text-racing-red font-bold text-base mb-2 flex items-center space-x-2">
+                            <span className="text-xl">▸</span>
+                            <span>{title.replace(/^\d+\.\s+/, '').replace(/\*\*/g, '')}</span>
+                          </h4>
+                          <div className="text-gray-300 text-sm leading-relaxed pl-6 space-y-1">
+                            {content.map((line, i) => line && (
+                              <p key={i} className="flex items-start space-x-2">
+                                <span className="text-racing-blue mt-1">•</span>
+                                <span>{line.replace(/^-\s*/, '').replace(/\*\*/g, '')}</span>
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    } else if (section.match(/^\d+\./)) {
+                      // Numbered list item
+                      return (
+                        <div key={idx} className="mb-3 pl-2">
+                          <p className="text-gray-200 text-sm leading-relaxed flex items-start space-x-2">
+                            <span className="text-racing-red font-bold mt-0.5">▸</span>
+                            <span>{section.replace(/^\d+\.\s+/, '').replace(/\*\*/g, '')}</span>
+                          </p>
+                        </div>
+                      )
+                    } else if (section.trim()) {
+                      // Regular paragraph
+                      return (
+                        <p key={idx} className="text-gray-300 text-sm leading-relaxed mb-3">
+                          {section.replace(/\*\*/g, '')}
+                        </p>
+                      )
+                    }
+                    return null
+                  })}
+                </div>
               </div>
-            )}
+
+              {/* Metadata Footer */}
+              {result.metadata && (
+                <div className="flex items-center justify-between bg-gray-900/50 rounded-lg p-3 border border-gray-800">
+                  <div className="flex items-center space-x-4 text-xs text-gray-400">
+                    <span className="flex items-center space-x-1">
+                      <span>🤖</span>
+                      <span>{result.metadata.model || 'AI Model'}</span>
+                    </span>
+                    {result.metadata.provider && (
+                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded">
+                        {result.metadata.provider}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {result.metadata.tokensUsed && `${result.metadata.tokensUsed} tokens`}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

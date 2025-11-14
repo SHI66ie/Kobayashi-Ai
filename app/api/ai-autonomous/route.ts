@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 180
 
-// Autonomous Racing AI inspired by cutting-edge research
+// Initialize Groq (FREE & FAST - PRIMARY)
+let groq: OpenAI | null = null
+try {
+  if (process.env.GROQ_API_KEY) {
+    groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+      timeout: 50000,
+      maxRetries: 2
+    })
+  }
+} catch (error) {
+  console.error('Failed to initialize Groq:', error)
+}
+
+// Autonomous Racing AI inspired by cutting-edge research (fallback)
 let gemini: GoogleGenerativeAI | null = null
 try {
   if (process.env.GEMINI_API_KEY) {
@@ -26,15 +42,15 @@ export async function POST(request: NextRequest) {
       mode = 'autonomous_racing'
     }: any = await request.json()
 
-    if (!gemini) {
+    if (!groq && !gemini) {
       return NextResponse.json({
         error: 'Autonomous AI not configured',
-        message: 'Add GEMINI_API_KEY to enable autonomous racing AI'
+        message: 'Add GROQ_API_KEY (recommended) or GEMINI_API_KEY to enable autonomous racing AI'
       }, { status: 503 })
     }
 
-    console.log('🤖 Initializing Autonomous Racing AI System...')
-    const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+    const useGroq = groq !== null
+    console.log(`🤖 Using ${useGroq ? 'Groq' : 'Gemini'} for Autonomous Racing AI...`)
 
     // Create autonomous driving context inspired by research papers
     const autonomousContext = `
@@ -174,18 +190,55 @@ Based on the provided sensor data, vehicle state, and track conditions, analyze 
 
 Respond with precise, actionable guidance as if you're an expert autonomous racing system making real-time decisions.`
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-      generationConfig: {
-        temperature: 0.3, // Lower temperature for more consistent autonomous decisions
-        maxOutputTokens: 5000,
-        topP: 0.7,
-        topK: 30
-      }
-    })
+    let analysis = ''
+    let tokensUsed = 0
+    let modelUsed = ''
 
-    const analysis = result.response.text()
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 0
+    // Try Groq first (FREE & FAST)
+    if (useGroq && groq) {
+      try {
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: 'You are an expert autonomous racing AI system. Provide precise, actionable real-time racing decisions.' },
+            { role: 'user', content: fullPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 5000
+        })
+        analysis = completion.choices[0]?.message?.content || ''
+        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        tokensUsed = completion.usage?.total_tokens || 0
+      } catch (error: any) {
+        console.error('Groq autonomous error:', error.message)
+      }
+    }
+
+    // Fall back to Gemini if Groq failed
+    if (!analysis && gemini) {
+      try {
+        const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 5000,
+            topP: 0.7,
+            topK: 30
+          }
+        })
+        analysis = result.response.text()
+        modelUsed = 'gemini-1.5-flash-latest'
+        tokensUsed = result.response.usageMetadata?.totalTokenCount || 0
+      } catch (error: any) {
+        console.error('Gemini autonomous error:', error.message)
+        throw error
+      }
+    }
+
+    if (!analysis) {
+      throw new Error('All AI providers failed to generate autonomous analysis')
+    }
 
     // Extract structured data from response
     const actionPlan = extractActionPlan(analysis)
@@ -202,11 +255,12 @@ Respond with precise, actionable guidance as if you're an expert autonomous raci
       riskAssessment,
       predictions,
       metadata: {
-        model: 'gemini-1.5-pro-autonomous',
+        model: modelUsed,
         tokensUsed,
         processingTime: Date.now(),
         systemMode: mode,
-        safetyLevel: riskAssessment.safetyLevel || 8
+        safetyLevel: riskAssessment.safetyLevel || 8,
+        provider: useGroq ? 'Groq (FREE)' : 'Gemini (FREE)'
       }
     })
 
