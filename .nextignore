@@ -1,0 +1,2 @@
+# Exclude Cloudflare Worker files from Next.js build
+drive-proxy/
