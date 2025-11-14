@@ -64,11 +64,11 @@ export default function DashboardPage() {
       
       const data: any = await response.json()
       
-      console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} data from ${dataSource}`)
-      console.log('📊 Race Results:', data.raceResults ? `${data.raceResults.length} entries` : 'Not available')
-      console.log('⏱️ Lap Times:', data.lapTimes ? `${data.lapTimes.length} laps` : 'Not available')
-      console.log('🌤️ Weather:', data.weather ? 'Available' : 'Not available')
-      console.log('📈 Telemetry:', data.telemetry?.available ? `${data.telemetry.totalRows} rows from ${data.telemetry.source || dataSource}` : 'Not available')
+      console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} metadata from ${dataSource}`)
+      console.log('📊 Race Results:', data.files?.raceResults ? `File: ${data.files.raceResults.name}` : 'Not found')
+      console.log('⏱️ Lap Times:', data.files?.lapTimes ? `File: ${data.files.lapTimes.name}` : 'Not found')
+      console.log('🌤️ Weather:', data.files?.weather ? `File: ${data.files.weather.name}` : 'Not found')
+      console.log('📈 Telemetry:', data.files?.telemetry ? `File: ${data.files.telemetry.name}` : 'Not found')
       console.log('📄 PDF Documents:', data.pdfDocuments?.length ? `${data.pdfDocuments.length} files available` : 'None')
       
       setRaceData({ 
@@ -115,14 +115,38 @@ If this persists, check browser console for detailed error logs.`,
     try {
       console.log('🤖 Requesting AI analysis...')
       
+      // Download actual data files if they're just metadata
+      const files = raceData.data[0].files
+      let raceResults = null
+      let lapTimes = null
+      let weather = null
+      
+      if (files?.raceResults?.downloadUrl) {
+        console.log('📥 Downloading race results...')
+        const res = await fetch(files.raceResults.downloadUrl)
+        raceResults = await res.json()
+      }
+      
+      if (files?.lapTimes?.downloadUrl) {
+        console.log('📥 Downloading lap times...')
+        const res = await fetch(files.lapTimes.downloadUrl)
+        lapTimes = await res.json()
+      }
+      
+      if (files?.weather?.downloadUrl) {
+        console.log('📥 Downloading weather data...')
+        const res = await fetch(files.weather.downloadUrl)
+        weather = await res.json()
+      }
+      
       // Call AI analysis endpoint
       const response = await fetch('/api/ai-analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          raceResults: raceData.data[0].raceResults,
-          lapTimes: raceData.data[0].lapTimes,
-          weather: raceData.data[0].weather,
+          raceResults,
+          lapTimes,
+          weather,
           track: selectedTrack,
           race: selectedRace
         })
