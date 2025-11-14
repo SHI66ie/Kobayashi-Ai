@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
 
-// Google Drive folder ID from the shared link
+// Cloudflare Worker proxy URL
+const DRIVE_PROXY_URL = 'https://drive-proxy.blockmusic.workers.dev'
 const DRIVE_FOLDER_ID = '1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou'
 
 // Map track names to their folder names in Google Drive
@@ -27,21 +28,14 @@ async function listGoogleDriveFiles(folderId: string): Promise<any[]> {
   }
 
   try {
-    // Use Google Drive API v3 to list files in the folder
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${process.env.GOOGLE_DRIVE_API_KEY}&fields=files(id,name,mimeType,size)`,
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    )
+    // Use Cloudflare Worker proxy to list files
+    const response = await fetch(`${DRIVE_PROXY_URL}/list?folderId=${folderId}`)
 
     if (!response.ok) {
-      throw new Error(`Google Drive API error: ${response.statusText}`)
+      throw new Error(`Drive proxy error: ${response.statusText}`)
     }
 
-    const data = await response.json()
+    const data: any = await response.json()
     driveCache.set(folderId, data.files || [])
     return data.files || []
   } catch (error) {
@@ -52,14 +46,7 @@ async function listGoogleDriveFiles(folderId: string): Promise<any[]> {
 
 async function downloadGoogleDriveFile(fileId: string): Promise<string | null> {
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${process.env.GOOGLE_DRIVE_API_KEY}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    )
+    const response = await fetch(`${DRIVE_PROXY_URL}/download/${fileId}`)
 
     if (!response.ok) {
       throw new Error(`Failed to download file: ${response.statusText}`)
@@ -79,14 +66,8 @@ export async function GET(
   try {
     const { track, race } = params
     
-    // Check if Google Drive API key is configured
-    if (!process.env.GOOGLE_DRIVE_API_KEY) {
-      return NextResponse.json({
-        error: 'Google Drive API not configured',
-        message: 'Please set GOOGLE_DRIVE_API_KEY environment variable',
-        fallback: 'Download data manually from Google Drive'
-      }, { status: 503 })
-    }
+    // Using Cloudflare Worker proxy - no API key needed
+    console.log(`🌐 Loading race data for ${track} - ${race} via Cloudflare Worker`)
 
     const trackFolder = TRACK_FOLDERS[track] || track
     console.log(`Loading race data for ${track} - ${race} from Google Drive`)
