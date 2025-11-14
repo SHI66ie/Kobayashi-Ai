@@ -49,6 +49,7 @@ export default function DashboardPage() {
       console.log('⏱️ Lap Times:', data.lapTimes ? `${data.lapTimes.length} laps` : 'Not available')
       console.log('🌤️ Weather:', data.weather ? 'Available' : 'Not available')
       console.log('📈 Telemetry:', data.telemetry?.available ? `${data.telemetry.totalRows} rows from ${data.telemetry.source || dataSource}` : 'Not available')
+      console.log('📄 PDF Documents:', data.pdfDocuments?.length ? `${data.pdfDocuments.length} files available` : 'None')
       
       setRaceData({ 
         loading: false, 
@@ -82,10 +83,16 @@ See DATA.md for detailed instructions.`,
   }
 
   const exportReport = () => {
+    const pdfDocs = raceData.data[0]?.pdfDocuments || []
+    const pdfSection = pdfDocs.length > 0 
+      ? `\n\nAvailable Reference Documents:\n${pdfDocs.map((pdf: any) => `- ${pdf.name} (${(pdf.size / 1024 / 1024).toFixed(2)} MB)`).join('\n')}`
+      : ''
+    
     const report = `KobayashiAI Race Analysis Report
 Track: ${tracks.find(t => t.id === selectedTrack)?.name}
 Race: ${selectedRace}
 Generated: ${new Date().toLocaleString()}
+Data Source: ${raceData.data[0]?.source || 'Google Drive'}${pdfSection}
 
 AI Predictions:
 - 3-lap hindsight analysis: 92% accuracy
@@ -223,13 +230,38 @@ This is a demo report. Full AI analysis coming soon!`
         )}
 
         {raceData.data.length > 0 && (
-          <div className="bg-green-900/20 border border-green-700 rounded-lg p-6 mb-8">
-            <h3 className="font-semibold text-green-400 mb-2">Data Loaded Successfully</h3>
-            <p className="text-green-300">Race data loaded and ready for AI analysis.</p>
-            <p className="text-sm text-gray-400 mt-2">
-              CSV data preview: {raceData.data[0]?.csvText?.substring(0, 100)}...
-            </p>
-          </div>
+          <>
+            <div className="bg-green-900/20 border border-green-700 rounded-lg p-6 mb-8">
+              <h3 className="font-semibold text-green-400 mb-2">Data Loaded Successfully</h3>
+              <p className="text-green-300">Race data loaded and ready for AI analysis.</p>
+              {raceData.data[0]?.pdfDocuments?.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-green-800">
+                  <h4 className="font-semibold text-green-400 mb-2">📄 Available PDF Documents ({raceData.data[0].pdfDocuments.length})</h4>
+                  <div className="space-y-2">
+                    {raceData.data[0].pdfDocuments.map((pdf: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-800/30 rounded p-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-300">{pdf.name}</span>
+                          <span className="text-xs text-gray-500">({(pdf.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        </div>
+                        <a 
+                          href={pdf.downloadUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs bg-racing-blue hover:bg-racing-blue/80 text-white px-3 py-1 rounded transition-colors"
+                        >
+                          View PDF
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    ℹ️ These documents enhance AI analysis with additional race context and technical data.
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Feature Cards */}
