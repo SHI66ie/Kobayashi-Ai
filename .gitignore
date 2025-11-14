@@ -15,6 +15,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
 # IDE
 .vscode/
@@ -77,3 +78,6 @@ temp/
 /Data/
 # Generated JSON files from CSV conversion
 /Data/json/
+
+# Cloudflare Worker (deployed separately)
+/drive-proxy/
