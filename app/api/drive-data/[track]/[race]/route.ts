@@ -7,7 +7,8 @@ export const runtime = 'nodejs'
 
 // Cloudflare Worker proxy URL (update if different)
 const DRIVE_PROXY_URL = 'https://drive-proxy.blockmusic.workers.dev'
-const DRIVE_FOLDER_ID = '1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou'
+// Use the 'json' folder ID which contains the track folders
+const DRIVE_FOLDER_ID = '1oYgl8SFNEvqpEdqRXsR_cGeRqCjjvpfQ'
 
 // Map track names to their folder names in Google Drive
 const TRACK_FOLDERS: Record<string, string> = {
