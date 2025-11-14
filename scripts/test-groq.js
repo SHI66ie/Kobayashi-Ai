@@ -58,7 +58,7 @@ Keep response under 200 words, be specific with data.`
     const startTime = Date.now()
     
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.1-70b-versatile',
+      model: 'llama-3.1-8b-instant', // Updated to current supported model
       messages: [
         {
           role: 'system',
@@ -104,7 +104,7 @@ Keep response under 200 words, be specific with data.`
     console.log('\n📋 Summary:')
     console.log(`   ✅ API Key: Valid`)
     console.log(`   ✅ Connection: Working`)
-    console.log(`   ✅ Model: llama-3.1-70b-versatile`)
+    console.log(`   ✅ Model: llama-3.1-8b-instant`)
     console.log(`   ✅ Response Time: ${responseTime}ms (Lightning fast!)`)
     console.log(`   ✅ Cost: 100% FREE`)
     console.log(`   ✅ Error Handling: Working`)
@@ -117,7 +117,7 @@ Keep response under 200 words, be specific with data.`
     console.log('\n💡 Why Groq is better:')
     console.log('   - 100% FREE (no phone verification)')
     console.log('   - Super fast responses (often <1 second)')
-    console.log('   - High-quality Llama 3.1 70B model')
+    console.log('   - High-quality Llama 3.1 8B model (fast & capable)')
     console.log('   - No rate limits for free tier')
 
   } catch (error) {
