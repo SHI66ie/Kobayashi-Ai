@@ -1,3 +1,6 @@
+// Load environment variables from .env.local
+require('dotenv').config({ path: '.env.local' });
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 async function testGeminiAPI() {
@@ -21,31 +24,46 @@ async function testGeminiAPI() {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     console.log('✅ Gemini client initialized\n');
 
-    // Test Gemini Flash (fast, free)
-    console.log('🚀 Testing Gemini 1.5 Flash...');
-    const flashModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
-    const flashResult = await flashModel.generateContent({
-      contents: [{ 
-        role: 'user', 
-        parts: [{ text: 'Say "RaceMind AI is ready for racing!" in exactly 7 words.' }] 
-      }]
-    });
-    
-    const flashResponse = flashResult.response.text();
-    console.log(`✅ Flash Response: ${flashResponse}`);
-    console.log(`📊 Tokens used: ${flashResult.response.usageMetadata?.totalTokenCount || 0}\n`);
+    // Test available models one by one
+    const modelsToTry = [
+      'gemini-pro',
+      'gemini-pro-vision',
+      'text-bison-001',
+      'chat-bison-001',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest'
+    ];
 
-    // Test Gemini Pro (advanced, free)
-    console.log('🚀 Testing Gemini 1.5 Pro...');
-    const proModel = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    let workingModel = null;
     
-    const proResult = await proModel.generateContent({
-      contents: [{ 
-        role: 'user', 
-        parts: [{ text: 'You are a racing AI. In 20 words, describe Toyota GR Cup racing.' }] 
-      }]
-    });
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`🧪 Testing ${modelName}...`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent('Say "RaceMind AI is ready!" in 5 words.');
+        const response = result.response.text();
+        
+        console.log(`✅ ${modelName} works!`);
+        console.log(`Response: ${response}`);
+        console.log(`📊 Tokens used: ${result.response.usageMetadata?.totalTokenCount || 0}\n`);
+        
+        workingModel = modelName;
+        break;
+        
+      } catch (error) {
+        console.log(`❌ ${modelName} failed: ${error.message.split('\n')[0]}\n`);
+        continue;
+      }
+    }
+
+    if (!workingModel) {
+      throw new Error('No working Gemini models found');
+    }
+
+    // Test the working model with a more complex prompt
+    console.log(`🚀 Testing ${workingModel} with racing prompt...`);
+    const finalModel = genAI.getGenerativeModel({ model: workingModel });
+    const proResult = await finalModel.generateContent('You are a racing AI. In 20 words, describe Toyota GR Cup racing.');
     
     const proResponse = proResult.response.text();
     console.log(`✅ Pro Response: ${proResponse}`);
@@ -56,8 +74,7 @@ async function testGeminiAPI() {
     console.log('✅ GEMINI API TEST SUCCESSFUL');
     console.log('═══════════════════════════════════════');
     console.log('✓ API key is valid');
-    console.log('✓ Gemini 1.5 Flash is working');
-    console.log('✓ Gemini 1.5 Pro is working');
+    console.log(`✓ Working model: ${workingModel}`);
     console.log('✓ RaceMind AI is ready!\n');
     console.log('🏁 Next steps:');
     console.log('1. Run: npm run dev');
