@@ -48,13 +48,13 @@ export default function DashboardPage() {
         throw new Error(errorData.message || 'Failed to load data from both Google Drive and local files')
       }
       
-      const data = await response.json()
+      const data: any = await response.json()
       
       console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} data from ${dataSource}`)
       console.log('📊 Race Results:', data.raceResults ? `${data.raceResults.length} entries` : 'Not available')
       console.log('⏱️ Lap Times:', data.lapTimes ? `${data.lapTimes.length} laps` : 'Not available')
       console.log('🌤️ Weather:', data.weather ? 'Available' : 'Not available')
-      console.log('📈 Telemetry:', data.telemetry.available ? `${data.telemetry.totalRows} rows from ${data.telemetry.source || dataSource}` : 'Not available')
+      console.log('📈 Telemetry:', data.telemetry?.available ? `${data.telemetry.totalRows} rows from ${data.telemetry.source || dataSource}` : 'Not available')
       
       setRaceData({ 
         loading: false, 
