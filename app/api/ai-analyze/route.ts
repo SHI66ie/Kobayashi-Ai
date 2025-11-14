@@ -6,7 +6,32 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 export const runtime = 'nodejs' // Use Node.js runtime for better compatibility
 
-// Initialize OpenAI (optional - requires OPENAI_API_KEY)
+// Initialize DeepSeek (FREE & RELIABLE - PRIMARY)
+let deepseek: OpenAI | null = null
+try {
+  if (process.env.DEEPSEEK_API_KEY) {
+    deepseek = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: 'https://api.deepseek.com',
+      timeout: 50000,
+      maxRetries: 2
+    })
+  }
+} catch (error) {
+  console.error('Failed to initialize DeepSeek:', error)
+}
+
+// Initialize Google Gemini (FREE - backup)
+let gemini: GoogleGenerativeAI | null = null
+try {
+  if (process.env.GEMINI_API_KEY) {
+    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  }
+} catch (error) {
+  console.error('Failed to initialize Gemini:', error)
+}
+
+// Initialize OpenAI (paid - final fallback)
 let openai: OpenAI | null = null
 try {
   if (process.env.OPENAI_API_KEY) {
@@ -20,35 +45,37 @@ try {
   console.error('Failed to initialize OpenAI:', error)
 }
 
-// Initialize Google Gemini (FREE - requires GEMINI_API_KEY)
-let gemini: GoogleGenerativeAI | null = null
-try {
-  if (process.env.GEMINI_API_KEY) {
-    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  }
-} catch (error) {
-  console.error('Failed to initialize Gemini:', error)
-}
+// Check for Custom LLM configuration
+const customLLMUrl = process.env.CUSTOM_LLM_URL
+const customLLMKey = process.env.CUSTOM_LLM_API_KEY
 
 export async function POST(request: NextRequest) {
   try {
     const { raceResults, lapTimes, weather, track, race }: any = await request.json()
 
-    // Check if either AI service is available
-    if (!openai && !gemini) {
+    // Check if any AI service is available
+    if (!deepseek && !gemini && !openai && !customLLMUrl) {
       return NextResponse.json({
         error: 'No AI service configured',
-        message: 'Add either GEMINI_API_KEY (FREE) or OPENAI_API_KEY to enable AI analysis',
+        message: 'Add DEEPSEEK_API_KEY (FREE & RECOMMENDED), GEMINI_API_KEY (FREE), CUSTOM_LLM_URL, or OPENAI_API_KEY to enable AI analysis',
         hints: {
+          deepseek: 'Get FREE DeepSeek key: https://platform.deepseek.com/api_keys (RECOMMENDED)',
           gemini: 'Get FREE Gemini key: https://makersuite.google.com/app/apikey',
+          custom: 'Use your own LLM: Set CUSTOM_LLM_URL in .env.local',
           openai: 'Get OpenAI key (paid): https://platform.openai.com/api-keys'
         }
       }, { status: 503 })
     }
 
-    // Prefer Gemini (free) over OpenAI (paid) if both available
-    const useGemini = gemini !== null
-    const aiProvider = useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
+    // Priority: DeepSeek (free & reliable) > Custom LLM > Gemini (free) > OpenAI (paid)
+    const useDeepSeek = deepseek !== null
+    const useCustomLLM = !useDeepSeek && customLLMUrl !== undefined
+    const useGemini = !useDeepSeek && !useCustomLLM && gemini !== null
+    const useOpenAI = !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
+    
+    const aiProvider = useDeepSeek ? 'DeepSeek (FREE & RELIABLE)' : 
+                      useCustomLLM ? 'Custom LLM' :
+                      useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
     console.log(`🤖 Using ${aiProvider} for analysis...`)
 
     // Prepare race data summary for AI
@@ -101,8 +128,72 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     let modelUsed = ''
     let tokensUsed = 0
 
-    // Use Gemini (FREE) or OpenAI
-    if (useGemini && gemini) {
+    // Use DeepSeek (FREE & RELIABLE) first
+    if (useDeepSeek && deepseek) {
+      try {
+        console.log('🚀 Using DeepSeek (FREE & RELIABLE)...')
+        const completion = await deepseek.chat.completions.create({
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: "system",
+              content: `You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.`
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: false
+        })
+        
+        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
+        modelUsed = 'deepseek-chat (FREE)'
+        tokensUsed = completion.usage?.total_tokens || 0
+        
+      } catch (deepseekError: any) {
+        console.error('⚠️ DeepSeek error, falling back to next provider:', deepseekError.message)
+        // Continue to next provider
+      }
+    }
+
+    // Use Custom LLM if DeepSeek failed
+    if (!analysis && useCustomLLM && customLLMUrl) {
+      try {
+        console.log('🔧 Using Custom LLM...')
+        
+        // Call the custom LLM endpoint
+        const customResponse = await fetch('/api/ai-custom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            raceResults,
+            lapTimes,
+            weather,
+            track,
+            race
+          })
+        })
+        
+        if (customResponse.ok) {
+          const customResult: any = await customResponse.json()
+          analysis = customResult.analysis || 'No analysis generated'
+          modelUsed = customResult.metadata?.model || 'Custom LLM'
+          tokensUsed = customResult.metadata?.tokensUsed || 0
+        } else {
+          throw new Error('Custom LLM request failed')
+        }
+        
+      } catch (customError: any) {
+        console.error('⚠️ Custom LLM error, falling back to Gemini/OpenAI:', customError.message)
+        // Continue to Gemini/OpenAI fallback
+      }
+    }
+    
+    // Use Gemini (FREE) if custom LLM failed or not available
+    if (!analysis && useGemini && gemini) {
       try {
         console.log('🆓 Using Gemini 1.5 Pro (FREE)...')
         // Try Pro first for better quality, fall back to Flash if needed
@@ -128,8 +219,8 @@ Format: Use numbered lists and bullet points. Be specific with data.`
       }
     }
     
-    // Use OpenAI if Gemini failed or not available
-    if (!analysis && openai) {
+    // Use OpenAI as final fallback
+    if (!analysis && useOpenAI && openai) {
       const model = process.env.GPT_MODEL || 'gpt-3.5-turbo'
       try {
         const completion = await openai.chat.completions.create({
@@ -185,7 +276,9 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         tokensUsed,
         track,
         race,
-        provider: useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
+        provider: useDeepSeek ? 'DeepSeek (FREE)' : 
+                 useCustomLLM ? 'Custom LLM' :
+                 useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
       }
     })
 
