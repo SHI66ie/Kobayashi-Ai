@@ -146,8 +146,39 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     let modelUsed = ''
     let tokensUsed = 0
 
-    // Use DeepSeek (FREE & RELIABLE) first
-    if (useDeepSeek && deepseek) {
+    // Use Groq (FREE & FAST) first
+    if (useGroq && groq) {
+      try {
+        console.log('⚡ Using Groq (FREE & FAST)...')
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.1-8b-instant', // Updated to current supported model
+          messages: [
+            {
+              role: "system",
+              content: `You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.`
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: false
+        })
+        
+        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
+        modelUsed = 'llama-3.1-8b (FREE via Groq)'
+        tokensUsed = completion.usage?.total_tokens || 0
+        
+      } catch (groqError: any) {
+        console.error('⚠️ Groq error, falling back to next provider:', groqError.message)
+        // Continue to next provider
+      }
+    }
+
+    // Use DeepSeek if Groq failed
+    if (!analysis && useDeepSeek && deepseek) {
       try {
         console.log('🚀 Using DeepSeek (FREE & RELIABLE)...')
         const completion = await deepseek.chat.completions.create({
