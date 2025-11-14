@@ -12,10 +12,11 @@
     "convert-csv": "node scripts/convert-csv-to-json.js",
     "convert-large-csv": "node scripts/convert-large-csv-to-json.js",
     "convert-all": "npm run extract-zips && npm run convert-csv && npm run convert-large-csv",
+    "test-groq": "node scripts/test-groq.js",
     "test-deepseek": "node scripts/test-deepseek.js",
     "test-gemini": "node scripts/test-gemini.js",
     "test-custom-llm": "node scripts/test-custom-llm.js",
-    "test-all-ai": "npm run test-deepseek && npm run test-gemini && npm run test-custom-llm"
+    "test-all-ai": "npm run test-groq && npm run test-deepseek && npm run test-gemini && npm run test-custom-llm"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

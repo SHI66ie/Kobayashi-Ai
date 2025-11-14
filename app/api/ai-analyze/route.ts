@@ -6,7 +6,22 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 export const runtime = 'nodejs' // Use Node.js runtime for better compatibility
 
-// Initialize DeepSeek (FREE & RELIABLE - PRIMARY)
+// Initialize Groq (FREE & FAST - PRIMARY)
+let groq: OpenAI | null = null
+try {
+  if (process.env.GROQ_API_KEY) {
+    groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+      timeout: 50000,
+      maxRetries: 2
+    })
+  }
+} catch (error) {
+  console.error('Failed to initialize Groq:', error)
+}
+
+// Initialize DeepSeek (FREE but may need verification)
 let deepseek: OpenAI | null = null
 try {
   if (process.env.DEEPSEEK_API_KEY) {
@@ -54,12 +69,13 @@ export async function POST(request: NextRequest) {
     const { raceResults, lapTimes, weather, track, race }: any = await request.json()
 
     // Check if any AI service is available
-    if (!deepseek && !gemini && !openai && !customLLMUrl) {
+    if (!groq && !deepseek && !gemini && !openai && !customLLMUrl) {
       return NextResponse.json({
         error: 'No AI service configured',
-        message: 'Add DEEPSEEK_API_KEY (FREE & RECOMMENDED), GEMINI_API_KEY (FREE), CUSTOM_LLM_URL, or OPENAI_API_KEY to enable AI analysis',
+        message: 'Add GROQ_API_KEY (FREE & FAST), DEEPSEEK_API_KEY (FREE), GEMINI_API_KEY (FREE), CUSTOM_LLM_URL, or OPENAI_API_KEY to enable AI analysis',
         hints: {
-          deepseek: 'Get FREE DeepSeek key: https://platform.deepseek.com/api_keys (RECOMMENDED)',
+          groq: 'Get FREE Groq key: https://console.groq.com/keys (RECOMMENDED - No phone needed)',
+          deepseek: 'Get FREE DeepSeek key: https://platform.deepseek.com/api_keys (May need phone verification)',
           gemini: 'Get FREE Gemini key: https://makersuite.google.com/app/apikey',
           custom: 'Use your own LLM: Set CUSTOM_LLM_URL in .env.local',
           openai: 'Get OpenAI key (paid): https://platform.openai.com/api-keys'
@@ -67,13 +83,15 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Priority: DeepSeek (free & reliable) > Custom LLM > Gemini (free) > OpenAI (paid)
-    const useDeepSeek = deepseek !== null
-    const useCustomLLM = !useDeepSeek && customLLMUrl !== undefined
-    const useGemini = !useDeepSeek && !useCustomLLM && gemini !== null
-    const useOpenAI = !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
+    // Priority: Groq (free & fast) > DeepSeek (free) > Custom LLM > Gemini (free) > OpenAI (paid)
+    const useGroq = groq !== null
+    const useDeepSeek = !useGroq && deepseek !== null
+    const useCustomLLM = !useGroq && !useDeepSeek && customLLMUrl !== undefined
+    const useGemini = !useGroq && !useDeepSeek && !useCustomLLM && gemini !== null
+    const useOpenAI = !useGroq && !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
     
-    const aiProvider = useDeepSeek ? 'DeepSeek (FREE & RELIABLE)' : 
+    const aiProvider = useGroq ? 'Groq (FREE & FAST)' :
+                      useDeepSeek ? 'DeepSeek (FREE)' : 
                       useCustomLLM ? 'Custom LLM' :
                       useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
     console.log(`🤖 Using ${aiProvider} for analysis...`)
@@ -159,7 +177,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
       }
     }
 
-    // Use Custom LLM if DeepSeek failed
+    // Use Custom LLM if Groq and DeepSeek failed
     if (!analysis && useCustomLLM && customLLMUrl) {
       try {
         console.log('🔧 Using Custom LLM...')
@@ -276,7 +294,8 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         tokensUsed,
         track,
         race,
-        provider: useDeepSeek ? 'DeepSeek (FREE)' : 
+        provider: useGroq ? 'Groq (FREE)' :
+                 useDeepSeek ? 'DeepSeek (FREE)' : 
                  useCustomLLM ? 'Custom LLM' :
                  useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
       }
