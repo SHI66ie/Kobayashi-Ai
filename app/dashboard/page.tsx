@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [selectedRace, setSelectedRace] = useState('R1')
   const [isReplaying, setIsReplaying] = useState(false)
   const [raceData, setRaceData] = useState<RaceData>({ loading: false, error: null, data: [] })
+  const [workerStatus, setWorkerStatus] = useState<'checking' | 'online' | 'offline' | null>(null)
 
   const tracks = [
     { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama', available: true },
@@ -25,6 +26,23 @@ export default function DashboardPage() {
     { id: 'sonoma', name: 'Sonoma Raceway', location: 'California', available: true },
     { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia', available: true }
   ]
+
+  const checkWorkerStatus = async () => {
+    setWorkerStatus('checking')
+    try {
+      const response = await fetch('/api/verify-tracks', { signal: AbortSignal.timeout(5000) })
+      if (response.ok) {
+        setWorkerStatus('online')
+        console.log('✅ Worker is online and responding')
+      } else {
+        setWorkerStatus('offline')
+        console.error('❌ Worker returned error status:', response.status)
+      }
+    } catch (error) {
+      setWorkerStatus('offline')
+      console.error('❌ Worker connection failed:', error)
+    }
+  }
 
   const loadRaceData = async () => {
     setRaceData({ loading: true, error: null, data: [] })
@@ -58,15 +76,17 @@ export default function DashboardPage() {
       })
     } catch (error: any) {
       console.error('❌ Error loading race data:', error)
+      const errorMessage = error?.message || String(error)
       setRaceData({ 
         loading: false, 
-        error: `Failed to load race data. 
-        
-🌐 Google Drive: Check API configuration
-📁 Local Files: Download data from Google Drive and place in Data/ folder
-🔗 Link: https://drive.google.com/drive/folders/1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou
+        error: `Failed to load race data: ${errorMessage}
 
-See DATA.md for detailed instructions.`,
+⚠️ This is likely a timeout or worker connectivity issue.
+🔧 Try: Refresh the page or select a different track/race.
+🌐 Worker URL: https://drive-proxy.blockmusic.workers.dev
+📁 Google Drive Folder: ${selectedTrack}/${selectedRace}
+
+If this persists, check browser console for detailed error logs.`,
         data: [] 
       })
     }
@@ -203,13 +223,22 @@ This is a demo report. Full AI analysis coming soon!`
           <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
             <h3 className="text-lg font-semibold mb-2 flex items-center">
               <Brain className="w-5 h-5 mr-2 text-racing-blue" />
-              AI Status
+              Worker Status
             </h3>
-            <p className="text-gray-300">
-              <strong>Prediction Model:</strong> 3-Lap Hindsight<br/>
-              <strong>Accuracy:</strong> 92% validation rate<br/>
-              <strong>Data Source:</strong> trddev.com (Remote)
+            <p className="text-gray-300 mb-3">
+              <strong>Connection:</strong>{' '}
+              {workerStatus === 'checking' && <span className="text-yellow-400">Checking...</span>}
+              {workerStatus === 'online' && <span className="text-green-400">✓ Online</span>}
+              {workerStatus === 'offline' && <span className="text-red-400">✗ Offline</span>}
+              {workerStatus === null && <span className="text-gray-400">Not tested</span>}
             </p>
+            <button
+              onClick={checkWorkerStatus}
+              disabled={workerStatus === 'checking'}
+              className="bg-racing-blue hover:bg-racing-blue/80 px-3 py-1 rounded text-sm disabled:opacity-50"
+            >
+              {workerStatus === 'checking' ? 'Testing...' : 'Test Connection'}
+            </button>
           </div>
         </div>
 
