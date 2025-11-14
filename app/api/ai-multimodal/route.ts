@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-// Initialize Gemini for multimodal analysis
+// Initialize Groq (FREE & FAST - PRIMARY)
+let groq: OpenAI | null = null
+try {
+  if (process.env.GROQ_API_KEY) {
+    groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+      timeout: 50000,
+      maxRetries: 2
+    })
+  }
+} catch (error) {
+  console.error('Failed to initialize Groq:', error)
+}
+
+// Initialize Gemini for multimodal analysis (fallback)
 let gemini: GoogleGenerativeAI | null = null
 try {
   if (process.env.GEMINI_API_KEY) {
@@ -25,15 +41,15 @@ export async function POST(request: NextRequest) {
       analysisType = 'comprehensive'
     }: any = await request.json()
 
-    if (!gemini) {
+    if (!groq && !gemini) {
       return NextResponse.json({
         error: 'Multimodal AI not configured',
-        message: 'Add GEMINI_API_KEY to enable advanced multimodal analysis'
+        message: 'Add GROQ_API_KEY (recommended) or GEMINI_API_KEY to enable advanced multimodal analysis'
       }, { status: 503 })
     }
 
-    console.log('🧠 Using Gemini Flash for multimodal racing analysis...')
-    const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+    const useGroq = groq !== null
+    console.log(`🧠 Using ${useGroq ? 'Groq' : 'Gemini'} for multimodal racing analysis...`)
 
     // Create comprehensive racing context
     const racingContext = `
@@ -135,18 +151,55 @@ ANALYSIS TYPE: ${analysisType.toUpperCase()}
 
 Provide detailed, technical analysis with specific recommendations, numerical data, and actionable insights. Use racing terminology and be precise with measurements and timings.`
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-      generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 4000,
-        topP: 0.8,
-        topK: 40
-      }
-    })
+    let analysis = ''
+    let tokensUsed = 0
+    let modelUsed = ''
 
-    const analysis = result.response.text()
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 0
+    // Try Groq first (FREE & FAST)
+    if (useGroq && groq) {
+      try {
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: 'You are an expert multimodal racing AI analyst. Provide detailed technical analysis with specific recommendations.' },
+            { role: 'user', content: fullPrompt }
+          ],
+          temperature: 0.4,
+          max_tokens: 4000
+        })
+        analysis = completion.choices[0]?.message?.content || ''
+        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        tokensUsed = completion.usage?.total_tokens || 0
+      } catch (error: any) {
+        console.error('Groq multimodal error:', error.message)
+      }
+    }
+
+    // Fall back to Gemini if Groq failed
+    if (!analysis && gemini) {
+      try {
+        const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 4000,
+            topP: 0.8,
+            topK: 40
+          }
+        })
+        analysis = result.response.text()
+        modelUsed = 'gemini-1.5-flash-latest'
+        tokensUsed = result.response.usageMetadata?.totalTokenCount || 0
+      } catch (error: any) {
+        console.error('Gemini multimodal error:', error.message)
+        throw error
+      }
+    }
+
+    if (!analysis) {
+      throw new Error('All AI providers failed to generate multimodal analysis')
+    }
 
     // Generate confidence score based on data completeness
     const dataCompleteness = calculateDataCompleteness({
@@ -166,12 +219,13 @@ Provide detailed, technical analysis with specific recommendations, numerical da
       analysis,
       analysisType,
       metadata: {
-        model: 'gemini-1.5-pro-multimodal',
+        model: modelUsed,
         tokensUsed,
         confidenceScore: Math.round(confidenceScore),
         dataCompleteness: Math.round(dataCompleteness * 100),
         analysisDepth: analysisType,
-        processingTime: Date.now()
+        processingTime: Date.now(),
+        provider: useGroq ? 'Groq (FREE)' : 'Gemini (FREE)'
       },
       recommendations: extractRecommendations(analysis),
       riskAssessment: analysisType === 'safety' ? extractRiskScores(analysis) : null
