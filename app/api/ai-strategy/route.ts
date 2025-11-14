@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+// Initialize Groq (FREE & FAST - PRIMARY)
+let groq: OpenAI | null = null
+try {
+  if (process.env.GROQ_API_KEY) {
+    groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+      timeout: 50000,
+      maxRetries: 2
+    })
+  }
+} catch (error) {
+  console.error('Failed to initialize Groq:', error)
+}
+
+// Initialize Gemini (FREE - fallback)
 let gemini: GoogleGenerativeAI | null = null
 try {
   if (process.env.GEMINI_API_KEY) {
@@ -25,15 +42,18 @@ export async function POST(request: NextRequest) {
       fuelLoad 
     } = await request.json()
 
-    if (!gemini) {
+    if (!groq && !gemini) {
       return NextResponse.json({
-        error: 'Gemini API not configured',
-        message: 'Add GEMINI_API_KEY to .env.local'
+        error: 'No AI service configured',
+        message: 'Add GROQ_API_KEY (recommended) or GEMINI_API_KEY to .env.local'
       }, { status: 503 })
     }
 
-    console.log('⚙️ Using Gemini Flash for strategy optimization...')
-    const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+    // Priority: Groq > Gemini
+    const useGroq = groq !== null
+    const useGemini = !useGroq && gemini !== null
+    
+    console.log(`⚙️ Using ${useGroq ? 'Groq' : 'Gemini'} for strategy optimization...`)
 
     const prompt = `You are a Toyota GR Cup race strategist. Optimize race strategy:
 
@@ -66,26 +86,65 @@ Provide strategic recommendations:
 
 Provide data-driven, specific recommendations with confidence levels.`
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.5,
-        maxOutputTokens: 3000,
-        topP: 0.85,
-        topK: 40
-      }
-    })
+    let strategy = ''
+    let modelUsed = ''
+    let tokensUsed = 0
 
-    const strategy = result.response.text()
+    // Try Groq first (FREE & FAST)
+    if (useGroq && groq) {
+      try {
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: 'You are an expert Toyota GR Cup race strategist. Provide data-driven strategy recommendations.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.5,
+          max_tokens: 3000
+        })
+        strategy = completion.choices[0]?.message?.content || ''
+        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        tokensUsed = completion.usage?.total_tokens || 0
+      } catch (error: any) {
+        console.error('Groq strategy error:', error.message)
+      }
+    }
+
+    // Fall back to Gemini if Groq failed
+    if (!strategy && useGemini && gemini) {
+      try {
+        const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: 3000,
+            topP: 0.85,
+            topK: 40
+          }
+        })
+        strategy = result.response.text()
+        modelUsed = 'gemini-1.5-flash-latest'
+        tokensUsed = result.response.usageMetadata?.totalTokenCount || 0
+      } catch (error: any) {
+        console.error('Gemini strategy error:', error.message)
+        throw error
+      }
+    }
+
+    if (!strategy) {
+      throw new Error('All AI providers failed to generate strategy')
+    }
 
     return NextResponse.json({
       success: true,
       strategy,
       metadata: {
-        model: 'gemini-1.5-flash-latest',
+        model: modelUsed,
         track,
-        tokensUsed: result.response.usageMetadata?.totalTokenCount || 0,
-        generatedAt: new Date().toISOString()
+        tokensUsed,
+        generatedAt: new Date().toISOString(),
+        provider: useGroq ? 'Groq (FREE)' : 'Gemini (FREE)'
       }
     })
 
