@@ -141,3 +141,10 @@ All driver names and personal information have been anonymized in accordance wit
 For access to the Google Drive data or questions about the dataset:
 - Open an issue in this repository
 - Contact the repository maintainer
+
+## 🔧 **Cloudflare Worker Deployed**
+
+The app now uses a Cloudflare Worker proxy for Google Drive access:
+- **Worker URL**: https://drive-proxy.blockmusic.workers.dev
+- **OAuth Credentials**: Configured as Cloudflare Worker secrets
+- **No API Keys Required**: Main app uses worker proxy
