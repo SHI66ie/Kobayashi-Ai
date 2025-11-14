@@ -3,7 +3,6 @@
 import {
   BarChart3,
   Flag,
-  FlagCheckered,
   Trophy,
   Thermometer,
   Droplets,
@@ -64,7 +63,7 @@ export default function RaceReportCard({ report, onClose, onDownload }: RaceRepo
             <span>{report.title}</span>
           </p>
           <h3 className="text-2xl font-bold mt-1 flex items-center space-x-2">
-            <FlagCheckered className="w-6 h-6 text-racing-red" />
+            <Flag className="w-6 h-6 text-racing-red" />
             <span>{report.track}</span>
           </h3>
           <p className="text-gray-400 text-sm">{report.race} • Generated {report.generatedAt}</p>
