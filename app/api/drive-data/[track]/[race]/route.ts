@@ -35,9 +35,9 @@ async function listGoogleDriveFiles(folderId: string): Promise<any[]> {
     const url = `${DRIVE_PROXY_URL}/list?folderId=${folderId}`
     console.log(`🔍 Fetching from worker: ${url}`)
     
-    // Add 8-second timeout to prevent serverless function timeout
+    // Add 3-second timeout for faster response
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
     
     const response = await fetch(url, { signal: controller.signal })
     clearTimeout(timeoutId)
@@ -140,9 +140,9 @@ export async function GET(
       }
     }
     
-    // Find race results (flexible search)
+    // Find race results (flexible search) - Return metadata only
     const raceNum = race.slice(1) // "R1" -> "1"
-    let raceResults = null
+    let raceResultsFile = null
     
     // Try multiple naming patterns
     const resultKeywords = [
@@ -159,60 +159,64 @@ export async function GET(
         f.name?.endsWith('.json')
       )
       if (file) {
-        const content = await downloadGoogleDriveFile(file.id)
-        if (content) {
-          raceResults = JSON.parse(content)
-          console.log(`✓ Loaded race results from Google Drive: ${file.name}`)
-          break
+        raceResultsFile = {
+          name: file.name,
+          id: file.id,
+          downloadUrl: `${DRIVE_PROXY_URL}/download/${file.id}`
         }
+        console.log(`✓ Found race results file: ${file.name}`)
+        break
       }
     }
 
-    // Find lap times (flexible search)
-    let lapTimes = null
+    // Find lap times (flexible search) - Return metadata only
+    let lapTimesFile = null
     const lapKeywords = [`${race}_${track}_lap`, `${race.toLowerCase()}_`, `lap_end`, `lap_time`]
     
     for (const keyword of lapKeywords) {
-      const lapTimeFile = trackFiles.find(f => 
+      const file = trackFiles.find(f => 
         f.name?.toLowerCase().includes(keyword.toLowerCase()) &&
         f.name?.toLowerCase().includes('lap') &&
         f.name?.endsWith('.json')
       )
-      if (lapTimeFile) {
-        const content = await downloadGoogleDriveFile(lapTimeFile.id)
-        if (content) {
-          lapTimes = JSON.parse(content)
-          console.log(`✓ Loaded lap times from Google Drive: ${lapTimeFile.name}`)
-          break
+      if (file) {
+        lapTimesFile = {
+          name: file.name,
+          id: file.id,
+          downloadUrl: `${DRIVE_PROXY_URL}/download/${file.id}`
         }
+        console.log(`✓ Found lap times file: ${file.name}`)
+        break
       }
     }
 
-    // Find weather data (flexible search)
-    let weather = null
-    const weatherFile = trackFiles.find(f => 
+    // Find weather data (flexible search) - Return metadata only
+    let weatherFile = null
+    const weatherFileMatch = trackFiles.find(f => 
       f.name?.toLowerCase().includes('weather') &&
       (f.name?.toLowerCase().includes(`race ${raceNum}`) || f.name?.toLowerCase().includes(race.toLowerCase())) &&
       f.name?.endsWith('.json')
     )
     
-    if (weatherFile) {
-      const content = await downloadGoogleDriveFile(weatherFile.id)
-      if (content) {
-        weather = JSON.parse(content)
-        console.log(`✓ Loaded weather data from Google Drive: ${weatherFile.name}`)
+    if (weatherFileMatch) {
+      weatherFile = {
+        name: weatherFileMatch.name,
+        id: weatherFileMatch.id,
+        downloadUrl: `${DRIVE_PROXY_URL}/download/${weatherFileMatch.id}`
       }
+      console.log(`✓ Found weather data file: ${weatherFileMatch.name}`)
     }
 
-    // Find telemetry index
-    const telemetryIndexFile = trackFiles.find(f => f.name === `${race}_${track}_telemetry_data_index.json`)
-    let telemetryInfo = null
-    if (telemetryIndexFile) {
-      const content = await downloadGoogleDriveFile(telemetryIndexFile.id)
-      if (content) {
-        telemetryInfo = JSON.parse(content)
-        console.log(`✓ Telemetry available from Google Drive: ${telemetryInfo.totalRows} rows in ${telemetryInfo.totalChunks} chunks`)
+    // Find telemetry index - Return metadata only
+    let telemetryFile = null
+    const telemetryIndexFileMatch = trackFiles.find(f => f.name === `${race}_${track}_telemetry_data_index.json`)
+    if (telemetryIndexFileMatch) {
+      telemetryFile = {
+        name: telemetryIndexFileMatch.name,
+        id: telemetryIndexFileMatch.id,
+        downloadUrl: `${DRIVE_PROXY_URL}/download/${telemetryIndexFileMatch.id}`
       }
+      console.log(`✓ Found telemetry index file: ${telemetryIndexFileMatch.name}`)
     }
 
     // Find PDF files for enhanced analysis
@@ -223,16 +227,12 @@ export async function GET(
       track,
       race,
       source: 'Google Drive',
-      raceResults,
-      lapTimes,
-      weather,
-      telemetry: telemetryInfo ? {
-        available: true,
-        totalRows: telemetryInfo.totalRows,
-        totalChunks: telemetryInfo.totalChunks,
-        chunkSize: telemetryInfo.chunkSize,
-        source: 'Google Drive'
-      } : { available: false },
+      files: {
+        raceResults: raceResultsFile,
+        lapTimes: lapTimesFile,
+        weather: weatherFile,
+        telemetry: telemetryFile
+      },
       pdfDocuments: pdfFiles.map(f => ({
         name: f.name,
         size: f.size,
