@@ -67,11 +67,12 @@ export async function GET(
   try {
     const { track, race } = params
     
-    // Using Cloudflare Worker proxy - no API key needed
-    console.log(`🌐 Loading race data for ${track} - ${race} via Cloudflare Worker`)
-
+    console.log(`🌐 API Route Called: /api/drive-data/${track}/${race}`)
+    console.log(`📍 Cloudflare Worker URL: ${DRIVE_PROXY_URL}`)
+    console.log(`📁 Drive Folder ID: ${DRIVE_FOLDER_ID}`)
+    
     const trackFolder = TRACK_FOLDERS[track] || track
-    console.log(`Loading race data for ${track} - ${race} from Google Drive`)
+    console.log(`🗂️ Track folder mapping: ${track} -> ${trackFolder}`)
 
     // List files in the main folder to find track subfolder
     const mainFiles = await listGoogleDriveFiles(DRIVE_FOLDER_ID)
@@ -169,13 +170,21 @@ export async function GET(
       availableFiles: trackFiles.map(f => ({ name: f.name, size: f.size }))
     })
 
-  } catch (error) {
-    console.error('Error loading data from Google Drive:', error)
+  } catch (error: any) {
+    console.error('❌ Error in drive-data API route:', error)
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause
+    })
+    
     return NextResponse.json(
       { 
-        error: 'Failed to load data from Google Drive', 
-        details: String(error),
-        fallback: 'Try downloading data manually from Google Drive'
+        error: 'Failed to load data from Google Drive',
+        message: error?.message || String(error),
+        workerUrl: DRIVE_PROXY_URL,
+        folderId: DRIVE_FOLDER_ID,
+        hint: 'Check if Cloudflare Worker is deployed and accessible'
       },
       { status: 500 }
     )

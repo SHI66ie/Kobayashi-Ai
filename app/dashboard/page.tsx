@@ -30,22 +30,16 @@ export default function DashboardPage() {
     setRaceData({ loading: true, error: null, data: [] })
     
     try {
-      // Try Google Drive first, then fallback to local files
+      // Load data from Google Drive via Cloudflare Worker proxy
       console.log(`🌐 Loading ${selectedTrack} ${selectedRace} data from Google Drive...`)
       
-      let response = await fetch(`/api/drive-data/${selectedTrack}/${selectedRace}`)
-      let dataSource = 'Google Drive'
-      
-      // If Google Drive fails, try local files
-      if (!response.ok) {
-        console.log(`⚠️ Google Drive failed, trying local files...`)
-        response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
-        dataSource = 'Local Files'
-      }
+      const response = await fetch(`/api/drive-data/${selectedTrack}/${selectedRace}`)
+      const dataSource = 'Google Drive (Cloudflare Worker)'
       
       if (!response.ok) {
-        const errorData: any = await response.json()
-        throw new Error(errorData.message || 'Failed to load data from both Google Drive and local files')
+        const errorData: any = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ API Error:', errorData)
+        throw new Error(errorData.error || errorData.message || 'Failed to load data from Google Drive')
       }
       
       const data: any = await response.json()
