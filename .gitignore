@@ -77,10 +77,7 @@ temp/
 # Racing data (hosted on Google Drive - 18+ GB)
 # (raw files are stored outside the repo; processed JSON under /Data is tracked)
 
-# Exclude large telemetry files from Git (keep locally)
-Data/**/*telemetry*.json
-Data/**/R*_*_telemetry_data.json
-Data/**/R*_*_lap_*.json
+# Large telemetry files are now tracked via Git LFS
 
 
 # Cloudflare Worker (deployed separately)
