@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { fetchRaceData, isAWSConfigured, getAWSInfo } from '@/lib/aws-data'
 
 // Disable caching for dynamic data
 export const dynamic = 'force-dynamic'
@@ -30,8 +31,10 @@ export async function GET(
 
     console.log(`Loading race data for ${track} - ${race}`)
 
-    // Check if Data directory exists
-    if (!fs.existsSync(dataDir)) {
+    // Check if we should use AWS or local data
+    const awsConfigured = isAWSConfigured()
+    
+    if (!awsConfigured && !fs.existsSync(dataDir)) {
       return NextResponse.json({ 
         error: 'Data not found',
         message: process.env.NODE_ENV === 'production' 
@@ -42,9 +45,28 @@ export async function GET(
           : 'https://drive.google.com/drive/folders/1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou?usp=sharing'
       }, { status: 404 })
     }
+    
+    if (awsConfigured) {
+      console.log(`🌐 Using AWS CloudFront for race data: ${getAWSInfo().domain}`)
+    } else {
+      console.log(`📂 Using local filesystem for race data`)
+    }
 
-    // Load directory listing once for flexible filename matching
-    const allFiles = fs.readdirSync(dataDir)
+    // Helper function to load data from AWS or local filesystem
+    const loadDataFile = async (filename: string): Promise<any> => {
+      if (awsConfigured) {
+        return await fetchRaceData(trackFolder, filename)
+      } else {
+        const filePath = path.join(dataDir, filename)
+        if (fs.existsSync(filePath)) {
+          return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+        }
+        return null
+      }
+    }
+
+    // Get available files for fallback search (local only)
+    const allFiles = !awsConfigured && fs.existsSync(dataDir) ? fs.readdirSync(dataDir) : []
 
     // Load race results - try common file patterns first
     const raceNum = race.slice(1) // "R1" -> "1"
@@ -62,16 +84,15 @@ export async function GET(
 
     let raceResults = null
     for (const file of raceFiles) {
-      const filePath = path.join(dataDir, file)
-      if (fs.existsSync(filePath)) {
-        raceResults = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      raceResults = await loadDataFile(file)
+      if (raceResults) {
         console.log(`✓ Loaded race results from: ${file}`)
         break
       }
     }
 
-    // Fallback: fuzzy search for any results file mentioning this race
-    if (!raceResults) {
+    // Fallback: fuzzy search for any results file mentioning this race (local only)
+    if (!raceResults && !awsConfigured) {
       const raceKeyword = `race ${raceNum}`
       const candidate = allFiles.find(f => {
         const name = f.toLowerCase()
@@ -81,33 +102,38 @@ export async function GET(
       })
 
       if (candidate) {
-        const filePath = path.join(dataDir, candidate)
-        raceResults = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-        console.log(`✓ Loaded race results from fallback: ${candidate}`)
-      } else {
-        console.warn('⚠️ No race results file found for', track, race)
+        raceResults = await loadDataFile(candidate)
+        if (raceResults) {
+          console.log(`✓ Loaded race results from fallback: ${candidate}`)
+        }
       }
     }
 
-    // Load lap times (exact pattern first)
-    const lapTimeFile = path.join(dataDir, `${race}_${track}_lap_time.json`)
-    let lapTimes = null
-    if (fs.existsSync(lapTimeFile)) {
-      lapTimes = JSON.parse(fs.readFileSync(lapTimeFile, 'utf-8'))
-      console.log(`✓ Loaded lap times from: ${path.basename(lapTimeFile)} (${lapTimes.length} entries)`)      
-    } else {
-      // Fallback: search for any lap_time file starting with race ID
-      const lapCandidate = allFiles.find(f => {
-        const name = f.toLowerCase()
-        return name.endsWith('.json') &&
-          name.startsWith(race.toLowerCase()) &&
-          name.includes('lap_time')
-      })
+    if (!raceResults) {
+      console.warn('⚠️ No race results file found for', track, race)
+    }
 
-      if (lapCandidate) {
-        const filePath = path.join(dataDir, lapCandidate)
-        lapTimes = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-        console.log(`✓ Loaded lap times from fallback: ${lapCandidate} (${lapTimes.length} entries)`)        
+    // Load lap times (exact pattern first)
+    const lapTimeFile = `${race}_${track}_lap_time.json`
+    let lapTimes = await loadDataFile(lapTimeFile)
+    if (lapTimes) {
+      console.log(`✓ Loaded lap times from: ${lapTimeFile} (${lapTimes.length} entries)`)      
+    } else {
+      // Fallback: search for any lap_time file starting with race ID (local only)
+      if (!awsConfigured) {
+        const lapCandidate = allFiles.find(f => {
+          const name = f.toLowerCase()
+          return name.endsWith('.json') &&
+            name.startsWith(race.toLowerCase()) &&
+            name.includes('lap_time')
+        })
+
+        if (lapCandidate) {
+          lapTimes = await loadDataFile(lapCandidate)
+          if (lapTimes) {
+            console.log(`✓ Loaded lap times from fallback: ${lapCandidate} (${lapTimes.length} entries)`)        
+          }
+        }
       }
     }
 
@@ -120,40 +146,42 @@ export async function GET(
     ]
     let weather = null
     for (const file of weatherFiles) {
-      const filePath = path.join(dataDir, file)
-      if (fs.existsSync(filePath)) {
-        weather = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      weather = await loadDataFile(file)
+      if (weather) {
         console.log(`✓ Loaded weather data from: ${file}`)
         break
       }
     }
 
-    // Fallback: pick any weather file in the folder if race-specific not found
-    if (!weather) {
+    // Fallback: search for any weather file mentioning this race (local only)
+    if (!weather && !awsConfigured) {
       const raceKeyword = `race ${raceNum}`
       const candidate = allFiles.find(f => {
         const name = f.toLowerCase()
         return name.endsWith('.json') &&
           name.includes('weather') &&
-          (name.includes(raceKeyword) || !name.includes('race'))
+          (name.includes(raceKeyword) || (!name.includes('race') && raceNum === '1'))
       })
 
       if (candidate) {
-        const filePath = path.join(dataDir, candidate)
-        weather = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-        console.log(`✓ Loaded weather data from fallback: ${candidate}`)
-      } else {
-        console.warn('⚠️ No weather file found for', track, race)
+        weather = await loadDataFile(candidate)
+        if (weather) {
+          console.log(`✓ Loaded weather data from fallback: ${candidate}`)
+        }
       }
     }
 
+    if (!weather) {
+      console.warn('⚠️ No weather file found for', track, race)
+    }
+
     // Check for telemetry data
-    const telemetryIndexFile = path.join(dataDir, `${race}_${track}_telemetry_data_index.json`)
+    const telemetryIndexFile = `${race}_${track}_telemetry_data_index.json`
     let telemetry: any = { available: false }
 
     // Prefer chunked telemetry when an index is available
-    if (fs.existsSync(telemetryIndexFile)) {
-      const telemetryInfo = JSON.parse(fs.readFileSync(telemetryIndexFile, 'utf-8'))
+    const telemetryInfo = await loadDataFile(telemetryIndexFile)
+    if (telemetryInfo) {
       telemetry = {
         available: true,
         type: 'chunked',
@@ -163,21 +191,47 @@ export async function GET(
       }
       console.log(`Telemetry available (chunked): ${telemetry.totalRows} rows in ${telemetry.totalChunks} chunks`)
     } else {
-      // Fallback: detect single-file telemetry JSONs without loading them into memory
-      const telemetryCandidate = allFiles.find(f => {
-        const name = f.toLowerCase()
-        return name.endsWith('.json') && name.includes('telemetry')
-      })
+      // Fallback: detect single-file telemetry JSONs (local only for now)
+      if (!awsConfigured) {
+        const telemetryCandidate = allFiles.find(f => {
+          const name = f.toLowerCase()
+          return name.endsWith('.json') && name.includes('telemetry')
+        })
 
-      if (telemetryCandidate) {
-        telemetry = {
-          available: true,
-          type: 'single-file',
-          fileName: telemetryCandidate
+        if (telemetryCandidate) {
+          telemetry = {
+            available: true,
+            type: 'single-file',
+            fileName: telemetryCandidate
+          }
+          console.log(`Telemetry available (single-file): ${telemetryCandidate}`)
+        } else {
+          console.log('No telemetry file detected for', track, race)
         }
-        console.log(`Telemetry available (single-file): ${telemetryCandidate}`)
       } else {
-        console.log('No telemetry file detected for', track, race)
+        // For AWS, try common telemetry file patterns
+        const telemetryCandidates = [
+          `${race}_${track}_telemetry_data.json`,
+          `${race}_${track}_telemetry.json`,
+          `${track}_telemetry_data.json`
+        ]
+        
+        for (const candidate of telemetryCandidates) {
+          const testInfo = await loadDataFile(candidate)
+          if (testInfo) {
+            telemetry = {
+              available: true,
+              type: 'single-file',
+              fileName: candidate
+            }
+            console.log(`Telemetry available (single-file): ${candidate}`)
+            break
+          }
+        }
+        
+        if (!telemetry.available) {
+          console.log('No telemetry file detected for', track, race)
+        }
       }
     }
 
