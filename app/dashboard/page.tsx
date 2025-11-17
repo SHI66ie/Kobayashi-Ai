@@ -20,7 +20,6 @@ export default function DashboardPage() {
   const [selectedRace, setSelectedRace] = useState('R1')
   const [isReplaying, setIsReplaying] = useState(false)
   const [raceData, setRaceData] = useState<RaceData>({ loading: false, error: null, data: [] })
-  const [workerStatus, setWorkerStatus] = useState<'checking' | 'online' | 'offline' | null>(null)
   const [generatedReport, setGeneratedReport] = useState<string | null>(null)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [simulatedWeather, setSimulatedWeather] = useState<any>(null)
@@ -35,67 +34,49 @@ export default function DashboardPage() {
     { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia', available: true }
   ]
 
-  const checkWorkerStatus = async () => {
-    setWorkerStatus('checking')
-    try {
-      const response = await fetch('/api/verify-tracks', { signal: AbortSignal.timeout(5000) })
-      if (response.ok) {
-        setWorkerStatus('online')
-        console.log('✅ Worker is online and responding')
-      } else {
-        setWorkerStatus('offline')
-        console.error('❌ Worker returned error status:', response.status)
-      }
-    } catch (error) {
-      setWorkerStatus('offline')
-      console.error('❌ Worker connection failed:', error)
-    }
-  }
-
   const loadRaceData = async () => {
     setRaceData({ loading: true, error: null, data: [] })
+    setGeneratedReport(null)
     
     try {
-      // Load data from Google Drive via Cloudflare Worker proxy
-      console.log(`🌐 Loading ${selectedTrack} ${selectedRace} data from Google Drive...`)
-      
-      const response = await fetch(`/api/drive-data/${selectedTrack}/${selectedRace}`)
-      const dataSource = 'Google Drive (Cloudflare Worker)'
-      
+      // Load race data from local JSON files in the Data folder
+      console.log(`📂 Loading ${selectedTrack} ${selectedRace} data from local Data folder...`)
+
+      const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
+      const dataSource = 'Local Data Folder'
+
       if (!response.ok) {
         const errorData: any = await response.json().catch(() => ({ error: 'Unknown error' }))
         console.error('❌ API Error:', errorData)
-        throw new Error(errorData.error || errorData.message || 'Failed to load data from Google Drive')
+        throw new Error(errorData.error || errorData.message || 'Failed to load data from local files')
       }
-      
+
       const data: any = await response.json()
-      
-      console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} metadata from ${dataSource}`)
-      console.log('📊 Race Results:', data.files?.raceResults ? `File: ${data.files.raceResults.name}` : 'Not found')
-      console.log('⏱️ Lap Times:', data.files?.lapTimes ? `File: ${data.files.lapTimes.name}` : 'Not found')
-      console.log('🌤️ Weather:', data.files?.weather ? `File: ${data.files.weather.name}` : 'Not found')
-      console.log('📈 Telemetry:', data.files?.telemetry ? `File: ${data.files.telemetry.name}` : 'Not found')
-      console.log('📄 PDF Documents:', data.pdfDocuments?.length ? `${data.pdfDocuments.length} files available` : 'None')
-      
+
+      console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} data from local files`)
+      console.log('📊 Race Results present:', !!data.raceResults)
+      console.log('⏱️ Lap Times entries:', Array.isArray(data.lapTimes) ? data.lapTimes.length : 0)
+      console.log('🌤️ Weather data:', data.weather ? 'Available' : 'Not found')
+      console.log('📈 Telemetry:', data.telemetry?.available ? `Mode: ${data.telemetry.type}` : 'Not detected')
+
       setRaceData({ 
         loading: false, 
         error: null, 
         data: [{ ...data, dataSource }] 
       })
     } catch (error: any) {
-      console.error('❌ Error loading race data:', error)
+      console.error('❌ Error loading race data from local files:', error)
       const errorMessage = error?.message || String(error)
       setRaceData({ 
-        loading: false, 
-        error: `Failed to load race data: ${errorMessage}
+        loading: false,
+        error: `Failed to load race data from local files: ${errorMessage}
 
-⚠️ This is likely a timeout or worker connectivity issue.
-🔧 Try: Refresh the page or select a different track/race.
-🌐 Worker URL: https://drive-proxy.blockmusic.workers.dev
-📁 Google Drive Folder: ${selectedTrack}/${selectedRace}
+⚠️ This usually means the Data folder is missing or incomplete.
+🔧 Make sure the /Data directory exists in the project root and contains the ${selectedTrack}/${selectedRace} files.
+📁 Each track folder should include race results, lap times, weather, and telemetry JSON files.
 
-If this persists, check browser console for detailed error logs.`,
-        data: [] 
+If this persists, check the server console for detailed error logs.`,
+        data: []
       })
     }
   }
@@ -119,32 +100,10 @@ If this persists, check browser console for detailed error logs.`,
     setIsGeneratingReport(true)
 
     try {
-      console.log('🤖 Requesting AI analysis...')
-      
-      // Download actual data files if they're just metadata
-      const files = raceData.data[0].files
-      let raceResults = null
-      let lapTimes = null
-      let weather = null
-      
-      if (files?.raceResults?.downloadUrl) {
-        console.log('📥 Downloading race results...')
-        const res = await fetch(files.raceResults.downloadUrl)
-        raceResults = await res.json()
-      }
-      
-      if (files?.lapTimes?.downloadUrl) {
-        console.log('📥 Downloading lap times...')
-        const res = await fetch(files.lapTimes.downloadUrl)
-        lapTimes = await res.json()
-      }
-      
-      if (files?.weather?.downloadUrl) {
-        console.log('📥 Downloading weather data...')
-        const res = await fetch(files.weather.downloadUrl)
-        weather = await res.json()
-      }
-      
+      console.log('🤖 Requesting AI analysis using local data...')
+
+      const { raceResults, lapTimes, weather, dataSource } = raceData.data[0] || {}
+
       // Call AI analysis endpoint
       const response = await fetch('/api/ai-analyze', {
         method: 'POST',
@@ -166,18 +125,13 @@ If this persists, check browser console for detailed error logs.`,
         throw new Error(result.message || 'AI analysis failed')
       }
 
-      const pdfDocs = raceData.data[0]?.pdfDocuments || []
-      const pdfSection = pdfDocs.length > 0 
-        ? `\n\nAvailable Reference Documents:\n${pdfDocs.map((pdf: any) => `- ${pdf.name} (${(pdf.size / 1024 / 1024).toFixed(2)} MB)`).join('\n')}`
-        : ''
-
       // Build report with AI analysis
       const report = `KobayashiAI Race Analysis Report
 Track: ${tracks.find(t => t.id === selectedTrack)?.name}
 Race: ${selectedRace}
 Generated: ${new Date().toLocaleString()}
-Data Source: ${raceData.data[0]?.source || 'Google Drive'}
-AI Model: ${result.metadata?.model || 'GPT-4'}${pdfSection}
+Data Source: ${dataSource || 'Local Data Folder'}
+AI Model: ${result.metadata?.model || 'GPT-4'}
 
 ═══════════════════════════════════════════════════
 🤖 AI-POWERED ANALYSIS
@@ -239,6 +193,27 @@ DEMO DATA (Placeholder):
       setIsGeneratingReport(false)
     }
   }
+
+  // Derive a simple weather summary from raw weather arrays
+  const initialWeatherSummary = (() => {
+    if (!raceData.data[0]?.weather) return undefined
+
+    const baseWeather = raceData.data[0].weather as any
+    if (Array.isArray(baseWeather) && baseWeather.length > 0) {
+      const latest = baseWeather[baseWeather.length - 1] as any
+      return {
+        airTemp: Number(latest.AIR_TEMP ?? latest.airTemp ?? 25),
+        trackTemp: Number(latest.TRACK_TEMP ?? latest.trackTemp ?? 35),
+        humidity: Number(latest.HUMIDITY ?? latest.humidity ?? 50),
+        windSpeed: Number(latest.WIND_SPEED ?? latest.windSpeed ?? 5),
+        windDirection: Number(latest.WIND_DIRECTION ?? latest.windDirection ?? 0),
+        pressure: Number(latest.PRESSURE ?? latest.pressure ?? 1013),
+        rain: Boolean(latest.RAIN ?? latest.rain ?? false)
+      }
+    }
+
+    return baseWeather
+  })()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
@@ -333,27 +308,6 @@ DEMO DATA (Placeholder):
               <strong>Race:</strong> {selectedRace}
             </p>
           </div>
-
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-2 flex items-center">
-              <Brain className="w-5 h-5 mr-2 text-racing-blue" />
-              Worker Status
-            </h3>
-            <p className="text-gray-300 mb-3">
-              <strong>Connection:</strong>{' '}
-              {workerStatus === 'checking' && <span className="text-yellow-400">Checking...</span>}
-              {workerStatus === 'online' && <span className="text-green-400">✓ Online</span>}
-              {workerStatus === 'offline' && <span className="text-red-400">✗ Offline</span>}
-              {workerStatus === null && <span className="text-gray-400">Not tested</span>}
-            </p>
-            <button
-              onClick={checkWorkerStatus}
-              disabled={workerStatus === 'checking'}
-              className="bg-racing-blue hover:bg-racing-blue/80 px-3 py-1 rounded text-sm disabled:opacity-50"
-            >
-              {workerStatus === 'checking' ? 'Testing...' : 'Test Connection'}
-            </button>
-          </div>
         </div>
 
         {/* Data Loading Status */}
@@ -361,7 +315,7 @@ DEMO DATA (Placeholder):
           <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6 mb-8">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-racing-blue"></div>
-              <span>Loading race data from remote source...</span>
+              <span>Loading race data from local Data folder...</span>
             </div>
           </div>
         )}
@@ -373,38 +327,45 @@ DEMO DATA (Placeholder):
         )}
 
         {raceData.data.length > 0 && (
-          <>
-            <div className="bg-green-900/20 border border-green-700 rounded-lg p-6 mb-8">
-              <h3 className="font-semibold text-green-400 mb-2">Data Loaded Successfully</h3>
-              <p className="text-green-300">Race data loaded and ready for AI analysis.</p>
-              {raceData.data[0]?.pdfDocuments?.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-green-800">
-                  <h4 className="font-semibold text-green-400 mb-2">📄 Available PDF Documents ({raceData.data[0].pdfDocuments.length})</h4>
-                  <div className="space-y-2">
-                    {raceData.data[0].pdfDocuments.map((pdf: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between bg-gray-800/30 rounded p-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-300">{pdf.name}</span>
-                          <span className="text-xs text-gray-500">({(pdf.size / 1024 / 1024).toFixed(2)} MB)</span>
-                        </div>
-                        <a 
-                          href={pdf.downloadUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs bg-racing-blue hover:bg-racing-blue/80 text-white px-3 py-1 rounded transition-colors"
-                        >
-                          View PDF
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    ℹ️ These documents enhance AI analysis with additional race context and technical data.
-                  </p>
+          <div className="bg-green-900/20 border border-green-700 rounded-lg p-6 mb-8">
+            <h3 className="font-semibold text-green-400 mb-2">Data Loaded Successfully</h3>
+            <p className="text-green-300 mb-2">
+              Race data loaded from your local <code>Data/</code> folder and ready for AI analysis.
+            </p>
+            <div className="grid md:grid-cols-3 gap-3 text-sm text-green-200">
+              <div>
+                <div className="font-semibold">Race Results</div>
+                <div className="text-green-100">
+                  {raceData.data[0]?.raceResults ? 'Available' : 'Not found'}
                 </div>
-              )}
+              </div>
+              <div>
+                <div className="font-semibold">Lap Times</div>
+                <div className="text-green-100">
+                  {Array.isArray(raceData.data[0]?.lapTimes)
+                    ? `${raceData.data[0].lapTimes.length} laps loaded`
+                    : 'Not found'}
+                </div>
+              </div>
+              <div>
+                <div className="font-semibold">Weather</div>
+                <div className="text-green-100">
+                  {raceData.data[0]?.weather ? 'Available' : 'Not found'}
+                </div>
+              </div>
+              <div>
+                <div className="font-semibold">Telemetry</div>
+                <div className="text-green-100">
+                  {raceData.data[0]?.telemetry?.available
+                    ? `Available (${raceData.data[0].telemetry.type})`
+                    : 'Not detected'}
+                </div>
+              </div>
             </div>
-          </>
+            <p className="text-xs text-green-300 mt-4">
+              Source: {raceData.data[0]?.dataSource || 'Local Data Folder'}
+            </p>
+          </div>
         )}
 
         {/* AI Tools Panel */}
@@ -446,7 +407,7 @@ DEMO DATA (Placeholder):
         <div className="mb-8">
           <TrackMapViewer 
             track={selectedTrack}
-            pdfUrl={raceData.data[0]?.pdfDocuments?.[0]?.downloadUrl}
+            pdfUrl={`/api/track-map/${selectedTrack}`}
             mapData={{
               corners: selectedTrack === 'barber' ? 17 : selectedTrack === 'cota' ? 20 : selectedTrack === 'indianapolis' ? 14 : 12,
               length: selectedTrack === 'road-america' ? '4.048 miles' : '3.7 km',
@@ -461,7 +422,7 @@ DEMO DATA (Placeholder):
         {/* Weather Controls */}
         <div className="mb-8">
           <WeatherControls
-            initialWeather={raceData.data[0]?.weather}
+            initialWeather={initialWeatherSummary}
             onWeatherChange={(weather) => {
               setSimulatedWeather(weather)
               console.log('🌤️ Weather simulation updated:', weather)
