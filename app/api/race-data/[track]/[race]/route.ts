@@ -34,8 +34,12 @@ export async function GET(
     if (!fs.existsSync(dataDir)) {
       return NextResponse.json({ 
         error: 'Data not found',
-        message: 'Please download the data from Google Drive and place it in the Data/ folder',
-        link: 'https://drive.google.com/drive/folders/1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou?usp=sharing'
+        message: process.env.NODE_ENV === 'production' 
+          ? 'Local data is not available in production. This feature requires local development environment.'
+          : 'Please download the data from Google Drive and place it in the Data/ folder',
+        link: process.env.NODE_ENV === 'production' 
+          ? null 
+          : 'https://drive.google.com/drive/folders/1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou?usp=sharing'
       }, { status: 404 })
     }
 

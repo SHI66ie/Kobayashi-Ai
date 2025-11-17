@@ -1,0 +1,7 @@
+# Exclude large Data folder from Netlify deployment
+# The local data refactor was for development - production will need a different approach
+Data/
+
+# Also exclude any backup or temp data folders
+*-temp/
+*.zip
