@@ -16,6 +16,15 @@ export default function SetupGuide() {
           the data files are missing, incomplete, or in the wrong location.
         </p>
         
+        {typeof window !== 'undefined' && window.location.hostname !== 'localhost' && (
+          <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3 mb-4">
+            <p className="text-yellow-300 text-sm">
+              <strong>Production Note:</strong> The local data feature is designed for development environments. 
+              In production, the large telemetry files are excluded to keep deployment sizes manageable.
+            </p>
+          </div>
+        )}
+        
         <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
           <h4 className="font-semibold text-orange-300">Common Issues:</h4>
           
