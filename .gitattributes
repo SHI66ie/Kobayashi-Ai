@@ -1,1 +1,2 @@
 Data/**/*telemetry*.json filter=lfs diff=lfs merge=lfs -text
+Data/**/R*_*_telemetry*.json filter=lfs diff=lfs merge=lfs -text
