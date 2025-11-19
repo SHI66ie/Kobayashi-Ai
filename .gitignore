@@ -74,10 +74,11 @@ temp/
 # Temporary extracted racing data
 *-temp/
 
-# Racing data (hosted on Google Drive - 18+ GB)
-# (raw files are stored outside the repo; processed JSON under /Data is tracked)
+# Racing data (now hosted on S3 via Cloudflare Worker)
+# Large data files should not be in the repo for production builds
+Data/
 
-# Telemetry files are now tracked via Git LFS
+# Telemetry files are now tracked via Git LFS (but excluded from builds)
 
 # Cloudflare Worker (deployed separately)
 /drive-proxy/
