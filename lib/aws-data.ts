@@ -44,26 +44,46 @@ export async function fetchRaceData(track: string, filename: string): Promise<an
   
   if (config.useAWS) {
     // Production: Fetch from AWS CloudFront
-    const url = `https://${config.cloudFrontDomain}/${track}/${filename}`
-    console.log(`📡 Fetching from AWS: ${url}`)
-    
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Cache-Control': 'no-cache' // Ensure fresh data for development
+    const base = `https://${config.cloudFrontDomain}`
+
+    // Support multiple possible key layouts so bucket structure can be
+    // either mirrored from local Data/ or flattened.
+    const keyCandidates = [
+      // Preferred layout: <track>/<filename>
+      `${track}/${filename}`,
+      // Layout with Data/ prefix (e.g. Data/virginia-international-raceway/...)
+      `Data/${track}/${filename}`,
+      // Fallbacks: file at root or under Data/
+      `${filename}`,
+      `Data/${filename}`
+    ]
+
+    for (const key of keyCandidates) {
+      const url = `${base}/${key}`
+      console.log(`📡 Trying AWS URL: ${url}`)
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'Cache-Control': 'no-cache' // Ensure fresh data for development
+          }
+        })
+        
+        if (!response.ok) {
+          console.warn(`⚠️ AWS fetch failed for ${filename} at ${key}: ${response.status}`)
+          // 404/403/etc: try next candidate
+          continue
         }
-      })
-      
-      if (!response.ok) {
-        console.warn(`⚠️ AWS fetch failed for ${filename}: ${response.status}`)
-        return null
+        
+        console.log(`✅ AWS fetch succeeded for ${filename} at ${key}`)
+        return await response.json()
+      } catch (error) {
+        console.error(`❌ Error fetching ${filename} from AWS at ${key}:`, error)
+        // Try next candidate
       }
-      
-      return await response.json()
-    } catch (error) {
-      console.error(`❌ Error fetching ${filename} from AWS:`, error)
-      return null
     }
+
+    console.error(`❌ All AWS key candidates failed for ${filename} (track=${track})`)
+    return null
   } else {
     // Development: Use local filesystem (existing logic)
     console.log(`📂 Using local data for ${filename}`)

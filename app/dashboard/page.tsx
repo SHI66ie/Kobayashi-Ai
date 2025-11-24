@@ -546,7 +546,7 @@ DEMO DATA (Placeholder):
           <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6 mb-8">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-racing-blue"></div>
-              <span>Loading race data from local Data folder...</span>
+              <span>Loading race data from server API...</span>
             </div>
           </div>
         )}
@@ -561,7 +561,19 @@ DEMO DATA (Placeholder):
           <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-2 border-green-500/30 rounded-xl p-6 mb-8 shadow-lg shadow-green-500/10">
             <h3 className="font-semibold text-green-400 mb-2">Data Loaded Successfully</h3>
             <p className="text-green-300 mb-2">
-              Race data loaded from your local <code>Data/</code> folder and ready for AI analysis.
+              {(() => {
+                const src = String(raceData.data[0]?.dataSource || '').toLowerCase()
+                if (src.includes('aws')) {
+                  return 'Race data loaded from AWS CloudFront/S3 and ready for AI analysis.'
+                }
+                if (src.includes('custom')) {
+                  return 'Race data loaded from your custom upload and ready for AI analysis.'
+                }
+                if (src.includes('local')) {
+                  return 'Race data loaded from your local Data/ folder and ready for AI analysis.'
+                }
+                return 'Race data loaded and ready for AI analysis.'
+              })()}
             </p>
             <div className="grid md:grid-cols-3 gap-3 text-sm text-green-200">
               <div>
