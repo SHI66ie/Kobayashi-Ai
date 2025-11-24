@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Papa from 'papaparse'
 import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp } from 'lucide-react'
 import SetupGuide from '../components/SetupGuide'
 import AIToolsPanel from '../components/AIToolsPanel'
@@ -24,6 +25,9 @@ export default function DashboardPage() {
   const [generatedReport, setGeneratedReport] = useState<string | null>(null)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [simulatedWeather, setSimulatedWeather] = useState<any>(null)
+  const [dataSourceMode, setDataSourceMode] = useState<'official' | 'custom'>('official')
+  const [customDataError, setCustomDataError] = useState<string | null>(null)
+  const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
   const tracks = [
     { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama', available: true },
@@ -40,6 +44,11 @@ export default function DashboardPage() {
     setGeneratedReport(null)
     
     try {
+      if (dataSourceMode === 'custom') {
+        setRaceData(prev => ({ ...prev, loading: false }))
+        return
+      }
+
       // Load race data from local JSON files in the Data folder
       console.log(`📂 Loading ${selectedTrack} ${selectedRace} data from local Data folder...`)
 
@@ -79,6 +88,150 @@ export default function DashboardPage() {
 If this persists, check the server console for detailed error logs.`,
         data: []
       })
+    }
+  }
+
+  const handleCustomDataUpload = async (event: any) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setRaceData({ loading: true, error: null, data: [] })
+    setGeneratedReport(null)
+    setCustomDataError(null)
+
+    try {
+      const fileName = file.name.toLowerCase()
+      const isCSV = fileName.endsWith('.csv') || file.type === 'text/csv'
+      const text = await file.text()
+
+      let normalized: any = null
+      let nextTrack = selectedTrack
+      let nextRace = selectedRace
+
+      if (isCSV) {
+        const result = Papa.parse(text, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true
+        }) as any
+
+        if (result.errors && result.errors.length > 0) {
+          console.warn('CSV parse errors:', result.errors)
+        }
+
+        const rows = (result.data || []).filter((row: any) => row && Object.keys(row).length > 0)
+
+        if (!rows.length) {
+          throw new Error('CSV file appears to be empty or has no valid rows')
+        }
+
+        const firstRow: any = rows[0]
+
+        if (typeof firstRow.track === 'string') {
+          nextTrack = firstRow.track
+        }
+        if (typeof firstRow.race === 'string') {
+          nextRace = firstRow.race
+        }
+
+        const lapTimes = rows.map((row: any, index: number) => {
+          const lapTimeValue =
+            row.lapTime ??
+            row.lap_time ??
+            row.LapTime ??
+            row['Lap Time'] ??
+            row.time ??
+            row.Time
+
+          const driverValue =
+            row.driver ??
+            row.Driver ??
+            row.driverName ??
+            row['Driver Name']
+
+          const lapNumberValue =
+            row.lap ??
+            row.Lap ??
+            row['Lap Number'] ??
+            row.lapNumber ??
+            index + 1
+
+          return {
+            ...row,
+            lapNumber: lapNumberValue,
+            lapTime: lapTimeValue,
+            driver: driverValue
+          }
+        })
+
+        normalized = {
+          track: nextTrack,
+          race: nextRace,
+          raceResults: null,
+          lapTimes,
+          weather: null,
+          telemetry: null
+        }
+      } else {
+        const parsed = JSON.parse(text)
+
+        normalized = {
+          track: parsed.track || selectedTrack,
+          race: parsed.race || selectedRace,
+          raceResults: parsed.raceResults || parsed.results || null,
+          lapTimes: parsed.lapTimes || parsed.laps || [],
+          weather: parsed.weather || parsed.weatherData || null,
+          telemetry: parsed.telemetry || null
+        }
+
+        if (parsed.track && typeof parsed.track === 'string') {
+          nextTrack = parsed.track
+        }
+        if (parsed.race && typeof parsed.race === 'string') {
+          nextRace = parsed.race
+        }
+      }
+
+      console.log('✅ Loaded custom race data from upload:', {
+        file: file.name,
+        isCSV,
+        hasRaceResults: !!normalized.raceResults,
+        lapCount: Array.isArray(normalized.lapTimes) ? normalized.lapTimes.length : 0,
+        hasWeather: !!normalized.weather,
+        hasTelemetry: !!normalized.telemetry
+      })
+
+      if (nextTrack && typeof nextTrack === 'string') {
+        setSelectedTrack(nextTrack)
+      }
+      if (nextRace && typeof nextRace === 'string') {
+        setSelectedRace(nextRace)
+      }
+
+      setRaceData({
+        loading: false,
+        error: null,
+        data: [{ ...normalized, dataSource: isCSV ? `Custom CSV Upload: ${file.name}` : `Custom Upload: ${file.name}` }]
+      })
+    } catch (error: any) {
+      console.error('❌ Error loading custom race data:', error)
+      setRaceData({ loading: false, error: null, data: [] })
+      setCustomDataError(
+        'Failed to parse custom data. Supported formats: JSON (.json) or CSV (.csv). For JSON, include fields like raceResults, lapTimes, weather, and telemetry. For CSV, include a header row and at least one time column such as lapTime or time.'
+      )
+    }
+  }
+
+  const handleCustomTrackMapUpload = (event: any) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const url = URL.createObjectURL(file)
+      setCustomTrackMapUrl(url)
+      console.log('✅ Loaded custom track map PDF:', file.name)
+    } catch (error) {
+      console.error('❌ Error loading custom track map:', error)
     }
   }
 
@@ -273,7 +426,7 @@ DEMO DATA (Placeholder):
           <div className="flex flex-wrap gap-4">
             <button 
               onClick={startRaceReplay}
-              disabled={isReplaying}
+              disabled={isReplaying || dataSourceMode === 'custom'}
               className="bg-gradient-to-r from-racing-red to-red-700 hover:from-red-700 hover:to-racing-red disabled:from-gray-600 disabled:to-gray-700 px-6 py-3 rounded-lg font-semibold transition-all shadow-lg shadow-racing-red/20 hover:shadow-racing-red/40 flex items-center space-x-2"
             >
               {isReplaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
@@ -282,11 +435,11 @@ DEMO DATA (Placeholder):
             
             <button 
               onClick={() => loadRaceData()}
-              disabled={raceData.loading}
+              disabled={raceData.loading || dataSourceMode === 'custom'}
               className="border-2 border-racing-blue/50 hover:border-racing-blue disabled:border-gray-700 bg-racing-blue/10 hover:bg-racing-blue/20 px-6 py-3 rounded-lg font-semibold transition-all flex items-center space-x-2"
             >
               <BarChart3 className="w-5 h-5" />
-              <span>{raceData.loading ? 'Loading...' : 'Load Analytics'}</span>
+              <span>{dataSourceMode === 'custom' ? 'Load Analytics (use custom data below)' : raceData.loading ? 'Loading...' : 'Load Analytics'}</span>
             </button>
 
             <button 
@@ -306,6 +459,60 @@ DEMO DATA (Placeholder):
                 </>
               )}
             </button>
+          </div>
+          <div className="mt-6 space-y-3">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-xs uppercase text-gray-400 tracking-wide">Data Source</span>
+              <label className="flex items-center space-x-2 text-xs text-gray-300">
+                <input
+                  type="radio"
+                  name="data-source-mode"
+                  value="official"
+                  checked={dataSourceMode === 'official'}
+                  onChange={() => setDataSourceMode('official')}
+                  className="accent-racing-red"
+                />
+                <span>Official GR Cup (Data/ folder or AWS)</span>
+              </label>
+              <label className="flex items-center space-x-2 text-xs text-gray-300">
+                <input
+                  type="radio"
+                  name="data-source-mode"
+                  value="custom"
+                  checked={dataSourceMode === 'custom'}
+                  onChange={() => {
+                    setDataSourceMode('custom')
+                    setRaceData({ loading: false, error: null, data: [] })
+                  }}
+                  className="accent-racing-blue"
+                />
+                <span>Custom Upload (JSON / CSV)</span>
+              </label>
+            </div>
+
+            {dataSourceMode === 'custom' && (
+              <div className="mt-2 bg-gray-900/70 border border-gray-700 rounded-lg p-4 space-y-2">
+                <p className="text-xs text-gray-400">
+                  Upload a JSON or CSV file containing your own race data. For JSON, expected fields are
+                  <code className="mx-1">raceResults</code>,
+                  <code className="mx-1">lapTimes</code>,
+                  <code className="mx-1">weather</code>, and optionally
+                  <code className="mx-1">telemetry</code>.
+                  For CSV, include a header row with lap timing columns like
+                  <code className="mx-1">lapTime</code> or
+                  <code className="mx-1">time</code>.
+                </p>
+                <input
+                  type="file"
+                  accept=".json,.csv,application/json,text/csv"
+                  onChange={handleCustomDataUpload}
+                  className="text-xs text-gray-200 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-racing-blue/20 file:text-racing-blue hover:file:bg-racing-blue/30"
+                />
+                {customDataError && (
+                  <p className="text-xs text-red-400 mt-1 whitespace-pre-line">{customDataError}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -418,10 +625,23 @@ DEMO DATA (Placeholder):
         )}
 
         {/* Track Map Viewer */}
-        <div className="mb-8">
+        <div className="mb-8 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
+            <div className="text-sm text-gray-300 font-semibold">Track Map</div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+              <span>Use official PDF from Drive or upload your own map (PDF only):</span>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handleCustomTrackMapUpload}
+                className="text-xs text-gray-200 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-racing-blue/20 file:text-racing-blue hover:file:bg-racing-blue/30"
+              />
+            </div>
+          </div>
+
           <TrackMapViewer 
             track={selectedTrack}
-            pdfUrl={`/api/track-map/${selectedTrack}`}
+            pdfUrl={customTrackMapUrl || `/api/track-map/${selectedTrack}`}
             mapData={{
               corners: selectedTrack === 'barber' ? 17 : selectedTrack === 'cota' ? 20 : selectedTrack === 'indianapolis' ? 14 : 12,
               length: selectedTrack === 'road-america' ? '4.048 miles' : '3.7 km',
