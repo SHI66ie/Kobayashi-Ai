@@ -17,15 +17,49 @@ const TRACK_FOLDERS: Record<string, string> = {
   'vir': 'virginia-international-raceway'
 }
 
-// Map track IDs to possible PDF filenames
+// Map track IDs to possible map filenames (PDF base names; images use same base)
 const TRACK_PDF_CANDIDATES: Record<string, string[]> = {
-  barber: ['Barber_Circuit_Map.pdf', 'barber_circuit_map.pdf'],
-  cota: ['COTA_Circuit_Map.pdf', 'cota_circuit_map.pdf', 'Circuit_of_the_Americas_Circuit_Map.pdf'],
-  indianapolis: ['Indianapolis_Circuit_Map.pdf', 'indianapolis_circuit_map.pdf'],
-  'road-america': ['Road_America_Circuit_Map.pdf', 'road_america_circuit_map.pdf'],
-  sebring: ['Sebring_Circuit_Map.pdf', 'sebring_circuit_map.pdf'],
-  sonoma: ['Sonoma_Circuit_Map.pdf', 'sonoma_circuit_map.pdf'],
-  vir: ['VIR_Circuit_Map.pdf', 'vir_circuit_map.pdf', 'Virginia_International_Raceway_Circuit_Map.pdf']
+  barber: [
+    'Barber_Circuit_Map.pdf',
+    'barber_circuit_map.pdf'
+  ],
+  cota: [
+    'COTA_Circuit_Map.pdf',
+    'cota_circuit_map.pdf',
+    'Circuit_of_the_Americas_Circuit_Map.pdf'
+  ],
+  indianapolis: [
+    'Indianapolis_Circuit_Map.pdf',
+    'indianapolis_circuit_map.pdf',
+    'Indy_Circuit_Map.pdf',
+    'Indy_Circuit_Map - Copy.pdf'
+  ],
+  'road-america': [
+    'Road_America_Circuit_Map.pdf',
+    'road_america_circuit_map.pdf',
+    'Road_America_Map.pdf',
+    'Road_America_Map - Copy.pdf'
+  ],
+  sebring: [
+    'Sebring_Circuit_Map.pdf',
+    'sebring_circuit_map.pdf',
+    'Sebring_Track_Sector_Map.pdf',
+    'Sebring_Track_Sector_Map - Copy.pdf'
+  ],
+  sonoma: [
+    'Sonoma_Circuit_Map.pdf',
+    'sonoma_circuit_map.pdf',
+    'Sonoma_Map.pdf',
+    'Sonoma_Map - Copy.pdf'
+  ],
+  vir: [
+    'VIR_Circuit_Map.pdf',
+    'vir_circuit_map.pdf',
+    'Virginia_International_Raceway_Circuit_Map.pdf',
+    'VIR_map.pdf',
+    'VIR_map - Copy.pdf',
+    'vir_map.pdf'
+  ]
 }
 
 export async function GET(
@@ -68,31 +102,47 @@ export async function GET(
       // AWS: Try to fetch map file from CloudFront (image or PDF)
       const cloudFrontDomain = getAWSInfo().domain
       const mapsPrefix = 'maps'
+      const dataPrefix = 'Data'
       
-      // Try mapped candidate filenames first
+      // Try mapped candidate filenames first, across multiple possible key layouts
       for (const name of allCandidates) {
-        const url = `https://${cloudFrontDomain}/${mapsPrefix}/${trackFolder}/${name}`
-        try {
-          const response = await fetch(url)
-          if (response.ok) {
-            console.log(`✓ Found track map at: ${url}`)
-            const fileBuffer = await response.arrayBuffer()
-            const ext = path.extname(name).toLowerCase()
-            const contentType =
-              ext === '.png' ? 'image/png' :
-              ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' :
-              'application/pdf'
-            
-            return new NextResponse(fileBuffer, {
-              status: 200,
-              headers: {
-                'Content-Type': contentType,
-                'Content-Disposition': `inline; filename="${name}"`
-              }
-            })
+        const urlCandidates = [
+          // Preferred new layout: maps/<trackFolder>/<name>
+          `https://${cloudFrontDomain}/${mapsPrefix}/${trackFolder}/${name}`,
+          // maps/<name>
+          `https://${cloudFrontDomain}/${mapsPrefix}/${name}`,
+          // Legacy layouts with Data/ prefix
+          `https://${cloudFrontDomain}/${dataPrefix}/maps/${trackFolder}/${name}`,
+          `https://${cloudFrontDomain}/${dataPrefix}/maps/${name}`,
+          // Original layout: <trackFolder>/<name>
+          `https://${cloudFrontDomain}/${trackFolder}/${name}`,
+          // Root-level fallback
+          `https://${cloudFrontDomain}/${name}`
+        ]
+
+        for (const url of urlCandidates) {
+          try {
+            const response = await fetch(url)
+            if (response.ok) {
+              console.log(` Found track map at: ${url}`)
+              const fileBuffer = await response.arrayBuffer()
+              const ext = path.extname(name).toLowerCase()
+              const contentType =
+                ext === '.png' ? 'image/png' :
+                ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' :
+                'application/pdf'
+              
+              return new NextResponse(fileBuffer, {
+                status: 200,
+                headers: {
+                  'Content-Type': contentType,
+                  'Content-Disposition': `inline; filename="${name}"`
+                }
+              })
+            }
+          } catch (error) {
+            console.log(`❌ Failed to fetch ${name} from ${url}:`, error)
           }
-        } catch (error) {
-          console.log(`❌ Failed to fetch ${name}:`, error)
         }
       }
       
