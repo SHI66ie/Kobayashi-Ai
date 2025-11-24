@@ -19,8 +19,18 @@ function getDataConfig(): DataConfig {
   const effectiveDomain = cloudFrontDomain || 
     (s3Bucket ? `${s3Bucket}.s3.${awsRegion}.amazonaws.com` : undefined)
   
+  const useAWS = !!(effectiveDomain && s3Bucket)
+  
+  // Debug logging to diagnose AWS vs local mode
+  console.log('🔍 AWS Configuration Check:')
+  console.log('  - AWS_S3_BUCKET:', s3Bucket || '(not set)')
+  console.log('  - AWS_CLOUDFRONT_DOMAIN:', cloudFrontDomain || '(not set)')
+  console.log('  - AWS_REGION:', awsRegion)
+  console.log('  - Effective Domain:', effectiveDomain || '(none)')
+  console.log('  - useAWS:', useAWS)
+  
   return {
-    useAWS: !!(effectiveDomain && s3Bucket),
+    useAWS,
     cloudFrontDomain: effectiveDomain,
     s3Bucket
   }
