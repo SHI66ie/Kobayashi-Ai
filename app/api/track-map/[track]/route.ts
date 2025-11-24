@@ -51,20 +51,21 @@ export async function GET(
     const trackFolder = TRACK_FOLDERS[track] || track
     const candidates = TRACK_PDF_CANDIDATES[track] || []
 
-    // Build list of candidate filenames for multiple extensions (pdf/png/jpg/jpeg)
+    // Build list of candidate filenames for multiple extensions (png/jpg/jpeg/pdf)
+    // We prefer image formats first when available.
     const allCandidates: string[] = []
     for (const name of candidates) {
       const base = name.replace(/\.(pdf|png|jpe?g)$/i, '')
       allCandidates.push(
-        `${base}.pdf`,
         `${base}.png`,
         `${base}.jpg`,
-        `${base}.jpeg`
+        `${base}.jpeg`,
+        `${base}.pdf`
       )
     }
     
     if (awsConfigured) {
-      // AWS: Try to fetch map file from CloudFront (PDF or image)
+      // AWS: Try to fetch map file from CloudFront (image or PDF)
       const cloudFrontDomain = getAWSInfo().domain
       const mapsPrefix = 'maps'
       
@@ -96,7 +97,7 @@ export async function GET(
       }
       
       // If no candidate found, return 404
-      return new NextResponse('Track map PDF not found on AWS', { status: 404 })
+      return new NextResponse('Track map file not found on AWS', { status: 404 })
     } else {
       // Local: Use existing filesystem logic, plus optional Data/maps/<trackFolder>/
       const trackDir = path.join(dataRoot, track)
@@ -152,7 +153,7 @@ export async function GET(
       }
 
       if (!pdfPath) {
-        return new NextResponse('Track map PDF not found', { status: 404 })
+        return new NextResponse('Track map file not found', { status: 404 })
       }
 
       const fileBuffer = fs.readFileSync(pdfPath)

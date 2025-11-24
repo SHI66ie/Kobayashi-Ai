@@ -645,10 +645,10 @@ DEMO DATA (Placeholder):
           <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
             <div className="text-sm text-gray-300 font-semibold">Track Map</div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-              <span>Use official PDF from Drive or upload your own map (PDF only):</span>
+              <span>Use official map from Data/AWS or upload your own (PDF/PNG/JPG):</span>
               <input
                 type="file"
-                accept="application/pdf"
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                 onChange={handleCustomTrackMapUpload}
                 className="text-xs text-gray-200 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-racing-blue/20 file:text-racing-blue hover:file:bg-racing-blue/30"
               />
