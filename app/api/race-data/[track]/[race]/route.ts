@@ -235,13 +235,16 @@ export async function GET(
       }
     }
 
+    const dataSource = awsConfigured ? 'aws' : 'local'
+
     return NextResponse.json({
       track,
       race,
       raceResults,
       lapTimes,
       weather,
-      telemetry
+      telemetry,
+      dataSource
     })
 
   } catch (error) {

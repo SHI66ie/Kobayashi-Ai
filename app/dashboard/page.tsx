@@ -51,11 +51,11 @@ export default function DashboardPage() {
         return
       }
 
-      // Load race data from local JSON files in the Data folder
-      console.log(`📂 Loading ${selectedTrack} ${selectedRace} data from local Data folder...`)
+      // Load race data from the server API (backed by local Data folder or AWS)
+      console.log(`📂 Loading ${selectedTrack} ${selectedRace} data from server API...`)
 
       const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
-      const dataSource = 'Local Data Folder'
+      let dataSource = 'Official dataset (server API)'
 
       if (!response.ok) {
         const errorData: any = await response.json().catch(() => ({ error: 'Unknown error' }))
@@ -65,7 +65,15 @@ export default function DashboardPage() {
 
       const data: any = await response.json()
 
-      console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} data from local files`)
+      if (data?.dataSource === 'aws') {
+        console.log('📡 Backend data source: AWS (CloudFront/S3)')
+        dataSource = 'Official dataset (AWS CloudFront/S3)'
+      } else if (data?.dataSource === 'local') {
+        console.log('📡 Backend data source: Local Data folder')
+        dataSource = 'Official dataset (Local Data folder)'
+      }
+
+      console.log(`✅ Successfully loaded ${selectedTrack} ${selectedRace} data from server API`)
       console.log('📊 Race Results present:', !!data.raceResults)
       console.log('⏱️ Lap Times entries:', Array.isArray(data.lapTimes) ? data.lapTimes.length : 0)
       console.log('🌤️ Weather data:', data.weather ? 'Available' : 'Not found')
@@ -77,15 +85,15 @@ export default function DashboardPage() {
         data: [{ ...data, dataSource }] 
       })
     } catch (error: any) {
-      console.error('❌ Error loading race data from local files:', error)
+      console.error('❌ Error loading race data from server API:', error)
       const errorMessage = error?.message || String(error)
       setRaceData({ 
         loading: false,
-        error: `Failed to load race data from local files: ${errorMessage}
+        error: `Failed to load race data: ${errorMessage}
 
-⚠️ This usually means the Data folder is missing or incomplete.
-🔧 Make sure the /Data directory exists in the project root and contains the ${selectedTrack}/${selectedRace} files.
-📁 Each track folder should include race results, lap times, weather, and telemetry JSON files.
+⚠️ This usually means the official data files are missing or unavailable.
+🔧 If you are running locally, make sure the /Data directory exists in the project root and contains the ${selectedTrack}/${selectedRace} JSON files.
+🌐 If you are using AWS, confirm that your S3 bucket / CloudFront distribution has the same Data structure uploaded.
 
 If this persists, check the server console for detailed error logs.`,
         data: []
