@@ -400,6 +400,96 @@ export default function F1Page() {
     { id: 'melbourne', name: 'Albert Park Circuit', location: 'Melbourne', available: true, category: 'f1', country: 'Australia' }
   ], [])
 
+  // Memoize loadRaceData function to prevent unnecessary re-renders
+  const loadRaceData = useCallback(async () => {
+    setRaceData({ loading: true, error: null, data: [] })
+
+    try {
+      if (dataSourceMode === 'custom') {
+        setRaceData(prev => ({ ...prev, loading: false }))
+        return
+      }
+
+      const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
+      if (!response.ok) {
+        throw new Error('Failed to load data')
+      }
+
+      const data = await response.json()
+      setRaceData({
+        loading: false,
+        error: null,
+        data: [{ ...data, dataSource: 'Official dataset' }]
+      })
+    } catch (error: any) {
+      setRaceData({
+        loading: false,
+        error: `Failed to load race data: ${error.message}`,
+        data: []
+      })
+    }
+  }, [selectedTrack, selectedRace, dataSourceMode])
+
+  // Simple export function
+  const exportReport = async () => {
+    if (!raceData.data[0]) {
+      alert('Please load race data first!')
+      return
+    }
+
+    setIsGeneratingReport(true)
+
+    try {
+      const response = await fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          raceResults: raceData.data[0]?.raceResults,
+          lapTimes: raceData.data[0]?.lapTimes,
+          weather: simulatedWeather || raceData.data[0]?.weather,
+          track: selectedTrack,
+          race: selectedRace
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'AI analysis failed')
+      }
+
+      const report = `KobayashiAI Race Analysis Report
+Track: ${tracks.find(t => t.id === selectedTrack)?.name}
+Race: ${selectedRace}
+Generated: ${new Date().toLocaleString()}
+
+${result.analysis || 'Analysis complete.'}`
+
+      setGeneratedReport(report)
+
+      const blob = new Blob([report], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `KobayashiAI_${selectedTrack}_${selectedRace}_report.txt`
+      a.click()
+      URL.revokeObjectURL(url)
+
+    } catch (error: any) {
+      const report = `KobayashiAI Race Analysis Report
+Track: ${tracks.find(t => t.id === selectedTrack)?.name}
+Race: ${selectedRace}
+Generated: ${new Date().toLocaleString()}
+
+⚠️ AI Analysis Unavailable
+${error.message || 'Could not connect to AI service'}`
+
+      setGeneratedReport(report)
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
       {/* Header */}
@@ -411,12 +501,12 @@ export default function F1Page() {
                 <ArrowLeft className="w-5 h-5" />
                 <span>Dashboard</span>
               </Link>
-              <div className="relative">
+              {/* <div className="relative">
                 <Suspense fallback={<div className="w-10 h-10 bg-gray-700 rounded-full animate-pulse" />}>
                   <ToyotaGRLogo className="w-10 h-10 text-racing-red" />
                 </Suspense>
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-racing-blue rounded-full animate-pulse" />
-              </div>
+              </div> */}
               <div>
                 <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                   KobayashiAI - F1 Analysis
@@ -1272,95 +1362,4 @@ export default function F1Page() {
       </div>
     </div>
   )
-}
-
-  // Memoize loadRaceData function to prevent unnecessary re-renders
-  const loadRaceData = useCallback(async () => {
-    setRaceData({ loading: true, error: null, data: [] })
-
-    try {
-      if (dataSourceMode === 'custom') {
-        setRaceData(prev => ({ ...prev, loading: false }))
-        return
-      }
-
-      const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
-      if (!response.ok) {
-        throw new Error('Failed to load data')
-      }
-
-      const data = await response.json()
-      setRaceData({
-        loading: false,
-        error: null,
-        data: [{ ...data, dataSource: 'Official dataset' }]
-      })
-    } catch (error: any) {
-      setRaceData({
-        loading: false,
-        error: `Failed to load race data: ${error.message}`,
-        data: []
-      })
-    }
-  }, [selectedTrack, selectedRace, dataSourceMode])
-
-  // Simple export function
-  const exportReport = async () => {
-    if (!raceData.data[0]) {
-      alert('Please load race data first!')
-      return
-    }
-
-    setIsGeneratingReport(true)
-
-    try {
-      const response = await fetch('/api/ai-analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          raceResults: raceData.data[0]?.raceResults,
-          lapTimes: raceData.data[0]?.lapTimes,
-          weather: simulatedWeather || raceData.data[0]?.weather,
-          track: selectedTrack,
-          race: selectedRace
-        })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.message || 'AI analysis failed')
-      }
-
-      const report = `KobayashiAI Race Analysis Report
-Track: ${tracks.find(t => t.id === selectedTrack)?.name}
-Race: ${selectedRace}
-Generated: ${new Date().toLocaleString()}
-
-${result.analysis || 'Analysis complete.'}`
-
-      setGeneratedReport(report)
-
-      const blob = new Blob([report], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `KobayashiAI_${selectedTrack}_${selectedRace}_report.txt`
-      a.click()
-      URL.revokeObjectURL(url)
-
-    } catch (error: any) {
-      const report = `KobayashiAI Race Analysis Report
-Track: ${tracks.find(t => t.id === selectedTrack)?.name}
-Race: ${selectedRace}
-Generated: ${new Date().toLocaleString()}
-
-⚠️ AI Analysis Unavailable
-${error.message || 'Could not connect to AI service'}`
-
-      setGeneratedReport(report)
-    } finally {
-      setIsGeneratingReport(false)
-    }
-  }
 }
