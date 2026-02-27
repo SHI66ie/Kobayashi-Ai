@@ -1,17 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import Papa from 'papaparse'
 import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp } from 'lucide-react'
-import SetupGuide from '../components/SetupGuide'
-import AIToolsPanel from '../components/AIToolsPanel'
-import AdvancedAIPanel from '../components/AdvancedAIPanel'
-import VoiceControlPanel from '../components/VoiceControlPanel'
-import TrackMapViewer from '../components/TrackMapViewer'
-import WeatherControls from '../components/WeatherControls'
-import ToyotaGRLogo from '../components/ToyotaGRLogo'
-import DriverComparisonPanel from '../components/DriverComparisonPanel'
-import RaceQASection from '../components/RaceQASection'
+
+// Lazy load heavy components for F1 optimization
+const SetupGuide = lazy(() => import('../components/SetupGuide'))
+const AIToolsPanel = lazy(() => import('../components/AIToolsPanel'))
+const AdvancedAIPanel = lazy(() => import('../components/AdvancedAIPanel'))
+const VoiceControlPanel = lazy(() => import('../components/VoiceControlPanel'))
+const TrackMapViewer = lazy(() => import('../components/TrackMapViewer'))
+const WeatherControls = lazy(() => import('../components/WeatherControls'))
+const ToyotaGRLogo = lazy(() => import('../components/ToyotaGRLogo'))
+const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonPanel'))
+const RaceQASection = lazy(() => import('../components/RaceQASection'))
+
+// Performance monitoring hook
+import { usePerformanceMonitoring } from '../hooks/usePerformanceMonitoring'
 
 interface RaceData {
   loading: boolean
@@ -20,6 +25,9 @@ interface RaceData {
 }
 
 export default function DashboardPage() {
+  // F1 Performance monitoring
+  usePerformanceMonitoring()
+
   const [selectedTrack, setSelectedTrack] = useState('barber')
   const [selectedRace, setSelectedRace] = useState('R1')
   const [isReplaying, setIsReplaying] = useState(false)
@@ -31,7 +39,8 @@ export default function DashboardPage() {
   const [customDataError, setCustomDataError] = useState<string | null>(null)
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
-  const tracks = [
+  // Memoize tracks array to prevent re-creation
+  const tracks = useMemo(() => [
     { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama', available: true },
     { id: 'cota', name: 'Circuit of the Americas', location: 'Texas', available: true },
     { id: 'indianapolis', name: 'Indianapolis Motor Speedway', location: 'Indiana', available: true },
@@ -39,12 +48,13 @@ export default function DashboardPage() {
     { id: 'sebring', name: 'Sebring International Raceway', location: 'Florida', available: true },
     { id: 'sonoma', name: 'Sonoma Raceway', location: 'California', available: true },
     { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia', available: true }
-  ]
+  ], [])
 
-  const loadRaceData = async () => {
+  // Memoize loadRaceData function to prevent unnecessary re-renders
+  const loadRaceData = useCallback(async () => {
     setRaceData({ loading: true, error: null, data: [] })
     setGeneratedReport(null)
-    
+
     try {
       if (dataSourceMode === 'custom') {
         setRaceData(prev => ({ ...prev, loading: false }))
@@ -79,15 +89,15 @@ export default function DashboardPage() {
       console.log('🌤️ Weather data:', data.weather ? 'Available' : 'Not found')
       console.log('📈 Telemetry:', data.telemetry?.available ? `Mode: ${data.telemetry.type}` : 'Not detected')
 
-      setRaceData({ 
-        loading: false, 
-        error: null, 
-        data: [{ ...data, dataSource }] 
+      setRaceData({
+        loading: false,
+        error: null,
+        data: [{ ...data, dataSource }]
       })
     } catch (error: any) {
       console.error('❌ Error loading race data from server API:', error)
       const errorMessage = error?.message || String(error)
-      setRaceData({ 
+      setRaceData({
         loading: false,
         error: `Failed to load race data: ${errorMessage}
 
@@ -99,6 +109,7 @@ If this persists, check the server console for detailed error logs.`,
         data: []
       })
     }
+  }, [selectedTrack, selectedRace, dataSourceMode])
   }
 
   const handleCustomDataUpload = async (event: any) => {
