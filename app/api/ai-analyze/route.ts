@@ -1,63 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { openai, google, groq, generateText } from 'ai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 export const runtime = 'nodejs' // Use Node.js runtime for better compatibility
 
-// Initialize Groq (FREE & FAST - PRIMARY)
-let groq: OpenAI | null = null
-try {
-  if (process.env.GROQ_API_KEY) {
-    groq = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: 'https://api.groq.com/openai/v1',
-      timeout: 50000,
-      maxRetries: 2
-    })
-  }
-} catch (error) {
-  console.error('Failed to initialize Groq:', error)
-}
+// Initialize AI providers using Vercel AI SDK
+const groqProvider = process.env.GROQ_API_KEY ? groq(process.env.GROQ_API_KEY) : null
+const openaiProvider = process.env.OPENAI_API_KEY ? openai(process.env.OPENAI_API_KEY) : null
+const googleProvider = process.env.GEMINI_API_KEY ? google(process.env.GEMINI_API_KEY) : null
 
-// Initialize DeepSeek (FREE but may need verification)
-let deepseek: OpenAI | null = null
-try {
-  if (process.env.DEEPSEEK_API_KEY) {
-    deepseek = new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: 'https://api.deepseek.com',
-      timeout: 50000,
-      maxRetries: 2
-    })
-  }
-} catch (error) {
-  console.error('Failed to initialize DeepSeek:', error)
-}
-
-// Initialize Google Gemini (FREE - backup)
-let gemini: GoogleGenerativeAI | null = null
-try {
-  if (process.env.GEMINI_API_KEY) {
-    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  }
-} catch (error) {
-  console.error('Failed to initialize Gemini:', error)
-}
-
-// Initialize OpenAI (paid - final fallback)
-let openai: OpenAI | null = null
-try {
-  if (process.env.OPENAI_API_KEY) {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: 50000,
-      maxRetries: 2
-    })
-  }
-} catch (error) {
-  console.error('Failed to initialize OpenAI:', error)
+// For DeepSeek, use OpenAI-compatible client as Vercel SDK doesn't have DeepSeek provider
+let deepseek: any = null
+if (process.env.DEEPSEEK_API_KEY) {
+  const { OpenAI } = require('openai')
+  deepseek = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: 'https://api.deepseek.com',
+    timeout: 50000,
+    maxRetries: 2
+  })
 }
 
 // Check for Custom LLM configuration
@@ -147,29 +109,20 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     let tokensUsed = 0
 
     // Use Groq (FREE & FAST) first
-    if (useGroq && groq) {
+    if (useGroq && groqProvider) {
       try {
-        console.log('⚡ Using Groq (FREE & FAST)...')
-        const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant', // Updated to current supported model
-          messages: [
-            {
-              role: "system",
-              content: `You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.`
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
+        console.log('⚡ Using Groq (FREE & FAST) via Vercel AI SDK...')
+        const result = await generateText({
+          model: groqProvider('llama-3.1-8b-instant'),
+          system: 'You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.',
+          prompt: prompt,
           temperature: 0.7,
-          max_tokens: 2000,
-          stream: false
+          maxTokens: 2000
         })
         
-        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
-        modelUsed = 'llama-3.1-8b (FREE via Groq)'
-        tokensUsed = completion.usage?.total_tokens || 0
+        analysis = result.text || 'No analysis generated'
+        modelUsed = 'llama-3.1-8b (FREE via Groq - Vercel AI SDK)'
+        tokensUsed = result.usage?.totalTokens || 0
         
       } catch (groqError: any) {
         console.error('⚠️ Groq error, falling back to next provider:', groqError.message)
@@ -242,72 +195,61 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     }
     
     // Use Gemini (FREE) if custom LLM failed or not available
-    if (!analysis && useGemini && gemini) {
+    if (!analysis && useGemini && googleProvider) {
       try {
-        console.log('🆓 Using Gemini 1.5 Flash (FREE)...')
-        // Using Flash model (stable and supported)
-        let model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
-        
-        const result = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2000,
-            topP: 0.9,
-            topK: 40
-          }
+        console.log('🆓 Using Gemini 1.5 Flash (FREE) via Vercel AI SDK...')
+        const result = await generateText({
+          model: googleProvider('gemini-1.5-flash-latest'),
+          prompt: prompt,
+          temperature: 0.7,
+          maxTokens: 2000
         })
         
-        analysis = result.response.text() || 'No analysis generated'
-        modelUsed = 'gemini-1.5-flash-latest (FREE)'
-        tokensUsed = result.response.usageMetadata?.totalTokenCount || 0
+        analysis = result.text || 'No analysis generated'
+        modelUsed = 'gemini-1.5-flash-latest (FREE - Vercel AI SDK)'
+        tokensUsed = result.usage?.totalTokens || 0
         
       } catch (geminiError: any) {
         console.error('⚠️ Gemini error, falling back to OpenAI if available:', geminiError.message)
-        if (!openai) throw geminiError
+        if (!openaiProvider) throw geminiError
       }
     }
     
     // Use OpenAI as final fallback
-    if (!analysis && useOpenAI && openai) {
+    if (!analysis && useOpenAI && openaiProvider) {
       const model = process.env.GPT_MODEL || 'gpt-3.5-turbo'
       try {
-        const completion = await openai.chat.completions.create({
-          model,
-          messages: [
-            {
-              role: "system",
-              content: `You are RaceMind AI, expert racing analyst for Toyota GR Cup.`
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
+        console.log(`💰 Using OpenAI ${model} via Vercel AI SDK...`)
+        const result = await generateText({
+          model: openaiProvider(model),
+          system: 'You are RaceMind AI, expert racing analyst for Toyota GR Cup.',
+          prompt: prompt,
           temperature: 0.7,
-          max_tokens: 1500
+          maxTokens: 1500
         })
         
-        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
-        modelUsed = completion.model
-        tokensUsed = completion.usage?.total_tokens || 0
+        analysis = result.text || 'No analysis generated'
+        modelUsed = `${model} (via Vercel AI SDK - OpenAI)`
+        tokensUsed = result.usage?.totalTokens || 0
         
       } catch (openaiError: any) {
-        // Try GPT-3.5 fallback
+        // Try GPT-3.5 fallback if GPT-4 failed
         if (model.includes('gpt-4')) {
-          console.log('⚠️ GPT-4 not available, falling back to GPT-3.5...')
-          const fallback = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              { role: "system", content: `Racing analyst. Numbered insights.` },
-              { role: "user", content: prompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
-          analysis = fallback.choices[0]?.message?.content || 'No analysis generated'
-          modelUsed = fallback.model
-          tokensUsed = fallback.usage?.total_tokens || 0
+          console.log('⚠️ GPT-4 not available, falling back to GPT-3.5 via Vercel AI SDK...')
+          try {
+            const fallbackResult = await generateText({
+              model: openaiProvider('gpt-3.5-turbo'),
+              system: 'You are RaceMind AI, expert racing analyst for Toyota GR Cup. Numbered insights.',
+              prompt: prompt,
+              temperature: 0.7,
+              maxTokens: 1000
+            })
+            analysis = fallbackResult.text || 'No analysis generated'
+            modelUsed = 'gpt-3.5-turbo (fallback via Vercel AI SDK - OpenAI)'
+            tokensUsed = fallbackResult.usage?.totalTokens || 0
+          } catch (fallbackError: any) {
+            throw fallbackError
+          }
         } else {
           throw openaiError
         }
