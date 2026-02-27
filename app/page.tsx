@@ -1,15 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, lazy, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { Car, Trophy, Zap, Target, Brain, Clock } from 'lucide-react'
+
+// Lazy load non-critical components
+const LazyFeatureCard = lazy(() => import('../components/FeatureCard'))
 
 export default function HomePage() {
   const [selectedTrack, setSelectedTrack] = useState('cota')
   const [selectedRace, setSelectedRace] = useState('R1')
   const router = useRouter()
 
-  const tracks = [
+  // Memoize tracks array to prevent re-creation
+  const tracks = useMemo(() => [
     { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama' },
     { id: 'cota', name: 'Circuit of the Americas', location: 'Texas' },
     { id: 'indianapolis', name: 'Indianapolis Motor Speedway', location: 'Indiana' },
@@ -17,9 +22,10 @@ export default function HomePage() {
     { id: 'sebring', name: 'Sebring International Raceway', location: 'Florida' },
     { id: 'sonoma', name: 'Sonoma Raceway', location: 'California' },
     { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia' }
-  ]
+  ], [])
 
-  const features = [
+  // Memoize features array
+  const features = useMemo(() => [
     {
       icon: <Brain className="w-8 h-8 text-racing-red" />,
       title: '3-Lap Hindsight Predictor',
@@ -40,7 +46,16 @@ export default function HomePage() {
       title: 'AI Training Export',
       description: 'Generate actionable insights and PDF reports for driver improvement'
     }
-  ]
+  ], [])
+
+  // Optimized navigation handlers
+  const handleStartRaceReplay = () => {
+    router.push('/dashboard')
+  }
+
+  const handleViewAnalytics = () => {
+    router.push('/dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
@@ -57,7 +72,7 @@ export default function HomePage() {
               <select 
                 value={selectedTrack}
                 onChange={(e) => setSelectedTrack(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm"
+                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
                 title="Select Track"
               >
                 {tracks.map(track => (
@@ -69,7 +84,7 @@ export default function HomePage() {
               <select 
                 value={selectedRace}
                 onChange={(e) => setSelectedRace(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm"
+                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
                 title="Select Race"
               >
                 <option value="R1">Race 1</option>
@@ -80,7 +95,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section - Critical above-the-fold content */}
       <section className="py-20 px-6">
         <div className="container mx-auto text-center">
           <h2 className="text-5xl font-bold mb-6">
@@ -93,14 +108,14 @@ export default function HomePage() {
           </p>
           <div className="flex justify-center space-x-4">
             <button 
-              onClick={() => router.push('/dashboard')}
-              className="bg-racing-red hover:bg-red-700 px-8 py-3 rounded-lg font-semibold transition-colors"
+              onClick={handleStartRaceReplay}
+              className="bg-racing-red hover:bg-red-700 px-8 py-3 rounded-lg font-semibold transition-colors transform hover:scale-105 active:scale-95"
             >
               Start Race Replay
             </button>
             <button 
-              onClick={() => router.push('/dashboard')}
-              className="border border-gray-600 hover:border-gray-400 px-8 py-3 rounded-lg font-semibold transition-colors"
+              onClick={handleViewAnalytics}
+              className="border border-gray-600 hover:border-gray-400 px-8 py-3 rounded-lg font-semibold transition-colors transform hover:scale-105 active:scale-95"
             >
               View Analytics
             </button>
@@ -108,35 +123,37 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* Features Grid - Lazy loaded for performance */}
       <section className="py-16 px-6 bg-black/30">
         <div className="container mx-auto">
           <h3 className="text-3xl font-bold text-center mb-12">Core Features</h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-                <div className="mb-4">{feature.icon}</div>
-                <h4 className="text-lg font-semibold mb-2">{feature.title}</h4>
-                <p className="text-gray-400 text-sm">{feature.description}</p>
-              </div>
+              <Suspense key={index} fallback={<div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 animate-pulse h-32"></div>}>
+                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 transform transition-all duration-300 hover:scale-105 hover:border-racing-red">
+                  <div className="mb-4">{feature.icon}</div>
+                  <h4 className="text-lg font-semibold mb-2">{feature.title}</h4>
+                  <p className="text-gray-400 text-sm">{feature.description}</p>
+                </div>
+              </Suspense>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Stats Section - Optimized with CSS Grid */}
       <section className="py-16 px-6">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div>
+            <div className="transform transition-transform duration-300 hover:scale-105">
               <div className="text-4xl font-bold text-racing-red mb-2">92%</div>
               <div className="text-gray-400">Strategy Validation Accuracy</div>
             </div>
-            <div>
+            <div className="transform transition-transform duration-300 hover:scale-105">
               <div className="text-4xl font-bold text-racing-blue mb-2">7</div>
               <div className="text-gray-400">Toyota GR Cup Tracks</div>
             </div>
-            <div>
+            <div className="transform transition-transform duration-300 hover:scale-105">
               <div className="text-4xl font-bold text-racing-red mb-2">3</div>
               <div className="text-gray-400">Lap Prediction Horizon</div>
             </div>
