@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Car, Trophy, Zap, Target, Brain, Clock } from 'lucide-react'
 
 // Lazy load non-critical components
-const LazyFeatureCard = lazy(() => import('../components/FeatureCard'))
+const LazyFeatureCard = lazy(() => import('./components/FeatureCard'))
 
 export default function HomePage() {
   const [selectedTrack, setSelectedTrack] = useState('cota')
@@ -130,11 +130,11 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <Suspense key={index} fallback={<div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 animate-pulse h-32"></div>}>
-                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 transform transition-all duration-300 hover:scale-105 hover:border-racing-red">
-                  <div className="mb-4">{feature.icon}</div>
-                  <h4 className="text-lg font-semibold mb-2">{feature.title}</h4>
-                  <p className="text-gray-400 text-sm">{feature.description}</p>
-                </div>
+                <LazyFeatureCard 
+                  icon={feature.icon}
+                  title={feature.title}
+                  description={feature.description}
+                />
               </Suspense>
             ))}
           </div>
