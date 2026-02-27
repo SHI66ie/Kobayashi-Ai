@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const [customDataError, setCustomDataError] = useState<string | null>(null)
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
-  // F1 Data Input state
+  // F1 Data Input state - Updated for 2026 Regulations
   const [f1Data, setF1Data] = useState({
     // Driver Information
     driverName: '',
@@ -48,18 +48,21 @@ export default function DashboardPage() {
     driverExperience: '',
     driverTeam: '',
 
-    // Car Specifications
+    // Car Specifications (2026 Technical Regulations)
     carModel: '',
-    engineType: '',
-    tireCompound: '',
-    fuelLoad: '',
-    carWeight: '',
+    engineType: '2026 Standardized Power Unit', // Standardized for all teams
+    tireCompound: 'C3', // 2026 C1-C5 compound system
+    fuelLoad: '110kg', // 2026 standardized fuel load
+    carWeight: '798kg', // 2026 minimum weight
+    aeroPackage: '2026 Ground Effect', // New aero philosophy
+    energyRecovery: '800kW', // 2026 MGU-K limit
 
     // Race Conditions
     trackCondition: 'dry',
     safetyCar: false,
     redFlag: false,
     raceLaps: '',
+    trackEvolution: 'medium', // 2026 track evolution factor
 
     // Weather Data
     airTemp: '25',
@@ -67,13 +70,15 @@ export default function DashboardPage() {
     humidity: '50',
     windSpeed: '5',
     rainProbability: '0',
+    precipitation: 'none', // 2026 weather classification
 
-    // Strategy Inputs
-    pitStrategy: '',
-    fuelStrategy: '',
-    tireStrategy: '',
+    // Strategy Inputs (2026 Sprint Format)
+    pitStrategy: '2-stop', // 2026 strategy options
+    fuelStrategy: 'conservative', // 2026 fuel management
+    tireStrategy: 'C3-C4-C4', // 2026 tire allocation
     overtakeAttempts: '',
-    defensiveDriving: ''
+    defensiveDriving: '',
+    sprintWeekend: false // 2026 sprint weekend flag
   })
 
   const [showF1DataInput, setShowF1DataInput] = useState(false)
@@ -592,11 +597,11 @@ ${error.message || 'Could not connect to AI service'}`
                 </div>
               </div>
 
-              {/* Car Specifications */}
+              {/* Car Specifications (2026 Technical Regulations) */}
               <div className="bg-gray-800/50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <span className="w-2 h-2 bg-racing-red rounded-full"></span>
-                  <span>Car Specifications</span>
+                  <span>Car Specifications (2026 Regulations)</span>
                 </h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
@@ -606,34 +611,32 @@ ${error.message || 'Could not connect to AI service'}`
                       value={f1Data.carModel}
                       onChange={(e) => updateF1Data('carModel', e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                      placeholder="e.g., W14 E Performance"
+                      placeholder="e.g., RB20"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Engine Type</label>
+                    <label className="block text-sm font-medium mb-2">Power Unit</label>
                     <select
                       value={f1Data.engineType}
                       onChange={(e) => updateF1Data('engineType', e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
                     >
-                      <option value="">Select Engine</option>
-                      <option value="V6 Turbo Hybrid">V6 Turbo Hybrid</option>
-                      <option value="V8">V8</option>
-                      <option value="V10">V10</option>
-                      <option value="Other">Other</option>
+                      <option value="2026 Standardized Power Unit">2026 Standardized Power Unit</option>
+                      <option value="Legacy V6 Turbo Hybrid">Legacy V6 Turbo Hybrid</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Tire Compound</label>
+                    <label className="block text-sm font-medium mb-2">Tire Compound (C1-C5)</label>
                     <select
                       value={f1Data.tireCompound}
                       onChange={(e) => updateF1Data('tireCompound', e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
                     >
-                      <option value="">Select Compound</option>
-                      <option value="Soft">Soft</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
+                      <option value="C1">C1 (Soft)</option>
+                      <option value="C2">C2 (Soft-Medium)</option>
+                      <option value="C3">C3 (Medium)</option>
+                      <option value="C4">C4 (Medium-Hard)</option>
+                      <option value="C5">C5 (Hard)</option>
                       <option value="Intermediate">Intermediate</option>
                       <option value="Wet">Wet</option>
                     </select>
@@ -641,31 +644,52 @@ ${error.message || 'Could not connect to AI service'}`
                   <div>
                     <label className="block text-sm font-medium mb-2">Fuel Load (kg)</label>
                     <input
-                      type="number"
+                      type="text"
                       value={f1Data.fuelLoad}
                       onChange={(e) => updateF1Data('fuelLoad', e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                      placeholder="e.g., 110"
+                      placeholder="110kg (standardized)"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Car Weight (kg)</label>
+                    <label className="block text-sm font-medium mb-2">Minimum Weight (kg)</label>
                     <input
-                      type="number"
+                      type="text"
                       value={f1Data.carWeight}
                       onChange={(e) => updateF1Data('carWeight', e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                      placeholder="e.g., 798"
+                      placeholder="798kg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Aero Package</label>
+                    <select
+                      value={f1Data.aeroPackage}
+                      onChange={(e) => updateF1Data('aeroPackage', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                    >
+                      <option value="2026 Ground Effect">2026 Ground Effect</option>
+                      <option value="Legacy Wing">Legacy Wing</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <label className="block text-sm font-medium mb-2">Energy Recovery (kW)</label>
+                    <input
+                      type="text"
+                      value={f1Data.energyRecovery}
+                      onChange={(e) => updateF1Data('energyRecovery', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="800kW MGU-K limit"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Race Conditions */}
+              {/* Race Conditions (2026 Format) */}
               <div className="bg-gray-800/50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                  <span>Race Conditions</span>
+                  <span>Race Conditions (2026 Format)</span>
                 </h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
@@ -679,6 +703,18 @@ ${error.message || 'Could not connect to AI service'}`
                       <option value="damp">Damp</option>
                       <option value="wet">Wet</option>
                       <option value="flooded">Flooded</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Track Evolution</label>
+                    <select
+                      value={f1Data.trackEvolution}
+                      onChange={(e) => updateF1Data('trackEvolution', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    >
+                      <option value="low">Low Evolution</option>
+                      <option value="medium">Medium Evolution</option>
+                      <option value="high">High Evolution</option>
                     </select>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -699,6 +735,15 @@ ${error.message || 'Could not connect to AI service'}`
                     />
                     <label className="text-sm font-medium">Red Flag</label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={f1Data.sprintWeekend}
+                      onChange={(e) => updateF1Data('sprintWeekend', e.target.checked)}
+                      className="accent-purple-500"
+                    />
+                    <label className="text-sm font-medium">Sprint Weekend</label>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Race Laps</label>
                     <input
@@ -706,17 +751,17 @@ ${error.message || 'Could not connect to AI service'}`
                       value={f1Data.raceLaps}
                       onChange={(e) => updateF1Data('raceLaps', e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                      placeholder="e.g., 71"
+                      placeholder={f1Data.sprintWeekend ? "17-20 laps (sprint)" : "50-78 laps"}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Weather Data */}
+              {/* Weather Data (2026 Classification) */}
               <div className="bg-gray-800/50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  <span>Weather Data</span>
+                  <span>Weather Data (2026 Classification)</span>
                 </h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
@@ -773,42 +818,73 @@ ${error.message || 'Could not connect to AI service'}`
                       placeholder="0"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Precipitation</label>
+                    <select
+                      value={f1Data.precipitation}
+                      onChange={(e) => updateF1Data('precipitation', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="none">None</option>
+                      <option value="light">Light Drizzle</option>
+                      <option value="moderate">Moderate Rain</option>
+                      <option value="heavy">Heavy Rain</option>
+                      <option value="storm">Thunderstorm</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Strategy Inputs */}
+              {/* Strategy Inputs (2026 Sprint Format) */}
               <div className="bg-gray-800/50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                  <span>Race Strategy</span>
+                  <span>Race Strategy (2026 Sprint Format)</span>
                 </h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Pit Strategy</label>
-                    <textarea
-                      value={f1Data.pitStrategy}
-                      onChange={(e) => updateF1Data('pitStrategy', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-20"
-                      placeholder="Describe pit stop strategy (e.g., 2 stops, undercut, overcut)"
-                    />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Pit Strategy</label>
+                      <select
+                        value={f1Data.pitStrategy}
+                        onChange={(e) => updateF1Data('pitStrategy', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="1-stop">1-Stop Strategy</option>
+                        <option value="2-stop">2-Stop Strategy</option>
+                        <option value="3-stop">3-Stop Strategy</option>
+                        <option value="undercut">Undercut Strategy</option>
+                        <option value="overcut">Overcut Strategy</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Fuel Strategy</label>
+                      <select
+                        value={f1Data.fuelStrategy}
+                        onChange={(e) => updateF1Data('fuelStrategy', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="conservative">Conservative (Save Fuel)</option>
+                        <option value="balanced">Balanced (Standard)</option>
+                        <option value="aggressive">Aggressive (Push Pace)</option>
+                        <option value="sprint">Sprint Mode (Max Power)</option>
+                      </select>
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Fuel Strategy</label>
-                    <textarea
-                      value={f1Data.fuelStrategy}
-                      onChange={(e) => updateF1Data('fuelStrategy', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-20"
-                      placeholder="Fuel management approach (e.g., heavy first stint, light final stint)"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Tire Strategy</label>
-                    <textarea
+                    <label className="block text-sm font-medium mb-2">Tire Allocation (2026 C1-C5)</label>
+                    <select
                       value={f1Data.tireStrategy}
                       onChange={(e) => updateF1Data('tireStrategy', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-20"
-                      placeholder="Tire degradation and compound strategy"
-                    />
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="C1-C2-C2">C1-C2-C2 (Soft Race)</option>
+                      <option value="C2-C3-C3">C2-C3-C3 (Balanced)</option>
+                      <option value="C3-C4-C4">C3-C4-C4 (Standard)</option>
+                      <option value="C4-C5-C5">C4-C5-C5 (Hard Race)</option>
+                      <option value="C1-C1-C2">C1-C1-C2 (Sprint Weekend)</option>
+                      <option value="C3-C3-C4">C3-C3-C4 (Wet Weather)</option>
+                    </select>
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
@@ -818,7 +894,7 @@ ${error.message || 'Could not connect to AI service'}`
                         value={f1Data.overtakeAttempts}
                         onChange={(e) => updateF1Data('overtakeAttempts', e.target.value)}
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        placeholder="Number of overtakes planned"
+                        placeholder="Number of DRS overtakes planned"
                       />
                     </div>
                     <div>
@@ -844,10 +920,15 @@ ${error.message || 'Could not connect to AI service'}`
                 <button
                   onClick={() => setF1Data({
                     driverName: '', driverNumber: '', driverExperience: '', driverTeam: '',
-                    carModel: '', engineType: '', tireCompound: '', fuelLoad: '', carWeight: '',
-                    trackCondition: 'dry', safetyCar: false, redFlag: false, raceLaps: '',
-                    airTemp: '25', trackTemp: '35', humidity: '50', windSpeed: '5', rainProbability: '0',
-                    pitStrategy: '', fuelStrategy: '', tireStrategy: '', overtakeAttempts: '', defensiveDriving: ''
+                    carModel: '', engineType: '2026 Standardized Power Unit', tireCompound: 'C3', 
+                    fuelLoad: '110kg', carWeight: '798kg', aeroPackage: '2026 Ground Effect', 
+                    energyRecovery: '800kW',
+                    trackCondition: 'dry', safetyCar: false, redFlag: false, raceLaps: '', 
+                    trackEvolution: 'medium', sprintWeekend: false,
+                    airTemp: '25', trackTemp: '35', humidity: '50', windSpeed: '5', 
+                    rainProbability: '0', precipitation: 'none',
+                    pitStrategy: '2-stop', fuelStrategy: 'conservative', 
+                    tireStrategy: 'C3-C4-C4', overtakeAttempts: '', defensiveDriving: ''
                   })}
                   className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                 >
