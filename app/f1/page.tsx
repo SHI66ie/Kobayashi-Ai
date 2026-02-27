@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
 import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { f1Api, transformApiData, safeApiCall } from '../../lib/f1-api'
