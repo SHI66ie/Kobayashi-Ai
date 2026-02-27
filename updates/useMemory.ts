@@ -37,7 +37,9 @@ export function useMemory() {
       // Calculate accuracy based on position matches
       const accuracy = calculateAccuracy(predicted, actual);
 
-      const memory: Omit<PredictionMemory, 'id' | 'timestamp'> = {
+      const memory: PredictionMemory = {
+        id: crypto?.randomUUID?.() ?? `pred_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
         predictionType: predictionType as any,
         track,
         category: category as any,
