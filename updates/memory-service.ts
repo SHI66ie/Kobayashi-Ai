@@ -1,4 +1,4 @@
-import { PredictionMemory, MemoryStats, LearningWeights } from './memory-types';
+import { PredictionMemory, MemoryStats, LearningWeights, PredictionOutcome } from './memory-types';
 
 // Memory Service for Racing Predictions
 // Handles storage, retrieval, and learning from prediction outcomes
