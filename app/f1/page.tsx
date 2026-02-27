@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { f1Api, transformApiData, safeApiCall } from '../../lib/f1-api'
 
 // Lazy load heavy components for F1 optimization
 const SetupGuide = lazy(() => import('../components/SetupGuide'))
@@ -39,6 +40,15 @@ export default function F1Page() {
   const [dataSourceMode, setDataSourceMode] = useState<'official' | 'custom'>('official')
   const [customDataError, setCustomDataError] = useState<string | null>(null)
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
+
+  // API Data State
+  const [apiTeams, setApiTeams] = useState<any[]>([])
+  const [apiDrivers, setApiDrivers] = useState<any[]>([])
+  const [apiRaces, setApiRaces] = useState<any[]>([])
+  const [apiStandings, setApiStandings] = useState<any[]>([])
+  const [apiLoading, setApiLoading] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [useRealData, setUseRealData] = useState(false)
 
   // F1 Data Input state - Updated for 2026 Regulations
   const [f1Data, setF1Data] = useState({
@@ -143,22 +153,80 @@ export default function F1Page() {
     }
   }
 
-  const generatePredictionResults = (type: string, track: any) => {
-    const baseAccuracy = 0.78 + Math.random() * 0.17 // 78-95% accuracy (improved for 2026 AI)
+  // Load real API data
+  const loadApiData = useCallback(async () => {
+    setApiLoading(true)
+    setApiError(null)
 
-    // 2026 F1 Teams and Drivers (updated for current season)
-    const teams2026 = {
-      'Red Bull Racing': ['Max Verstappen', 'Liam Lawson'],
-      'Mercedes AMG': ['Lewis Hamilton', 'George Russell'],
-      'Ferrari': ['Charles Leclerc', 'Carlos Sainz'],
-      'McLaren': ['Lando Norris', 'Oscar Piastri'],
-      'Aston Martin': ['Fernando Alonso', 'Lance Stroll'],
-      'Alpine': ['Pierre Gasly', 'Esteban Ocon'],
-      'Williams': ['Alexander Albon', 'Logan Sargeant'],
-      'RB': ['Yuki Tsunoda', 'Daniel Ricciardo'],
-      'Haas': ['Kevin Magnussen', 'Nico Hulkenberg'],
-      'Sauber': ['Valtteri Bottas', 'Zhou Guanyu']
+    try {
+      const currentYear = new Date().getFullYear()
+
+      // Load teams
+      const teamsResult = await safeApiCall(() => f1Api.getTeams(currentYear))
+      if (teamsResult.data) {
+        setApiTeams(teamsResult.data.map(transformApiData.team))
+      }
+
+      // Load drivers
+      const driversResult = await safeApiCall(() => f1Api.getDrivers(currentYear))
+      if (driversResult.data) {
+        setApiDrivers(driversResult.data.map(transformApiData.driver))
+      }
+
+      // Load races
+      const racesResult = await safeApiCall(() => f1Api.getRaces(currentYear))
+      if (racesResult.data) {
+        setApiRaces(racesResult.data.map(transformApiData.race))
+      }
+
+      // Load standings
+      const standingsResult = await safeApiCall(() => f1Api.getDriverStandings(currentYear))
+      if (standingsResult.data) {
+        setApiStandings(standingsResult.data.map(transformApiData.standing))
+      }
+
+      if (teamsResult.error || driversResult.error || racesResult.error || standingsResult.error) {
+        setApiError('Some API data could not be loaded. Using mock data as fallback.')
+        setUseRealData(false)
+      } else {
+        setUseRealData(true)
+      }
+    } catch (error) {
+      setApiError('Failed to load API data. Using mock data.')
+      setUseRealData(false)
+    } finally {
+      setApiLoading(false)
     }
+  }, [])
+
+  // Load API data on component mount
+  useEffect(() => {
+    loadApiData()
+  }, [loadApiData])
+
+  const generatePredictionResults = (type: string, track: any) => {
+    const baseAccuracy = 0.78 + Math.random() * 0.17 // 78-95% accuracy
+
+    // Use real API data if available, otherwise fall back to mock data
+    const teams2026 = useRealData && apiTeams.length > 0
+      ? apiTeams.map(team => [team.name, [team.name.split(' ')[0]]])
+      : {
+          'Red Bull Racing': ['Max Verstappen', 'Liam Lawson'],
+          'Mercedes AMG': ['Lewis Hamilton', 'George Russell'],
+          'Ferrari': ['Charles Leclerc', 'Carlos Sainz'],
+          'McLaren': ['Lando Norris', 'Oscar Piastri'],
+          'Aston Martin': ['Fernando Alonso', 'Lance Stroll'],
+          'Alpine': ['Pierre Gasly', 'Esteban Ocon'],
+          'Williams': ['Alexander Albon', 'Logan Sargeant'],
+          'RB': ['Yuki Tsunoda', 'Daniel Ricciardo'],
+          'Haas': ['Kevin Magnussen', 'Nico Hulkenberg'],
+          'Sauber': ['Valtteri Bottas', 'Zhou Guanyu']
+        }
+
+    // Use real driver data if available
+    const realDrivers = useRealData && apiDrivers.length > 0
+      ? apiDrivers.map(driver => driver.name)
+      : ['Max Verstappen', 'Lewis Hamilton', 'Charles Leclerc', 'Lando Norris', 'George Russell', 'Carlos Sainz', 'Oscar Piastri', 'Fernando Alonso']
 
     // 2026 Technical Regulations Factors
     const trackFactors = {
@@ -184,15 +252,16 @@ export default function F1Page() {
           type: 'Qualifying Predictions (2026 Rules)',
           track: track?.name,
           predictions: [
-            { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', time: '1:09.543', confidence: 0.94 },
-            { position: 2, driver: 'Lewis Hamilton', team: 'Mercedes AMG', time: '1:09.678', confidence: 0.89 },
-            { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', time: '1:09.892', confidence: 0.86 },
-            { position: 4, driver: 'Lando Norris', team: 'McLaren', time: '1:10.034', confidence: 0.83 },
-            { position: 5, driver: 'George Russell', team: 'Mercedes AMG', time: '1:10.156', confidence: 0.80 }
+            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', time: '1:09.543', confidence: 0.94 },
+            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', time: '1:09.678', confidence: 0.89 },
+            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', time: '1:09.892', confidence: 0.86 },
+            { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', time: '1:10.034', confidence: 0.83 },
+            { position: 5, driver: realDrivers[4] || 'George Russell', team: 'Mercedes AMG', time: '1:10.156', confidence: 0.80 }
           ],
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 Aero Package Efficiency', 'Power Unit Performance', 'Driver Skill', 'Track-Specific Setup', 'Tire Strategy'],
-          rules: '2026 Technical Regulations: New aero philosophy, standardized power units, enhanced sustainability'
+          rules: '2026 Technical Regulations: New aero philosophy, standardized power units, enhanced sustainability',
+          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
       case 'race':
@@ -200,18 +269,19 @@ export default function F1Page() {
           type: 'Race Finish Predictions (2026 Format)',
           track: track?.name,
           predictions: [
-            { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.91, points: 26 }, // 2026: Win + Fastest Lap
-            { position: 2, driver: 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.78, points: 19 },
-            { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', confidence: 0.73, points: 16 },
-            { position: 4, driver: 'Lando Norris', team: 'McLaren', confidence: 0.69, points: 13 },
-            { position: 5, driver: 'Carlos Sainz', team: 'Ferrari', confidence: 0.66, points: 11 },
-            { position: 6, driver: 'George Russell', team: 'Mercedes AMG', confidence: 0.63, points: 9 },
-            { position: 7, driver: 'Oscar Piastri', team: 'McLaren', confidence: 0.59, points: 7 },
-            { position: 8, driver: 'Fernando Alonso', team: 'Aston Martin', confidence: 0.56, points: 5 }
+            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.91, points: 26 },
+            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.78, points: 19 },
+            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.73, points: 16 },
+            { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', confidence: 0.69, points: 13 },
+            { position: 5, driver: realDrivers[4] || 'Carlos Sainz', team: 'Ferrari', confidence: 0.66, points: 11 },
+            { position: 6, driver: realDrivers[5] || 'George Russell', team: 'Mercedes AMG', confidence: 0.63, points: 9 },
+            { position: 7, driver: realDrivers[6] || 'Oscar Piastri', team: 'McLaren', confidence: 0.59, points: 7 },
+            { position: 8, driver: realDrivers[7] || 'Fernando Alonso', team: 'Aston Martin', confidence: 0.56, points: 5 }
           ],
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['Starting Position', '2026 Tire Degradation Model', 'DRS Strategy', 'Pit Window Timing', '2026 Power Unit Efficiency'],
-          rules: '2026 Points System: 26-19-16-13-11-9-7-5-3-1 + 1 for fastest lap'
+          rules: '2026 Points System: 26-19-16-13-11-9-7-5-3-1 + 1 for fastest lap',
+          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
       case 'podium':
@@ -219,13 +289,14 @@ export default function F1Page() {
           type: 'Podium Predictions (2026 Season)',
           track: track?.name,
           predictions: [
-            { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.87, odds: '1.35' },
-            { position: 2, driver: 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.75, odds: '3.10' },
-            { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', confidence: 0.70, odds: '4.20' }
+            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.87, odds: '1.35' },
+            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.75, odds: '3.10' },
+            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.70, odds: '4.20' }
           ],
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 Championship Standings', 'Recent Performance', '2026 Technical Package', 'Team Strategy'],
-          rules: '2026 Sprint Points: 8-7-6-5-4-3-2-1 for sprint races (Austria, USA, Qatar, Brazil, China, Qatar)'
+          rules: '2026 Sprint Points: 8-7-6-5-4-3-2-1 for sprint races (Austria, USA, Qatar, Brazil, China, Qatar)',
+          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
       case 'pit-strategy':
@@ -248,7 +319,8 @@ export default function F1Page() {
           },
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 Tire Compound Characteristics', 'Track-Specific Degradation', '2026 Aero Impact', 'Power Unit Fuel Efficiency'],
-          rules: '2026 Tire Rules: 5 compounds (C1-C5), mandatory sets reduced, enhanced sustainability'
+          rules: '2026 Tire Rules: 5 compounds (C1-C5), mandatory sets reduced, enhanced sustainability',
+          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
       case 'overtake':
@@ -258,13 +330,14 @@ export default function F1Page() {
           type: 'Overtaking Opportunities (2026 Technical Rules)',
           track: track?.name,
           predictions: [
-            { zone: 'DRS Zone 1 (Main Straight)', difficulty: overtakeTrackFactor.power > 0.92 ? 'Easy' : 'Medium', successRate: 0.82, drivers: ['HAM', 'LEC', 'NOR', 'PIA'] },
-            { zone: 'DRS Zone 2 (Back Straight)', difficulty: overtakeTrackFactor.aero > 0.90 ? 'Medium' : 'Hard', successRate: 0.68, drivers: ['VER', 'SAI', 'RUS', 'ALO'] },
-            { zone: 'Corner Complex (DRS Available)', difficulty: overtakeTrackFactor.handling > 0.90 ? 'Easy' : 'Medium', successRate: 0.75, drivers: ['LEC', 'NOR', 'PIA', 'STR'] }
+            { zone: 'DRS Zone 1 (Main Straight)', difficulty: overtakeTrackFactor.power > 0.92 ? 'Easy' : 'Medium', successRate: 0.82, drivers: [realDrivers.slice(0, 4).join(', ')] },
+            { zone: 'DRS Zone 2 (Back Straight)', difficulty: overtakeTrackFactor.aero > 0.90 ? 'Medium' : 'Hard', successRate: 0.68, drivers: [realDrivers.slice(4, 8).join(', ')] },
+            { zone: 'Corner Complex (DRS Available)', difficulty: overtakeTrackFactor.handling > 0.90 ? 'Easy' : 'Medium', successRate: 0.75, drivers: [realDrivers.slice(2, 6).join(', ')] }
           ],
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 DRS Zone Optimization', 'Corner Speed Differentials', '2026 Aero Wake Effects', 'Tire Grip Levels'],
-          rules: '2026 DRS Rules: Maintained from 2023, enhanced activation zones, improved detection'
+          rules: '2026 DRS Rules: Maintained from 2023, enhanced activation zones, improved detection',
+          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
       case 'sprint':
@@ -275,7 +348,8 @@ export default function F1Page() {
             note: 'Not a sprint weekend - regular qualifying format applies',
             sprintWeekends: sprintWeekends.map(id => id.charAt(0).toUpperCase() + id.slice(1)),
             accuracy: 100,
-            factors: ['Sprint Weekend Schedule']
+            factors: ['Sprint Weekend Schedule'],
+            dataSource: useRealData ? 'Real API Data' : 'Mock Data'
           }
         }
 
@@ -283,15 +357,16 @@ export default function F1Page() {
           type: 'Sprint Race Predictions (2026 Format)',
           track: track?.name,
           predictions: [
-            { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', points: 8, pole: true },
-            { position: 2, driver: 'Lewis Hamilton', team: 'Mercedes AMG', points: 7, pole: false },
-            { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', points: 6, pole: false },
-            { position: 4, driver: 'Lando Norris', team: 'McLaren', points: 5, pole: false },
-            { position: 5, driver: 'George Russell', team: 'Mercedes AMG', points: 4, pole: false }
+            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', points: 8, pole: true },
+            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', points: 7, pole: false },
+            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', points: 6, pole: false },
+            { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', points: 5, pole: false },
+            { position: 5, driver: realDrivers[4] || 'George Russell', team: 'Mercedes AMG', points: 4, pole: false }
           ],
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['Sprint Qualifying Performance', 'Short Race Strategy', 'Overtaking Opportunities'],
-          rules: '2026 Sprint Format: 100km race, points for top 8 (8-7-6-5-4-3-2-1), pole for race winner'
+          rules: '2026 Sprint Format: 100km race, points for top 8 (8-7-6-5-4-3-2-1), pole for race winner',
+          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
       default:
@@ -345,7 +420,31 @@ export default function F1Page() {
                 <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                   KobayashiAI - F1 Analysis
                 </h1>
-                <p className="text-xs text-racing-red font-semibold tracking-wider">FORMULA 1</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <p className="text-xs text-racing-red font-semibold tracking-wider">FORMULA 1</p>
+                  {apiLoading && (
+                    <div className="flex items-center space-x-1 text-xs text-blue-400">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-400"></div>
+                      <span>Loading API data...</span>
+                    </div>
+                  )}
+                  {!apiLoading && (
+                    <div className="flex items-center space-x-1 text-xs">
+                      {useRealData ? (
+                        <>
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-green-400">Live API Data</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                          <span className="text-yellow-400">Mock Data</span>
+                          {apiError && <span className="text-red-400 ml-1">(API Error)</span>}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-4">
