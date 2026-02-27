@@ -153,46 +153,47 @@ export default function F1Page() {
     }
   }
 
-  // Load real API data
+  // Load real API data from Sportradar
   const loadApiData = useCallback(async () => {
     setApiLoading(true)
     setApiError(null)
 
     try {
-      const currentYear = new Date().getFullYear()
+      // Get current season first
+      const seasonsResult = await safeApiCall(() => f1Api.getSeasons())
+      let currentSeasonId = 'sr:season:831' // Default to 2023 season as fallback
 
-      // Load teams
-      const teamsResult = await safeApiCall(() => f1Api.getTeams(currentYear))
-      if (teamsResult.data) {
-        setApiTeams(teamsResult.data.map(transformApiData.team))
+      if (seasonsResult.data) {
+        // Find the most recent season
+        const currentYear = new Date().getFullYear().toString()
+        const currentSeason = seasonsResult.data.seasons.find(s => s.year === currentYear)
+        if (currentSeason) {
+          currentSeasonId = currentSeason.id
+        }
       }
 
-      // Load drivers
-      const driversResult = await safeApiCall(() => f1Api.getDrivers(currentYear))
-      if (driversResult.data) {
-        setApiDrivers(driversResult.data.map(transformApiData.driver))
+      // Load teams/standings
+      const standingsResult = await safeApiCall(() => f1Api.getStandings(currentSeasonId))
+      if (standingsResult.data && standingsResult.data.standings[0]?.groups[0]?.standings) {
+        const standings = standingsResult.data.standings[0].groups[0].standings
+        setApiTeams(standings.map(s => transformApiData.team(s.competitor)))
+        setApiStandings(standings.map(transformApiData.standing))
       }
 
       // Load races
-      const racesResult = await safeApiCall(() => f1Api.getRaces(currentYear))
-      if (racesResult.data) {
-        setApiRaces(racesResult.data.map(transformApiData.race))
+      const racesResult = await safeApiCall(() => f1Api.getRaces(currentSeasonId))
+      if (racesResult.data && racesResult.data.stages) {
+        setApiRaces(racesResult.data.stages.map(transformApiData.race))
       }
 
-      // Load standings
-      const standingsResult = await safeApiCall(() => f1Api.getDriverStandings(currentYear))
-      if (standingsResult.data) {
-        setApiStandings(standingsResult.data.map(transformApiData.standing))
-      }
-
-      if (teamsResult.error || driversResult.error || racesResult.error || standingsResult.error) {
-        setApiError('Some API data could not be loaded. Using mock data as fallback.')
+      if (standingsResult.error || racesResult.error) {
+        setApiError('Some Sportradar API data could not be loaded. Using mock data as fallback.')
         setUseRealData(false)
       } else {
         setUseRealData(true)
       }
     } catch (error) {
-      setApiError('Failed to load API data. Using mock data.')
+      setApiError('Failed to load Sportradar API data. Using mock data.')
       setUseRealData(false)
     } finally {
       setApiLoading(false)
