@@ -40,6 +40,52 @@ export default function DashboardPage() {
   const [customDataError, setCustomDataError] = useState<string | null>(null)
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
+  // F1 Data Input state
+  const [f1Data, setF1Data] = useState({
+    // Driver Information
+    driverName: '',
+    driverNumber: '',
+    driverExperience: '',
+    driverTeam: '',
+
+    // Car Specifications
+    carModel: '',
+    engineType: '',
+    tireCompound: '',
+    fuelLoad: '',
+    carWeight: '',
+
+    // Race Conditions
+    trackCondition: 'dry',
+    safetyCar: false,
+    redFlag: false,
+    raceLaps: '',
+
+    // Weather Data
+    airTemp: '25',
+    trackTemp: '35',
+    humidity: '50',
+    windSpeed: '5',
+    rainProbability: '0',
+
+    // Strategy Inputs
+    pitStrategy: '',
+    fuelStrategy: '',
+    tireStrategy: '',
+    overtakeAttempts: '',
+    defensiveDriving: ''
+  })
+
+  const [showF1DataInput, setShowF1DataInput] = useState(false)
+
+  // Helper function to update F1 data
+  const updateF1Data = (field: string, value: any) => {
+    setF1Data(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
   // Memoize tracks array to prevent re-creation
   const tracks = useMemo(() => [
     { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama', available: true },
@@ -230,6 +276,351 @@ ${error.message || 'Could not connect to AI service'}`
               <span>Generate AI Report</span>
             </button>
           </div>
+        </div>
+
+        {/* F1 Data Input Section */}
+        <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-racing-red to-red-700 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">F1</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">F1 Data Input</h2>
+                <p className="text-sm text-gray-400">Input detailed Formula 1 race data for AI analysis</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowF1DataInput(!showF1DataInput)}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>{showF1DataInput ? 'Hide' : 'Show'} Input Form</span>
+              <span className={`transform transition-transform ${showF1DataInput ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+          </div>
+
+          {showF1DataInput && (
+            <div className="space-y-8">
+              {/* Driver Information */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-racing-blue rounded-full"></span>
+                  <span>Driver Information</span>
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Driver Name</label>
+                    <input
+                      type="text"
+                      value={f1Data.driverName}
+                      onChange={(e) => updateF1Data('driverName', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                      placeholder="e.g., Lewis Hamilton"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Driver Number</label>
+                    <input
+                      type="text"
+                      value={f1Data.driverNumber}
+                      onChange={(e) => updateF1Data('driverNumber', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                      placeholder="e.g., 44"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Experience (Years)</label>
+                    <input
+                      type="number"
+                      value={f1Data.driverExperience}
+                      onChange={(e) => updateF1Data('driverExperience', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                      placeholder="e.g., 15"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Team</label>
+                    <input
+                      type="text"
+                      value={f1Data.driverTeam}
+                      onChange={(e) => updateF1Data('driverTeam', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                      placeholder="e.g., Mercedes AMG Petronas"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Car Specifications */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-racing-red rounded-full"></span>
+                  <span>Car Specifications</span>
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Car Model</label>
+                    <input
+                      type="text"
+                      value={f1Data.carModel}
+                      onChange={(e) => updateF1Data('carModel', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="e.g., W14 E Performance"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Engine Type</label>
+                    <select
+                      value={f1Data.engineType}
+                      onChange={(e) => updateF1Data('engineType', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                    >
+                      <option value="">Select Engine</option>
+                      <option value="V6 Turbo Hybrid">V6 Turbo Hybrid</option>
+                      <option value="V8">V8</option>
+                      <option value="V10">V10</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tire Compound</label>
+                    <select
+                      value={f1Data.tireCompound}
+                      onChange={(e) => updateF1Data('tireCompound', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                    >
+                      <option value="">Select Compound</option>
+                      <option value="Soft">Soft</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Hard">Hard</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Wet">Wet</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Fuel Load (kg)</label>
+                    <input
+                      type="number"
+                      value={f1Data.fuelLoad}
+                      onChange={(e) => updateF1Data('fuelLoad', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="e.g., 110"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Car Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={f1Data.carWeight}
+                      onChange={(e) => updateF1Data('carWeight', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="e.g., 798"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Race Conditions */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                  <span>Race Conditions</span>
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Track Condition</label>
+                    <select
+                      value={f1Data.trackCondition}
+                      onChange={(e) => updateF1Data('trackCondition', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    >
+                      <option value="dry">Dry</option>
+                      <option value="damp">Damp</option>
+                      <option value="wet">Wet</option>
+                      <option value="flooded">Flooded</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={f1Data.safetyCar}
+                      onChange={(e) => updateF1Data('safetyCar', e.target.checked)}
+                      className="accent-yellow-500"
+                    />
+                    <label className="text-sm font-medium">Safety Car Deployed</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={f1Data.redFlag}
+                      onChange={(e) => updateF1Data('redFlag', e.target.checked)}
+                      className="accent-red-500"
+                    />
+                    <label className="text-sm font-medium">Red Flag</label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Race Laps</label>
+                    <input
+                      type="number"
+                      value={f1Data.raceLaps}
+                      onChange={(e) => updateF1Data('raceLaps', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      placeholder="e.g., 71"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Weather Data */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <span>Weather Data</span>
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Air Temperature (°C)</label>
+                    <input
+                      type="number"
+                      value={f1Data.airTemp}
+                      onChange={(e) => updateF1Data('airTemp', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="25"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Track Temperature (°C)</label>
+                    <input
+                      type="number"
+                      value={f1Data.trackTemp}
+                      onChange={(e) => updateF1Data('trackTemp', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="35"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Humidity (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={f1Data.humidity}
+                      onChange={(e) => updateF1Data('humidity', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Wind Speed (km/h)</label>
+                    <input
+                      type="number"
+                      value={f1Data.windSpeed}
+                      onChange={(e) => updateF1Data('windSpeed', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Rain Probability (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={f1Data.rainProbability}
+                      onChange={(e) => updateF1Data('rainProbability', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Strategy Inputs */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  <span>Race Strategy</span>
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Pit Strategy</label>
+                    <textarea
+                      value={f1Data.pitStrategy}
+                      onChange={(e) => updateF1Data('pitStrategy', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-20"
+                      placeholder="Describe pit stop strategy (e.g., 2 stops, undercut, overcut)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Fuel Strategy</label>
+                    <textarea
+                      value={f1Data.fuelStrategy}
+                      onChange={(e) => updateF1Data('fuelStrategy', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-20"
+                      placeholder="Fuel management approach (e.g., heavy first stint, light final stint)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tire Strategy</label>
+                    <textarea
+                      value={f1Data.tireStrategy}
+                      onChange={(e) => updateF1Data('tireStrategy', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-20"
+                      placeholder="Tire degradation and compound strategy"
+                    />
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Overtake Attempts</label>
+                      <input
+                        type="number"
+                        value={f1Data.overtakeAttempts}
+                        onChange={(e) => updateF1Data('overtakeAttempts', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="Number of overtakes planned"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Defensive Driving Level</label>
+                      <select
+                        value={f1Data.defensiveDriving}
+                        onChange={(e) => updateF1Data('defensiveDriving', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="">Select Level</option>
+                        <option value="low">Low - Focus on pace</option>
+                        <option value="medium">Medium - Balance attack/defense</option>
+                        <option value="high">High - Strong defense needed</option>
+                        <option value="extreme">Extreme - Position protection</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-700">
+                <button
+                  onClick={() => setF1Data({
+                    driverName: '', driverNumber: '', driverExperience: '', driverTeam: '',
+                    carModel: '', engineType: '', tireCompound: '', fuelLoad: '', carWeight: '',
+                    trackCondition: 'dry', safetyCar: false, redFlag: false, raceLaps: '',
+                    airTemp: '25', trackTemp: '35', humidity: '50', windSpeed: '5', rainProbability: '0',
+                    pitStrategy: '', fuelStrategy: '', tireStrategy: '', overtakeAttempts: '', defensiveDriving: ''
+                  })}
+                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Reset Form
+                </button>
+                <button
+                  onClick={() => console.log('F1 Data:', f1Data)}
+                  className="px-6 py-2 bg-racing-blue hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  Save F1 Data
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Data Loading Status */}
