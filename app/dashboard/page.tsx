@@ -80,7 +80,7 @@ export default function DashboardPage() {
 
   // F1 Race Predictions state
   const [showPredictions, setShowPredictions] = useState(false)
-  const [predictionType, setPredictionType] = useState<'qualifying' | 'race' | 'podium' | 'pit-strategy' | 'overtake'>('race')
+  const [predictionType, setPredictionType] = useState<'qualifying' | 'race' | 'podium' | 'pit-strategy' | 'overtake' | 'sprint'>('race')
   const [predictionResults, setPredictionResults] = useState<any>(null)
   const [isPredicting, setIsPredicting] = useState(false)
 
