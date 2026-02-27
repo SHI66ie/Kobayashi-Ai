@@ -212,17 +212,17 @@ export default function F1Page() {
     const teams2026 = useRealData && apiTeams.length > 0
       ? apiTeams.map(team => [team.name, [team.name.split(' ')[0]]])
       : {
-          'Red Bull Racing': ['Max Verstappen', 'Liam Lawson'],
-          'Mercedes AMG': ['Lewis Hamilton', 'George Russell'],
-          'Ferrari': ['Charles Leclerc', 'Carlos Sainz'],
-          'McLaren': ['Lando Norris', 'Oscar Piastri'],
-          'Aston Martin': ['Fernando Alonso', 'Lance Stroll'],
-          'Alpine': ['Pierre Gasly', 'Esteban Ocon'],
-          'Williams': ['Alexander Albon', 'Logan Sargeant'],
-          'RB': ['Yuki Tsunoda', 'Daniel Ricciardo'],
-          'Haas': ['Kevin Magnussen', 'Nico Hulkenberg'],
-          'Sauber': ['Valtteri Bottas', 'Zhou Guanyu']
-        }
+        'Red Bull Racing': ['Max Verstappen', 'Liam Lawson'],
+        'Mercedes AMG': ['Lewis Hamilton', 'George Russell'],
+        'Ferrari': ['Charles Leclerc', 'Carlos Sainz'],
+        'McLaren': ['Lando Norris', 'Oscar Piastri'],
+        'Aston Martin': ['Fernando Alonso', 'Lance Stroll'],
+        'Alpine': ['Pierre Gasly', 'Esteban Ocon'],
+        'Williams': ['Alexander Albon', 'Logan Sargeant'],
+        'RB': ['Yuki Tsunoda', 'Daniel Ricciardo'],
+        'Haas': ['Kevin Magnussen', 'Nico Hulkenberg'],
+        'Sauber': ['Valtteri Bottas', 'Zhou Guanyu']
+      }
 
     // Use real driver data if available
     const realDrivers = useRealData && apiDrivers.length > 0
@@ -460,12 +460,11 @@ export default function F1Page() {
         throw new Error(result.message || 'AI analysis failed')
       }
 
-      const report = `KobayashiAI Race Analysis Report
-Track: ${tracks.find(t => t.id === selectedTrack)?.name}
-Race: ${selectedRace}
-Generated: ${new Date().toLocaleString()}
-
-${result.analysis || 'Analysis complete.'}`
+      const report = 'KobayashiAI Race Analysis Report\n' +
+        'Track: ' + (tracks.find(t => t.id === selectedTrack)?.name || selectedTrack) + '\n' +
+        'Race: ' + selectedRace + '\n' +
+        'Generated: ' + new Date().toLocaleString() + '\n\n' +
+        (result.analysis || 'Analysis complete.')
 
       setGeneratedReport(report)
 
@@ -478,13 +477,12 @@ ${result.analysis || 'Analysis complete.'}`
       URL.revokeObjectURL(url)
 
     } catch (error: any) {
-      const report = `KobayashiAI Race Analysis Report
-Track: ${tracks.find(t => t.id === selectedTrack)?.name}
-Race: ${selectedRace}
-Generated: ${new Date().toLocaleString()}
-
-⚠️ AI Analysis Unavailable
-${error.message || 'Could not connect to AI service'}`
+      const report = 'KobayashiAI Race Analysis Report\n' +
+        'Track: ' + (tracks.find(t => t.id === selectedTrack)?.name || selectedTrack) + '\n' +
+        'Race: ' + selectedRace + '\n' +
+        'Generated: ' + new Date().toLocaleString() + '\n\n' +
+        '⚠️ AI Analysis Unavailable\n' +
+        (error.message || 'Could not connect to AI service')
 
       setGeneratedReport(report)
     } finally {
@@ -1103,19 +1101,17 @@ ${error.message || 'Could not connect to AI service'}`
                 {predictionType === 'qualifying' && predictionResults.predictions && (
                   <div className="space-y-2">
                     {predictionResults.predictions.map((pred: any, index: number) => (
-                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
-                        index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                        index === 1 ? 'bg-gray-400/20 border border-gray-400/30' :
-                        index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
-                        'bg-gray-700/50'
-                      }`}>
+                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                          index === 1 ? 'bg-gray-400/20 border border-gray-400/30' :
+                            index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
+                              'bg-gray-700/50'
+                        }`}>
                         <div className="flex items-center space-x-3">
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                            index === 0 ? 'bg-yellow-500 text-black' :
-                            index === 1 ? 'bg-gray-400 text-black' :
-                            index === 2 ? 'bg-orange-500 text-white' :
-                            'bg-gray-600 text-white'
-                          }`}>
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                              index === 1 ? 'bg-gray-400 text-black' :
+                                index === 2 ? 'bg-orange-500 text-white' :
+                                  'bg-gray-600 text-white'
+                            }`}>
                             {index + 1}
                           </span>
                           <span className="font-semibold">{pred.driver}</span>
@@ -1133,18 +1129,16 @@ ${error.message || 'Could not connect to AI service'}`
                 {predictionType === 'race' && predictionResults.predictions && (
                   <div className="space-y-2">
                     {predictionResults.predictions.map((pred: any, index: number) => (
-                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
-                        index < 3 ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30' :
-                        index < 10 ? 'bg-gray-700/50 border border-gray-600/30' :
-                        'bg-gray-800/30'
-                      }`}>
+                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${index < 3 ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30' :
+                          index < 10 ? 'bg-gray-700/50 border border-gray-600/30' :
+                            'bg-gray-800/30'
+                        }`}>
                         <div className="flex items-center space-x-3">
-                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            index === 0 ? 'bg-yellow-500 text-black' :
-                            index === 1 ? 'bg-gray-400 text-black' :
-                            index === 2 ? 'bg-orange-500 text-white' :
-                            'bg-gray-600 text-white'
-                          }`}>
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                              index === 1 ? 'bg-gray-400 text-black' :
+                                index === 2 ? 'bg-orange-500 text-white' :
+                                  'bg-gray-600 text-white'
+                            }`}>
                             {index + 1}
                           </span>
                           <span className="font-semibold">{pred.driver}</span>
@@ -1163,11 +1157,10 @@ ${error.message || 'Could not connect to AI service'}`
                   <div className="grid md:grid-cols-3 gap-4">
                     {predictionResults.predictions.map((pred: any, index: number) => (
                       <div key={index} className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg border border-gray-600 text-center">
-                        <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl font-bold ${
-                          index === 0 ? 'bg-yellow-500 text-black' :
-                          index === 1 ? 'bg-gray-400 text-black' :
-                          'bg-orange-500 text-white'
-                        }`}>
+                        <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                            index === 1 ? 'bg-gray-400 text-black' :
+                              'bg-orange-500 text-white'
+                          }`}>
                           {index + 1}
                         </div>
                         <h4 className="text-lg font-semibold mb-2">{pred.driver}</h4>
@@ -1198,170 +1191,167 @@ ${error.message || 'Could not connect to AI service'}`
                         ))}
                       </div>
 
-                {predictionType === 'overtake' && predictionResults.predictions && (
-                  <div className="space-y-4">
-                    {predictionResults.predictions.map((zone: any, index: number) => (
-                      <div key={index} className="bg-gray-700/50 p-4 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold">{zone.zone}</h4>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            zone.difficulty === 'Easy' ? 'bg-green-600' :
-                            zone.difficulty === 'Medium' ? 'bg-yellow-600' :
-                            'bg-red-600'
-                          }`}>
-                            {zone.difficulty}
-                          </span>
+                      {predictionType === 'overtake' && predictionResults.predictions && (
+                        <div className="space-y-4">
+                          {predictionResults.predictions.map((zone: any, index: number) => (
+                            <div key={index} className="bg-gray-700/50 p-4 rounded-lg">
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold">{zone.zone}</h4>
+                                <span className={`px-2 py-1 rounded text-xs ${zone.difficulty === 'Easy' ? 'bg-green-600' :
+                                    zone.difficulty === 'Medium' ? 'bg-yellow-600' :
+                                      'bg-red-600'
+                                  }`}>
+                                  {zone.difficulty}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-300">
+                                <p>Success Rate: {zone.successRate * 100}%</p>
+                                <p className="mt-1">Key Drivers: {zone.drivers.join(', ')}</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="text-sm text-gray-300">
-                          <p>Success Rate: {zone.successRate * 100}%</p>
-                          <p className="mt-1">Key Drivers: {zone.drivers.join(', ')}</p>
+                      )}
+
+                      {predictionType === 'sprint' && predictionResults.predictions && (
+                        <div className="space-y-2">
+                          {predictionResults.predictions.map((pred: any, index: number) => (
+                            <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                                'bg-gray-700/50'
+                              }`}>
+                              <div className="flex items-center space-x-3">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-white'
+                                  }`}>
+                                  {index + 1}
+                                </span>
+                                <span className="font-semibold">{pred.driver}</span>
+                                <span className="text-sm text-gray-400">{pred.team}</span>
+                                {pred.pole && <span className="text-xs bg-blue-600 px-2 py-1 rounded">Pole</span>}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-mono text-sm">Points: {pred.points}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {predictionResults.note && (
+                        <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                          <p className="text-blue-300">{predictionResults.note}</p>
+                          {predictionResults.sprintWeekends && (
+                            <div className="mt-2">
+                              <p className="text-sm text-blue-400">Sprint Weekends: {predictionResults.sprintWeekends.join(', ')}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-6 pt-4 border-t border-gray-600">
+                        <h4 className="font-semibold mb-2">Prediction Factors</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {predictionResults.factors?.map((factor: string, index: number) => (
+                            <span key={index} className="px-3 py-1 bg-gray-600 rounded-full text-sm">
+                              {factor}
+                            </span>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                {predictionType === 'sprint' && predictionResults.predictions && (
-                  <div className="space-y-2">
-                    {predictionResults.predictions.map((pred: any, index: number) => (
-                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
-                        index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                        'bg-gray-700/50'
-                      }`}>
-                        <div className="flex items-center space-x-3">
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                            index === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-white'
-                          }`}>
-                            {index + 1}
-                          </span>
-                          <span className="font-semibold">{pred.driver}</span>
-                          <span className="text-sm text-gray-400">{pred.team}</span>
-                          {pred.pole && <span className="text-xs bg-blue-600 px-2 py-1 rounded">Pole</span>}
+                      {predictionResults.rules && (
+                        <div className="mt-4 p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
+                          <h4 className="font-semibold text-green-300 mb-2">2026 Regulations</h4>
+                          <p className="text-green-200 text-sm">{predictionResults.rules}</p>
                         </div>
-                        <div className="text-right">
-                          <div className="font-mono text-sm">Points: {pred.points}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      )}
+                    </div>
+            )}
 
-                {predictionResults.note && (
-                  <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                    <p className="text-blue-300">{predictionResults.note}</p>
-                    {predictionResults.sprintWeekends && (
-                      <div className="mt-2">
-                        <p className="text-sm text-blue-400">Sprint Weekends: {predictionResults.sprintWeekends.join(', ')}</p>
+                    {predictionResults?.error && (
+                      <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                        <p className="text-red-300">{predictionResults.error}</p>
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="mt-6 pt-4 border-t border-gray-600">
-                  <h4 className="font-semibold mb-2">Prediction Factors</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {predictionResults.factors?.map((factor: string, index: number) => (
-                      <span key={index} className="px-3 py-1 bg-gray-600 rounded-full text-sm">
-                        {factor}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                {/* Race Data Display */}
+                {raceData.data.length > 0 && (
+                  <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-gray-600/20 shadow-xl backdrop-blur-sm">
+                    <div className="flex items-center space-x-3 mb-6">
+                      <BarChart3 className="w-5 h-5 text-green-500" />
+                      <h2 className="text-xl font-bold tracking-tight">Race Data Analysis</h2>
+                    </div>
 
-                {predictionResults.rules && (
-                  <div className="mt-4 p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
-                    <h4 className="font-semibold text-green-300 mb-2">2026 Regulations</h4>
-                    <p className="text-green-200 text-sm">{predictionResults.rules}</p>
-                  </div>
-                )}
-              </div>
-            )}
+                    {raceData.loading && (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-racing-red"></div>
+                        <span className="ml-4 text-lg">Loading race data...</span>
+                      </div>
+                    )}
 
-            {predictionResults?.error && (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
-                <p className="text-red-300">{predictionResults.error}</p>
-              </div>
-            )}
-          </div>
-        )}
+                    {raceData.error && (
+                      <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                        <p className="text-red-300">{raceData.error}</p>
+                      </div>
+                    )}
 
-        {/* Race Data Display */}
-        {raceData.data.length > 0 && (
-          <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-gray-600/20 shadow-xl backdrop-blur-sm">
-            <div className="flex items-center space-x-3 mb-6">
-              <BarChart3 className="w-5 h-5 text-green-500" />
-              <h2 className="text-xl font-bold tracking-tight">Race Data Analysis</h2>
-            </div>
-
-            {raceData.loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-racing-red"></div>
-                <span className="ml-4 text-lg">Loading race data...</span>
-              </div>
-            )}
-
-            {raceData.error && (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
-                <p className="text-red-300">{raceData.error}</p>
-              </div>
-            )}
-
-            {!raceData.loading && !raceData.error && raceData.data[0] && (
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">Race Results</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {raceData.data[0].raceResults?.slice(0, 10).map((result: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-600 last:border-b-0">
-                          <div className="flex items-center space-x-3">
-                            <span className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-xs font-bold">
-                              {index + 1}
-                            </span>
-                            <span>{result.driver}</span>
+                    {!raceData.loading && !raceData.error && raceData.data[0] && (
+                      <div className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="bg-gray-800/50 rounded-lg p-4">
+                            <h3 className="text-lg font-semibold mb-4">Race Results</h3>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {raceData.data[0].raceResults?.slice(0, 10).map((result: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between py-2 border-b border-gray-600 last:border-b-0">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-xs font-bold">
+                                      {index + 1}
+                                    </span>
+                                    <span>{result.driver}</span>
+                                  </div>
+                                  <span className="font-mono text-sm">{result.time || result.points}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <span className="font-mono text-sm">{result.time || result.points}</span>
+
+                          <div className="bg-gray-800/50 rounded-lg p-4">
+                            <h3 className="text-lg font-semibold mb-4">Weather Conditions</h3>
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <span>Temperature:</span>
+                                <span>{simulatedWeather?.temperature || raceData.data[0].weather?.temperature || 'N/A'}°C</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Humidity:</span>
+                                <span>{simulatedWeather?.humidity || raceData.data[0].weather?.humidity || 'N/A'}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Wind Speed:</span>
+                                <span>{simulatedWeather?.windSpeed || raceData.data[0].weather?.windSpeed || 'N/A'} km/h</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Conditions:</span>
+                                <span>{simulatedWeather?.conditions || raceData.data[0].weather?.conditions || 'N/A'}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">Weather Conditions</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span>Temperature:</span>
-                        <span>{simulatedWeather?.temperature || raceData.data[0].weather?.temperature || 'N/A'}°C</span>
+                        {generatedReport && (
+                          <div className="bg-gray-800/50 rounded-lg p-4">
+                            <h3 className="text-lg font-semibold mb-4">AI Analysis Report</h3>
+                            <div className="bg-black/50 rounded p-4 max-h-96 overflow-y-auto">
+                              <pre className="text-sm text-gray-300 whitespace-pre-wrap">{generatedReport}</pre>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between">
-                        <span>Humidity:</span>
-                        <span>{simulatedWeather?.humidity || raceData.data[0].weather?.humidity || 'N/A'}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Wind Speed:</span>
-                        <span>{simulatedWeather?.windSpeed || raceData.data[0].weather?.windSpeed || 'N/A'} km/h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Conditions:</span>
-                        <span>{simulatedWeather?.conditions || raceData.data[0].weather?.conditions || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {generatedReport && (
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">AI Analysis Report</h3>
-                    <div className="bg-black/50 rounded p-4 max-h-96 overflow-y-auto">
-                      <pre className="text-sm text-gray-300 whitespace-pre-wrap">{generatedReport}</pre>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        )}
-      </div>
     </div>
-  )
-}
+        )
+        }
