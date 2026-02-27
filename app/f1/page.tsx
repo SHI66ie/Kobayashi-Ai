@@ -1105,9 +1105,6 @@ export default function F1Page() {
                           </div>
                         ))}
                       </div>
-                    </div>
-                  </div>
-                )}
 
                 {predictionType === 'overtake' && predictionResults.predictions && (
                   <div className="space-y-4">
