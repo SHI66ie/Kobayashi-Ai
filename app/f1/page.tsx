@@ -300,7 +300,7 @@ export default function F1Page() {
           dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
 
-      case 'pit-strategy':
+      case 'pit-strategy': {
         const trackFactor = trackFactors[track?.id?.toLowerCase() as keyof typeof trackFactors] || { aero: 0.85, power: 0.90, handling: 0.88, tireWear: 0.80 }
 
         return {
@@ -323,8 +323,9 @@ export default function F1Page() {
           rules: '2026 Tire Rules: 5 compounds (C1-C5), mandatory sets reduced, enhanced sustainability',
           dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
+      }
 
-      case 'overtake':
+      case 'overtake': {
         const overtakeTrackFactor = trackFactors[track?.id?.toLowerCase() as keyof typeof trackFactors] || { aero: 0.85, power: 0.90, handling: 0.88, tireWear: 0.80 }
 
         return {
@@ -340,6 +341,7 @@ export default function F1Page() {
           rules: '2026 DRS Rules: Maintained from 2023, enhanced activation zones, improved detection',
           dataSource: useRealData ? 'Real API Data' : 'Mock Data'
         }
+      }
 
       case 'sprint':
         if (!isSprintWeekend) {
