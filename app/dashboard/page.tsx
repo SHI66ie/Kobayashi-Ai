@@ -41,6 +41,26 @@ export default function DashboardPage() {
   const [customDataError, setCustomDataError] = useState<string | null>(null)
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
+<<<<<<< Updated upstream
+=======
+  // F1 Data Input state
+  const [showF1DataInput, setShowF1DataInput] = useState(false)
+  const [f1Data, setF1Data] = useState({
+    driverName: '', driverNumber: '', driverExperience: '', driverTeam: '',
+    carModel: '', engineType: '2026 Standardized Power Unit', tireCompound: 'C3', fuelLoad: '110kg', carWeight: '798kg',
+    aeroPackage: '2026 Ground Effect', energyRecovery: '800kW',
+    trackCondition: 'dry', safetyCar: false, redFlag: false, raceLaps: '', trackEvolution: 'medium', sprintWeekend: false,
+    airTemp: '25', trackTemp: '35', humidity: '50', windSpeed: '5', rainProbability: '0', precipitation: 'none',
+    pitStrategy: '2-stop', fuelStrategy: 'conservative', tireStrategy: 'C3-C4-C4', overtakeAttempts: '', defensiveDriving: ''
+  })
+
+  // F1 Race Predictions state
+  const [showPredictions, setShowPredictions] = useState(false)
+  const [predictionType, setPredictionType] = useState<'qualifying' | 'race' | 'podium' | 'pit-strategy' | 'overtake' | 'sprint'>('race')
+  const [predictionResults, setPredictionResults] = useState<any>(null)
+  const [isPredicting, setIsPredicting] = useState(false)
+
+>>>>>>> Stashed changes
 
   // Memoize tracks array to prevent re-creation
   const tracks = useMemo(() => [
