@@ -1,0 +1,186 @@
+{
+  "sessionId": "monaco_R1_1640000000000",
+  "track": "monaco",
+  "race": "R1",
+  "driver": "Max Verstappen",
+  "car": "F1 Car (2026 Spec)",
+  "timestamp": "2023-12-20T12:00:00.000Z",
+  "laps": [
+    {
+      "lapNumber": 1,
+      "lapTime": 82034,
+      "sector1Time": 28500,
+      "sector2Time": 29000,
+      "sector3Time": 24534,
+      "position": 1,
+      "gapToLeader": 0,
+      "gapToFront": 0,
+      "bestLap": true,
+      "pitStop": false,
+      "tireCompound": "C3",
+      "fuelLevel": 95,
+      "engineTemp": 98,
+      "brakeTemp": 165,
+      "tirePressures": {
+        "frontLeft": 39.2,
+        "frontRight": 39.1,
+        "rearLeft": 37.8,
+        "rearRight": 37.9
+      },
+      "tireTemps": {
+        "frontLeft": [82, 87, 85, 84, 82, 80],
+        "frontRight": [82, 87, 85, 84, 82, 80],
+        "rearLeft": [85, 89, 87, 86, 84, 82],
+        "rearRight": [85, 89, 87, 86, 84, 82]
+      }
+    },
+    {
+      "lapNumber": 2,
+      "lapTime": 81567,
+      "sector1Time": 28200,
+      "sector2Time": 28700,
+      "sector3Time": 24667,
+      "position": 1,
+      "gapToLeader": 0,
+      "gapToFront": 0,
+      "bestLap": true,
+      "pitStop": false,
+      "tireCompound": "C3",
+      "fuelLevel": 92,
+      "engineTemp": 102,
+      "brakeTemp": 175,
+      "tirePressures": {
+        "frontLeft": 39.0,
+        "frontRight": 38.9,
+        "rearLeft": 37.6,
+        "rearRight": 37.7
+      },
+      "tireTemps": {
+        "frontLeft": [85, 90, 88, 87, 85, 83],
+        "frontRight": [85, 90, 88, 87, 85, 83],
+        "rearLeft": [88, 92, 90, 89, 87, 85],
+        "rearRight": [88, 92, 90, 89, 87, 85]
+      }
+    }
+  ],
+  "telemetry": [
+    {
+      "timestamp": 0,
+      "lapNumber": 1,
+      "lapDistance": 0,
+      "position": { "x": 0, "y": 1000, "z": 0 },
+      "velocity": { "x": 80, "y": 0, "z": 0 },
+      "acceleration": { "x": 5, "y": -2, "z": 0 },
+      "engine": {
+        "rpm": 11500,
+        "throttle": 95,
+        "brake": 0,
+        "gear": 3,
+        "fuelFlow": 85
+      },
+      "aero": {
+        "frontWing": -1,
+        "rearWing": 10,
+        "drag": 1300,
+        "downforce": 2800
+      },
+      "tires": {
+        "frontLeft": {
+          "pressure": 39,
+          "temperature": { "inner": 82, "middle": 87, "outer": 85 },
+          "wear": 0.01
+        },
+        "frontRight": {
+          "pressure": 39,
+          "temperature": { "inner": 82, "middle": 87, "outer": 85 },
+          "wear": 0.01
+        },
+        "rearLeft": {
+          "pressure": 37,
+          "temperature": { "inner": 85, "middle": 89, "outer": 87 },
+          "wear": 0.01
+        },
+        "rearRight": {
+          "pressure": 37,
+          "temperature": { "inner": 85, "middle": 89, "outer": 87 },
+          "wear": 0.01
+        }
+      },
+      "temperatures": {
+        "engine": 98,
+        "brakes": { "frontLeft": 150, "frontRight": 150, "rearLeft": 180, "rearRight": 180 },
+        "gearbox": 85,
+        "battery": 38
+      },
+      "raceData": {
+        "position": 1,
+        "gapToLeader": 0,
+        "gapToFront": 0,
+        "bestLapTime": 82034,
+        "lastLapTime": 82034,
+        "sector1Time": 28500,
+        "sector2Time": 29000,
+        "sector3Time": 24534
+      }
+    },
+    {
+      "timestamp": 100,
+      "lapNumber": 1,
+      "lapDistance": 0.01,
+      "position": { "x": 8, "y": 996, "z": 0 },
+      "velocity": { "x": 78, "y": 8, "z": 0 },
+      "acceleration": { "x": 3, "y": -5, "z": 0 },
+      "engine": {
+        "rpm": 11800,
+        "throttle": 98,
+        "brake": 5,
+        "gear": 4,
+        "fuelFlow": 88
+      },
+      "aero": {
+        "frontWing": -0.5,
+        "rearWing": 9.8,
+        "drag": 1280,
+        "downforce": 2750
+      },
+      "tires": {
+        "frontLeft": {
+          "pressure": 39.1,
+          "temperature": { "inner": 84, "middle": 89, "outer": 87 },
+          "wear": 0.015
+        },
+        "frontRight": {
+          "pressure": 39.0,
+          "temperature": { "inner": 84, "middle": 89, "outer": 87 },
+          "wear": 0.015
+        },
+        "rearLeft": {
+          "pressure": 37.1,
+          "temperature": { "inner": 87, "middle": 91, "outer": 89 },
+          "wear": 0.012
+        },
+        "rearRight": {
+          "pressure": 37.0,
+          "temperature": { "inner": 87, "middle": 91, "outer": 89 },
+          "wear": 0.012
+        }
+      },
+      "temperatures": {
+        "engine": 101,
+        "brakes": { "frontLeft": 165, "frontRight": 168, "rearLeft": 185, "rearRight": 182 },
+        "gearbox": 87,
+        "battery": 39
+      },
+      "raceData": {
+        "position": 1,
+        "gapToLeader": 0,
+        "gapToFront": 0,
+        "bestLapTime": 82034,
+        "lastLapTime": 82034,
+        "sector1Time": 28500,
+        "sector2Time": 29000,
+        "sector3Time": 24534
+      }
+    }
+  ]
+}

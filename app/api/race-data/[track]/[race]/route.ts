@@ -52,15 +52,26 @@ export async function GET(
       console.log(`📂 Using local filesystem for race data`)
     }
 
-    // Helper function to load data from AWS or local filesystem
+    // Helper function to load data from AWS, local Data directory, or public f1-sample-data
     const loadDataFile = async (filename: string): Promise<any> => {
       if (awsConfigured) {
         return await fetchRaceData(trackFolder, filename)
       } else {
-        const filePath = path.join(dataDir, filename)
-        if (fs.existsSync(filePath)) {
-          return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+        // First try local Data directory
+        const dataFilePath = path.join(dataDir, filename)
+        if (fs.existsSync(dataFilePath)) {
+          return JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'))
         }
+
+        // Then try public/f1-sample-data directory for F1 telemetry
+        if (filename.includes('f1_telemetry') || filename.includes('_f1_')) {
+          const publicF1Path = path.join(process.cwd(), 'public', 'f1-sample-data', filename)
+          if (fs.existsSync(publicF1Path)) {
+            console.log(`✓ Loading F1 telemetry from public directory: ${filename}`)
+            return JSON.parse(fs.readFileSync(publicF1Path, 'utf-8'))
+          }
+        }
+
         return null
       }
     }
@@ -187,64 +198,82 @@ export async function GET(
       console.warn('⚠️ No weather file found for', track, race)
     }
 
-    // Check for telemetry data
-    const telemetryIndexFile = `${race}_${track}_telemetry_data_index.json`
+    // Check for telemetry data - prioritize F1 telemetry patterns
+    const f1TelemetryPatterns = [
+      // F1 specific patterns (highest priority)
+      `${race}_${track}_f1_telemetry_data.json`,
+      `f1_${race}_${track}_telemetry.json`,
+      `${track}_${race}_f1_telemetry.json`,
+
+      // Generic patterns (fallback)
+      `${race}_${track}_telemetry_data.json`,
+      `${race}_${track}_telemetry.json`,
+      `${track}_telemetry_data.json`
+    ]
+
     let telemetry: any = { available: false }
 
-    // Prefer chunked telemetry when an index is available
-    const telemetryInfo = await loadDataFile(telemetryIndexFile)
-    if (telemetryInfo) {
-      telemetry = {
-        available: true,
-        type: 'chunked',
-        totalRows: telemetryInfo.totalRows,
-        totalChunks: telemetryInfo.totalChunks,
-        chunkSize: telemetryInfo.chunkSize
+    // Try F1-specific telemetry patterns first
+    for (const pattern of f1TelemetryPatterns) {
+      const telemetryData = await loadDataFile(pattern)
+      if (telemetryData) {
+        telemetry = {
+          available: true,
+          type: 'single-file',
+          fileName: pattern,
+          dataType: pattern.includes('f1') ? 'f1-telemetry' : 'generic-telemetry',
+          totalPoints: telemetryData.telemetry?.length || 0,
+          totalLaps: telemetryData.laps?.length || 0
+        }
+        console.log(`✓ Found F1 telemetry: ${pattern} (${telemetry.totalPoints} points, ${telemetry.totalLaps} laps)`)
+        break
       }
-      console.log(`Telemetry available (chunked): ${telemetry.totalRows} rows in ${telemetry.totalChunks} chunks`)
-    } else {
-      // Fallback: detect single-file telemetry JSONs (local only for now)
-      if (!awsConfigured) {
-        const telemetryCandidate = allFiles.find(f => {
-          const name = f.toLowerCase()
-          return name.endsWith('.json') && name.includes('telemetry')
-        })
+    }
 
-        if (telemetryCandidate) {
+    // If no F1 telemetry found, check for chunked telemetry
+    if (!telemetry.available) {
+      const telemetryIndexFile = `${race}_${track}_telemetry_data_index.json`
+      const telemetryInfo = await loadDataFile(telemetryIndexFile)
+      if (telemetryInfo) {
+        telemetry = {
+          available: true,
+          type: 'chunked',
+          totalRows: telemetryInfo.totalRows,
+          totalChunks: telemetryInfo.totalChunks,
+          chunkSize: telemetryInfo.chunkSize,
+          dataType: 'chunked-telemetry'
+        }
+        console.log(`✓ Found chunked telemetry: ${telemetry.totalRows} rows in ${telemetry.totalChunks} chunks`)
+      }
+    }
+
+    // Final fallback: detect any telemetry file (local only)
+    if (!telemetry.available && !awsConfigured) {
+      const telemetryCandidate = allFiles.find(f => {
+        const name = f.toLowerCase()
+        return name.endsWith('.json') &&
+               name.includes('telemetry') &&
+               !name.includes('index') // Skip index files
+      })
+
+      if (telemetryCandidate) {
+        const telemetryData = await loadDataFile(telemetryCandidate)
+        if (telemetryData) {
           telemetry = {
             available: true,
             type: 'single-file',
-            fileName: telemetryCandidate
+            fileName: telemetryCandidate,
+            dataType: 'fallback-telemetry',
+            totalPoints: telemetryData.telemetry?.length || 0,
+            totalLaps: telemetryData.laps?.length || 0
           }
-          console.log(`Telemetry available (single-file): ${telemetryCandidate}`)
-        } else {
-          console.log('No telemetry file detected for', track, race)
-        }
-      } else {
-        // For AWS, try common telemetry file patterns
-        const telemetryCandidates = [
-          `${race}_${track}_telemetry_data.json`,
-          `${race}_${track}_telemetry.json`,
-          `${track}_telemetry_data.json`
-        ]
-        
-        for (const candidate of telemetryCandidates) {
-          const testInfo = await loadDataFile(candidate)
-          if (testInfo) {
-            telemetry = {
-              available: true,
-              type: 'single-file',
-              fileName: candidate
-            }
-            console.log(`Telemetry available (single-file): ${candidate}`)
-            break
-          }
-        }
-        
-        if (!telemetry.available) {
-          console.log('No telemetry file detected for', track, race)
+          console.log(`✓ Found fallback telemetry: ${telemetryCandidate}`)
         }
       }
+    }
+
+    if (!telemetry.available) {
+      console.log(`ℹ️ No telemetry data found for ${track} - ${race}`)
     }
 
     const dataSource = awsConfigured ? 'aws' : 'local'
