@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     console.log(`🔮 Using ${useGroq ? 'Groq' : useDeepSeek ? 'DeepSeek' : useGemini ? 'Gemini' : 'OpenAI'} for F1 predictions...`)
 
     // Fetch Sportradar data for context
-    let apiData = { teams: [], standings: [], races: [] }
-    let ergastData = { standings: [], drivers: [] }
+    let apiData: { teams: any[]; standings: any[]; races: any[] } = { teams: [], standings: [], races: [] }
+    let ergastData: { standings: any[]; drivers: any[] } = { standings: [], drivers: [] }
 
     try {
       // Get current season standings
