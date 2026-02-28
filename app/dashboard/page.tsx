@@ -73,48 +73,48 @@ export default function DashboardPage() {
     { id: 'vir', name: 'Virginia International Raceway', location: 'Virginia', available: true, category: 'gr-cup', country: 'USA' }
   ], [])
 
+  // Helper function to update F1 data
+  const updateF1Data = (field: string, value: any) => {
+    setF1Data(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  // Load F1 data from Ergast API
+  const loadF1Data = useCallback(async (season: string) => {
+    setIsLoadingF1Data(true)
+    try {
+      const [driversResponse, constructorsResponse] = await Promise.all([
+        fetch(`/api/ergast/drivers?season=${season}`),
+        fetch(`/api/ergast/constructors?season=${season}`)
+      ])
+
+      if (driversResponse.ok) {
+        const driversData = await driversResponse.json()
+        setAvailableDrivers(driversData.drivers || [])
+      }
+
+      if (constructorsResponse.ok) {
+        const constructorsData = await constructorsResponse.json()
+        setAvailableConstructors(constructorsData.constructors || [])
+      }
+    } catch (error) {
+      console.error('Failed to load F1 data:', error)
+    } finally {
+      setIsLoadingF1Data(false)
+    }
+  }, [])
+
+  // Load F1 data when season changes
+  useEffect(() => {
+    loadF1Data(selectedSeason)
+  }, [selectedSeason, loadF1Data])
+
   // Memoize loadRaceData function to prevent unnecessary re-renders
   const loadRaceData = useCallback(async () => {
     setRaceData({ loading: true, error: null, data: [] })
     setGeneratedReport(null)
-
-    // Helper function to update F1 data
-    const updateF1Data = (field: string, value: any) => {
-      setF1Data(prev => ({
-        ...prev,
-        [field]: value
-      }))
-    }
-
-    // Load F1 data from Ergast API
-    const loadF1Data = useCallback(async (season: string) => {
-      setIsLoadingF1Data(true)
-      try {
-        const [driversResponse, constructorsResponse] = await Promise.all([
-          fetch(`/api/ergast/drivers?season=${season}`),
-          fetch(`/api/ergast/constructors?season=${season}`)
-        ])
-
-        if (driversResponse.ok) {
-          const driversData = await driversResponse.json()
-          setAvailableDrivers(driversData.drivers || [])
-        }
-
-        if (constructorsResponse.ok) {
-          const constructorsData = await constructorsResponse.json()
-          setAvailableConstructors(constructorsData.constructors || [])
-        }
-      } catch (error) {
-        console.error('Failed to load F1 data:', error)
-      } finally {
-        setIsLoadingF1Data(false)
-      }
-    }, [])
-
-    // Load F1 data when season changes
-    useEffect(() => {
-      loadF1Data(selectedSeason)
-    }, [selectedSeason, loadF1Data])
 
     try {
       const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
@@ -218,7 +218,7 @@ ${error.message || 'Could not connect to AI service'}`
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <select 
+              <select
                 value={selectedTrack}
                 onChange={(e) => setSelectedTrack(e.target.value)}
                 className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
