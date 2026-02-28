@@ -594,6 +594,30 @@ ${error.message || 'Could not connect to AI service'}`
                   Reset Form
                 </button>
                 <button
+                  onClick={() => {
+                    if (availableDrivers.length > 0) {
+                      const randomDriver = availableDrivers[Math.floor(Math.random() * availableDrivers.length)]
+                      updateF1Data('driverName', randomDriver.name)
+                      updateF1Data('driverNumber', randomDriver.permanentNumber || '')
+                    }
+                    if (availableConstructors.length > 0) {
+                      const randomTeam = availableConstructors[Math.floor(Math.random() * availableConstructors.length)]
+                      updateF1Data('driverTeam', randomTeam.name)
+                    }
+                    // Randomize car specs
+                    const tireOptions = ['C1', 'C2', 'C3', 'C4', 'C5']
+                    updateF1Data('tireCompound', tireOptions[Math.floor(Math.random() * tireOptions.length)])
+                    const aeroOptions = ['2026 Ground Effect', 'Legacy Wing']
+                    updateF1Data('aeroPackage', aeroOptions[Math.floor(Math.random() * aeroOptions.length)])
+                    const engineOptions = ['2026 Standardized Power Unit', 'Legacy V6 Turbo Hybrid']
+                    updateF1Data('engineType', engineOptions[Math.floor(Math.random() * engineOptions.length)])
+                  }}
+                  className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                  disabled={isLoadingF1Data}
+                >
+                  Randomize F1 Data
+                </button>
+                <button
                   onClick={() => console.log('F1 Data:', f1Data)}
                   className="px-6 py-2 bg-racing-blue hover:bg-blue-700 rounded-lg transition-colors"
                 >
