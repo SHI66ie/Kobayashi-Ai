@@ -162,7 +162,10 @@ export default function F1Page() {
       const currentYear = new Date().getFullYear().toString()
 
       // Load standings
-      const standingsResult = await safeErgastCall(() => ergastApi.getCurrentDriverStandings())
+      let standingsResult = await safeErgastCall(() => ergastApi.getCurrentDriverStandings())
+      if (standingsResult.data && (!standingsResult.data.MRData.StandingsTable.StandingsLists || standingsResult.data.MRData.StandingsTable.StandingsLists.length === 0)) {
+        standingsResult = await safeErgastCall(() => ergastApi.getDriverStandings('2025'))
+      }
       if (standingsResult.data && standingsResult.data.MRData.StandingsTable.StandingsLists[0]) {
         const standings = standingsResult.data.MRData.StandingsTable.StandingsLists[0].DriverStandings
 
@@ -186,7 +189,10 @@ export default function F1Page() {
       }
 
       // Load races
-      const racesResult = await safeErgastCall(() => ergastApi.getRaces(currentYear))
+      let racesResult = await safeErgastCall(() => ergastApi.getRaces(currentYear))
+      if (racesResult.data && (!racesResult.data.MRData.RaceTable.Races || racesResult.data.MRData.RaceTable.Races.length === 0)) {
+        racesResult = await safeErgastCall(() => ergastApi.getRaces('2025'))
+      }
       if (racesResult.data && racesResult.data.MRData.RaceTable.Races) {
         setApiRaces(racesResult.data.MRData.RaceTable.Races.map(transformErgastData.race))
       }
@@ -556,14 +562,7 @@ export default function F1Page() {
                   </option>
                 ))}
               </select>
-              <select
-                value={selectedRace}
-                onChange={(e) => setSelectedRace(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm"
-              >
-                <option value="R1">Race 1</option>
-                <option value="R2">Race 2</option>
-              </select>
+              {/* F1 Tracks do not typically have multiple races in a weekend like WEC */}
             </div>
           </div>
         </div>
