@@ -41,10 +41,12 @@ export default function DashboardPage() {
   const [customDataError, setCustomDataError] = useState<string | null>(null)
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
-<<<<<<< Updated upstream
-=======
   // F1 Data Input state
   const [showF1DataInput, setShowF1DataInput] = useState(false)
+  const [selectedSeason, setSelectedSeason] = useState(new Date().getFullYear().toString())
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([])
+  const [availableConstructors, setAvailableConstructors] = useState<any[]>([])
+  const [isLoadingF1Data, setIsLoadingF1Data] = useState(false)
   const [f1Data, setF1Data] = useState({
     driverName: '', driverNumber: '', driverExperience: '', driverTeam: '',
     carModel: '', engineType: '2026 Standardized Power Unit', tireCompound: 'C3', fuelLoad: '110kg', carWeight: '798kg',
@@ -60,9 +62,6 @@ export default function DashboardPage() {
   const [predictionResults, setPredictionResults] = useState<any>(null)
   const [isPredicting, setIsPredicting] = useState(false)
 
->>>>>>> Stashed changes
-
-  // Memoize tracks array to prevent re-creation
   const tracks = useMemo(() => [
     // Toyota GR Cup Tracks
     { id: 'barber', name: 'Barber Motorsports Park', location: 'Alabama', available: true, category: 'gr-cup', country: 'USA' },
@@ -79,12 +78,45 @@ export default function DashboardPage() {
     setRaceData({ loading: true, error: null, data: [] })
     setGeneratedReport(null)
 
-    try {
-      if (dataSourceMode === 'custom') {
-        setRaceData(prev => ({ ...prev, loading: false }))
-        return
-      }
+    // Helper function to update F1 data
+    const updateF1Data = (field: string, value: any) => {
+      setF1Data(prev => ({
+        ...prev,
+        [field]: value
+      }))
+    }
 
+    // Load F1 data from Ergast API
+    const loadF1Data = useCallback(async (season: string) => {
+      setIsLoadingF1Data(true)
+      try {
+        const [driversResponse, constructorsResponse] = await Promise.all([
+          fetch(`/api/ergast/drivers?season=${season}`),
+          fetch(`/api/ergast/constructors?season=${season}`)
+        ])
+
+        if (driversResponse.ok) {
+          const driversData = await driversResponse.json()
+          setAvailableDrivers(driversData.drivers || [])
+        }
+
+        if (constructorsResponse.ok) {
+          const constructorsData = await constructorsResponse.json()
+          setAvailableConstructors(constructorsData.constructors || [])
+        }
+      } catch (error) {
+        console.error('Failed to load F1 data:', error)
+      } finally {
+        setIsLoadingF1Data(false)
+      }
+    }, [])
+
+    // Load F1 data when season changes
+    useEffect(() => {
+      loadF1Data(selectedSeason)
+    }, [selectedSeason, loadF1Data])
+
+    try {
       const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
       if (!response.ok) {
         throw new Error('Failed to load data')
@@ -357,6 +389,219 @@ ${error.message || 'Could not connect to AI service'}`
             <p className="text-gray-400 text-sm">Generates actionable driver insights</p>
             <div className="mt-4 text-2xl font-bold text-racing-blue">PDF Export</div>
           </div>
+        </div>
+
+        {/* F1 Data Input Section */}
+        <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-racing-red to-red-700 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">F1</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">F1 Data Input</h2>
+                <p className="text-sm text-gray-400">Select season and real F1 data for AI analysis</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowF1DataInput(!showF1DataInput)}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>{showF1DataInput ? 'Hide' : 'Show'} Input Form</span>
+              <span className={`transform transition-transform ${showF1DataInput ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+          </div>
+
+          {/* Season Selector */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">F1 Season</label>
+            <select
+              value={selectedSeason}
+              onChange={(e) => setSelectedSeason(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+            >
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - i
+                return <option key={year} value={year.toString()}>{year} Season</option>
+              })}
+            </select>
+            {isLoadingF1Data && <p className="text-sm text-gray-400 mt-2">Loading F1 data...</p>}
+          </div>
+
+          {showF1DataInput && (
+            <div className="space-y-8">
+              {/* Driver Information */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-racing-blue rounded-full"></span>
+                  <span>Driver Information</span>
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Driver Name</label>
+                    <select
+                      value={f1Data.driverName}
+                      onChange={(e) => updateF1Data('driverName', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                    >
+                      <option value="">Select Driver</option>
+                      {availableDrivers.map((driver: any) => (
+                        <option key={driver.id} value={driver.name}>
+                          {driver.name} ({driver.code || driver.nationality})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Driver Number</label>
+                    <input
+                      type="text"
+                      value={f1Data.driverNumber}
+                      onChange={(e) => updateF1Data('driverNumber', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                      placeholder="e.g., 44"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Experience (Years)</label>
+                    <input
+                      type="number"
+                      value={f1Data.driverExperience}
+                      onChange={(e) => updateF1Data('driverExperience', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                      placeholder="e.g., 15"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Team</label>
+                    <select
+                      value={f1Data.driverTeam}
+                      onChange={(e) => updateF1Data('driverTeam', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                    >
+                      <option value="">Select Team</option>
+                      {availableConstructors.map((team: any) => (
+                        <option key={team.id} value={team.name}>
+                          {team.name} ({team.nationality})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Car Specifications (2026 Technical Regulations) */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-racing-red rounded-full"></span>
+                  <span>Car Specifications (2026 Regulations)</span>
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Car Model</label>
+                    <input
+                      type="text"
+                      value={f1Data.carModel}
+                      onChange={(e) => updateF1Data('carModel', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="e.g., RB20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Power Unit</label>
+                    <select
+                      value={f1Data.engineType}
+                      onChange={(e) => updateF1Data('engineType', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                    >
+                      <option value="2026 Standardized Power Unit">2026 Standardized Power Unit</option>
+                      <option value="Legacy V6 Turbo Hybrid">Legacy V6 Turbo Hybrid</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tire Compound (C1-C5)</label>
+                    <select
+                      value={f1Data.tireCompound}
+                      onChange={(e) => updateF1Data('tireCompound', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                    >
+                      <option value="C1">C1 (Soft)</option>
+                      <option value="C2">C2 (Soft-Medium)</option>
+                      <option value="C3">C3 (Medium)</option>
+                      <option value="C4">C4 (Medium-Hard)</option>
+                      <option value="C5">C5 (Hard)</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Wet">Wet</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Fuel Load (kg)</label>
+                    <input
+                      type="text"
+                      value={f1Data.fuelLoad}
+                      onChange={(e) => updateF1Data('fuelLoad', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="110kg (standardized)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Minimum Weight (kg)</label>
+                    <input
+                      type="text"
+                      value={f1Data.carWeight}
+                      onChange={(e) => updateF1Data('carWeight', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="798kg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Aero Package</label>
+                    <select
+                      value={f1Data.aeroPackage}
+                      onChange={(e) => updateF1Data('aeroPackage', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                    >
+                      <option value="2026 Ground Effect">2026 Ground Effect</option>
+                      <option value="Legacy Wing">Legacy Wing</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <label className="block text-sm font-medium mb-2">Energy Recovery (kW)</label>
+                    <input
+                      type="text"
+                      value={f1Data.energyRecovery}
+                      onChange={(e) => updateF1Data('energyRecovery', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      placeholder="800kW MGU-K limit"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-700">
+                <button
+                  onClick={() => setF1Data({
+                    driverName: '', driverNumber: '', driverExperience: '', driverTeam: '',
+                    carModel: '', engineType: '2026 Standardized Power Unit', tireCompound: 'C3', fuelLoad: '110kg', carWeight: '798kg',
+                    aeroPackage: '2026 Ground Effect', energyRecovery: '800kW',
+                    trackCondition: 'dry', safetyCar: false, redFlag: false, raceLaps: '', trackEvolution: 'medium', sprintWeekend: false,
+                    airTemp: '25', trackTemp: '35', humidity: '50', windSpeed: '5', rainProbability: '0', precipitation: 'none',
+                    pitStrategy: '2-stop', fuelStrategy: 'conservative', tireStrategy: 'C3-C4-C4', overtakeAttempts: '', defensiveDriving: ''
+                  })}
+                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Reset Form
+                </button>
+                <button
+                  onClick={() => console.log('F1 Data:', f1Data)}
+                  className="px-6 py-2 bg-racing-blue hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  Save F1 Data
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* F1 Navigation Card */}

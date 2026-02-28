@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { f1Api, safeApiCall, transformApiData } from '../../../lib/f1-api'
+import { ergastApi, safeErgastCall, transformErgastData } from '../../../lib/ergast-api'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -64,6 +65,8 @@ export async function POST(request: NextRequest) {
 
     // Fetch Sportradar data for context
     let apiData = { teams: [], standings: [], races: [] }
+    let ergastData = { standings: [], drivers: [] }
+
     try {
       // Get current season standings
       const standingsResult = await safeApiCall(() => f1Api.getStandings())
@@ -87,6 +90,16 @@ export async function POST(request: NextRequest) {
       }
     } catch (apiError) {
       console.warn('Sportradar API unavailable, using provided data only:', apiError)
+    }
+
+    // Fetch Ergast historical data
+    try {
+      const ergastStandingsResult = await safeErgastCall(() => ergastApi.getCurrentDriverStandings())
+      if (ergastStandingsResult.data?.MRData?.StandingsTable?.StandingsLists[0]?.DriverStandings) {
+        ergastData.standings = ergastStandingsResult.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.map(transformErgastData.driverStanding)
+      }
+    } catch (ergastError) {
+      console.warn('Ergast API unavailable:', ergastError)
     }
 
     // Build AI prompt based on prediction type
@@ -196,12 +209,18 @@ export async function POST(request: NextRequest) {
 }
 
 // Build prompt based on prediction type
-function buildPredictionPrompt(type: string, trackId: string, f1Data: any, apiData: any, selectedTrack: any) {
+function buildPredictionPrompt(type: string, trackId: string, f1Data: any, apiData: any, selectedTrack: any, ergastData?: any) {
+  const currentYear = new Date().getFullYear()
+  const historicalStandings = ergastData?.standings || []
+
   const basePrompt = `F1 ${type.charAt(0).toUpperCase() + type.slice(1)} Prediction for ${selectedTrack?.name || 'Selected Track'}
 
-Current Season Data:
+Current Season Data (Live):
 ${apiData.standings.length > 0 ? `Championship Standings:
-${apiData.standings.slice(0, 5).map((s: any) => `${s.position}. ${s.team} - ${s.points} pts`).join('\n')}` : 'No live standings available'}
+${apiData.standings.slice(0, 10).map((s: any) => `${s.position}. ${s.team} - ${s.points} pts`).join('\n')}` : 'No live standings available'}
+
+Historical Championship Standings (${currentYear}):
+${historicalStandings.length > 0 ? historicalStandings.slice(0, 10).map((s: any) => `${s.position}. ${s.driver.name} (${s.team.name}) - ${s.points} pts, ${s.wins} wins`).join('\n') : 'No historical data available'}
 
 Driver/Car Data Provided:
 - Driver: ${f1Data.driverName || 'Not specified'}
@@ -217,12 +236,12 @@ Track Conditions:
 - Red Flag: ${f1Data.redFlag ? 'Active' : 'Not active'}
 
 Provide a detailed ${type} prediction with:
-1. Expected outcomes
-2. Key factors
-3. Confidence assessment
-4. Risk analysis
+1. Expected outcomes based on historical performance and current form
+2. Key factors including championship standings and driver experience
+3. Confidence assessment using real data validation
+4. Risk analysis considering team performance and track history
 
-Format with numbered sections and bullet points.`
+Format with numbered sections and bullet points. Use the provided historical and live data to make informed predictions.`
 
   return basePrompt
 }
