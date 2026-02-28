@@ -2,7 +2,7 @@
 // Free historical F1 data API
 // Documentation: http://ergast.com/mrd/
 
-const ERGAST_BASE_URL = 'http://ergast.com/api/f1'
+const ERGAST_BASE_URL = 'https://api.jolpi.ca/ergast/f1'
 
 // Ergast API Response types
 export interface ErgastDriver {
