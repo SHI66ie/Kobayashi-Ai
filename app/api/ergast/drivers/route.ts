@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await safeJolpicaCall(() => jolpicaApi.getDrivers(season))
 
-    let drivers = []
+    let drivers: any[] = []
     if (!result.error && result.data?.MRData?.DriverTable?.Drivers) {
       drivers = result.data.MRData.DriverTable.Drivers.map(transformJolpicaData.driver)
     }
