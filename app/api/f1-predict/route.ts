@@ -229,12 +229,115 @@ Format with numbered sections and bullet points.`
 
 // Parse AI response into structured format
 function parsePredictionResponse(response: string, type: string) {
-  // Simple parsing - in production, use more robust parsing
-  return {
-    type: `${type.charAt(0).toUpperCase() + type.slice(1)} Prediction`,
-    predictions: [], // Would parse from response
-    accuracy: Math.floor(70 + Math.random() * 20), // Placeholder
-    factors: ['AI Analysis', 'Historical Data', 'Current Conditions'],
-    rules: '2026 F1 Regulations Applied'
+  // Mock predictions for different types - in production, parse actual AI response
+  const mockDrivers = [
+    { driver: 'Max Verstappen', team: 'Red Bull Racing' },
+    { driver: 'Lewis Hamilton', team: 'Mercedes AMG' },
+    { driver: 'Charles Leclerc', team: 'Ferrari' },
+    { driver: 'Lando Norris', team: 'McLaren' },
+    { driver: 'George Russell', team: 'Mercedes AMG' },
+    { driver: 'Carlos Sainz', team: 'Ferrari' },
+    { driver: 'Sergio Perez', team: 'Red Bull Racing' },
+    { driver: 'Fernando Alonso', team: 'Aston Martin' },
+    { driver: 'Oscar Piastri', team: 'McLaren' },
+    { driver: 'Pierre Gasly', team: 'Alpine' }
+  ]
+
+  switch (type) {
+    case 'qualifying':
+      return {
+        type: 'Qualifying Prediction',
+        predictions: mockDrivers.slice(0, 10).map((d, i) => ({
+          ...d,
+          position: i + 1,
+          time: `1:1${(10 + i).toString().padStart(2, '0')}.${Math.floor(Math.random() * 999)}`,
+          confidence: Math.floor(70 + Math.random() * 30)
+        })),
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['AI Analysis', 'Historical Qualifying Data', 'Track Conditions'],
+        rules: '2026 F1 Qualifying Regulations'
+      }
+
+    case 'race':
+      return {
+        type: 'Race Prediction',
+        predictions: mockDrivers.slice(0, 10).map((d, i) => ({
+          ...d,
+          position: i + 1,
+          points: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][i] || 0,
+          confidence: Math.floor(70 + Math.random() * 30)
+        })),
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['AI Analysis', 'Historical Race Data', 'Strategy Factors'],
+        rules: '2026 F1 Race Regulations'
+      }
+
+    case 'podium':
+      return {
+        type: 'Podium Prediction',
+        predictions: mockDrivers.slice(0, 3).map((d, i) => ({
+          ...d,
+          position: i + 1,
+          odds: `${(2 + i * 0.5).toFixed(1)}:1`,
+          confidence: Math.floor(75 + Math.random() * 25)
+        })),
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['AI Analysis', 'Driver Form', 'Team Performance'],
+        rules: '2026 F1 Championship Points'
+      }
+
+    case 'pit-strategy':
+      return {
+        type: 'Pit Strategy Prediction',
+        predictions: {
+          optimalStrategy: '2-Stop Strategy',
+          confidence: Math.floor(70 + Math.random() * 30),
+          tireCompounds: ['C3', 'C4', 'C4'],
+          pitStops: [
+            { stop: 1, lap: 15, from: 'C3', to: 'C4', time: '22.5s' },
+            { stop: 2, lap: 35, from: 'C4', to: 'C4', time: '21.8s' }
+          ]
+        },
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['Tire Degradation Analysis', 'Track Evolution', 'Weather Impact'],
+        rules: '2026 F1 Tire Regulations'
+      }
+
+    case 'overtake':
+      return {
+        type: 'Overtaking Zones Prediction',
+        predictions: [
+          { zone: 'Turn 1 DRS Zone', difficulty: 'Medium', successRate: 0.75, drivers: ['HAM', 'LEC', 'NOR'] },
+          { zone: 'Turn 8 Hairpin', difficulty: 'Hard', successRate: 0.45, drivers: ['VER', 'SAI'] },
+          { zone: 'Final Corner Complex', difficulty: 'Easy', successRate: 0.85, drivers: ['RUS', 'PER', 'ALO'] }
+        ],
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['DRS Analysis', 'Corner Speeds', 'Tire Grip Levels'],
+        rules: '2026 F1 DRS Regulations'
+      }
+
+    case 'sprint':
+      return {
+        type: 'Sprint Race Prediction',
+        predictions: mockDrivers.slice(0, 8).map((d, i) => ({
+          ...d,
+          position: i + 1,
+          points: [8, 7, 6, 5, 4, 3, 2, 1][i] || 0,
+          pole: i === 0,
+          confidence: Math.floor(70 + Math.random() * 30)
+        })),
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['Sprint Qualifying Performance', 'Short Race Strategy', 'Overtaking Opportunities'],
+        rules: '2026 Sprint Format: 100km race, points for top 8 (8-7-6-5-4-3-2-1), pole for race winner'
+      }
+
+    default:
+      return {
+        type: `${type.charAt(0).toUpperCase() + type.slice(1)} Prediction`,
+        predictions: [],
+        accuracy: Math.floor(70 + Math.random() * 20),
+        factors: ['AI Analysis', 'Historical Data', 'Current Conditions'],
+        rules: '2026 F1 Regulations Applied'
+      }
   }
 }
