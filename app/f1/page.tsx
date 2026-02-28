@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
 import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { f1Api, transformApiData, safeApiCall } from '../../lib/f1-api'
+import { ergastApi, transformErgastData, safeErgastCall } from '../../lib/ergast-api'
 
 // Lazy load heavy components for F1 optimization
 const SetupGuide = lazy(() => import('../components/SetupGuide'))
@@ -153,47 +153,52 @@ export default function F1Page() {
     }
   }
 
-  // Load real API data from Sportradar
+  // Load real API data from Ergast
   const loadApiData = useCallback(async () => {
     setApiLoading(true)
     setApiError(null)
 
     try {
-      // Get current season first
-      const seasonsResult = await safeApiCall(() => f1Api.getSeasons())
-      let currentSeasonId = 'sr:season:831' // Default to 2023 season as fallback
+      const currentYear = new Date().getFullYear().toString()
 
-      if (seasonsResult.data) {
-        // Find the most recent season
-        const currentYear = new Date().getFullYear().toString()
-        const currentSeason = seasonsResult.data.seasons.find(s => s.year === currentYear)
-        if (currentSeason) {
-          currentSeasonId = currentSeason.id
-        }
-      }
+      // Load standings
+      const standingsResult = await safeErgastCall(() => ergastApi.getCurrentDriverStandings())
+      if (standingsResult.data && standingsResult.data.MRData.StandingsTable.StandingsLists[0]) {
+        const standings = standingsResult.data.MRData.StandingsTable.StandingsLists[0].DriverStandings
 
-      // Load teams/standings
-      const standingsResult = await safeApiCall(() => f1Api.getStandings(currentSeasonId))
-      if (standingsResult.data && standingsResult.data.standings[0]?.groups[0]?.standings) {
-        const standings = standingsResult.data.standings[0].groups[0].standings
-        setApiTeams(standings.map(s => transformApiData.team(s.competitor)))
-        setApiStandings(standings.map(transformApiData.standing))
+        // Extract teams from driver standings
+        const teamsMap = new Map()
+        standings.forEach(s => {
+          if (s.Constructors && s.Constructors.length > 0) {
+            const team = transformErgastData.constructor(s.Constructors[0])
+            if (!teamsMap.has(team.id)) {
+              teamsMap.set(team.id, team)
+            }
+          }
+        })
+        setApiTeams(Array.from(teamsMap.values()))
+
+        setApiStandings(standings.map(transformErgastData.driverStanding))
+
+        // Extract drivers for predictions
+        const drivers = standings.map(s => transformErgastData.driver(s.Driver))
+        setApiDrivers(drivers)
       }
 
       // Load races
-      const racesResult = await safeApiCall(() => f1Api.getRaces(currentSeasonId))
-      if (racesResult.data && racesResult.data.stages) {
-        setApiRaces(racesResult.data.stages.map(transformApiData.race))
+      const racesResult = await safeErgastCall(() => ergastApi.getRaces(currentYear))
+      if (racesResult.data && racesResult.data.MRData.RaceTable.Races) {
+        setApiRaces(racesResult.data.MRData.RaceTable.Races.map(transformErgastData.race))
       }
 
       if (standingsResult.error || racesResult.error) {
-        setApiError('Some Sportradar API data could not be loaded. Using mock data as fallback.')
+        setApiError('Some Ergast API data could not be loaded. Using mock data as fallback.')
         setUseRealData(false)
       } else {
         setUseRealData(true)
       }
     } catch (error) {
-      setApiError('Failed to load Sportradar API data. Using mock data.')
+      setApiError('Failed to load Ergast API data. Using mock data.')
       setUseRealData(false)
     } finally {
       setApiLoading(false)
