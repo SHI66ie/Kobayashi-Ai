@@ -99,6 +99,12 @@ export default function F1Page() {
   const [predictionResults, setPredictionResults] = useState<any>(null)
   const [isPredicting, setIsPredicting] = useState(false)
 
+  // Telemetry File Management state
+  const [showTelemetryManager, setShowTelemetryManager] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [telemetryStatus, setTelemetryStatus] = useState<any>(null)
+
   // Helper function to update F1 data
   const updateF1Data = (field: string, value: any) => {
     setF1Data(prev => ({
@@ -107,29 +113,115 @@ export default function F1Page() {
     }))
   }
 
-  // Helper function to get country flag emoji
-  const getCountryFlag = (country: string) => {
-    const flags: { [key: string]: string } = {
-      'Monaco': '🇲🇨',
-      'UK': '🇬🇧',
-      'Belgium': '🇧🇪',
-      'Italy': '🇮🇹',
-      'Spain': '🇪🇸',
-      'Austria': '🇦🇹',
-      'UAE': '🇦🇪',
-      'Brazil': '🇧🇷',
-      'Bahrain': '🇧🇭',
-      'Saudi Arabia': '🇸🇦',
-      'USA': '🇺🇸',
-      'Hungary': '🇭🇺',
-      'Netherlands': '🇳🇱',
-      'Singapore': '🇸🇬',
-      'Japan': '🇯🇵',
-      'China': '🇨🇳',
-      'Azerbaijan': '🇦🇿',
-      'Australia': '🇦🇺'
+  // Telemetry management functions
+  const handleTelemetryUpload = async (files: FileList) => {
+    setIsUploading(true)
+    const fileArray = Array.from(files)
+    setUploadedFiles(fileArray)
+
+    try {
+      // Process each telemetry file
+      for (const file of fileArray) {
+        if (file.type === 'application/json' && file.name.includes('telemetry')) {
+          const text = await file.text()
+          const telemetryData = JSON.parse(text)
+
+          // Validate basic structure
+          if (telemetryData.sessionId && telemetryData.telemetry && telemetryData.laps) {
+            console.log(`✅ Valid telemetry file: ${file.name}`)
+            console.log(`   Session: ${telemetryData.sessionId}`)
+            console.log(`   Telemetry points: ${telemetryData.telemetry.length}`)
+            console.log(`   Lap data: ${telemetryData.laps.length} laps`)
+
+            // In a real implementation, you'd upload to server/API here
+            // For now, we'll just show success
+            setTelemetryStatus({
+              success: true,
+              file: file.name,
+              sessionId: telemetryData.sessionId,
+              points: telemetryData.telemetry.length,
+              laps: telemetryData.laps.length
+            })
+          } else {
+            throw new Error('Invalid telemetry file structure')
+          }
+        } else {
+          throw new Error('File must be a JSON telemetry file')
+        }
+      }
+    } catch (error: any) {
+      console.error('Telemetry upload error:', error)
+      setTelemetryStatus({
+        error: true,
+        message: error.message
+      })
+    } finally {
+      setIsUploading(false)
     }
-    return flags[country] || '🏁'
+  }
+
+  const generateSampleTelemetry = async () => {
+    setIsUploading(true)
+    try {
+      // Import the generator
+      const { generateSampleF1Telemetry } = await import('../../lib/f1-telemetry-generator')
+
+      const telemetryData = generateSampleF1Telemetry(selectedTrack, selectedRace, 'Sample Driver')
+
+      // Create a downloadable file
+      const dataStr = JSON.stringify(telemetryData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${selectedTrack}_${selectedRace}_f1_telemetry_data.json`
+      link.click()
+
+      URL.revokeObjectURL(url)
+
+      setTelemetryStatus({
+        generated: true,
+        file: link.download,
+        sessionId: telemetryData.sessionId,
+        points: telemetryData.telemetry.length,
+        laps: telemetryData.laps.length
+      })
+
+    } catch (error: any) {
+      console.error('Sample generation error:', error)
+      setTelemetryStatus({
+        error: true,
+        message: `Failed to generate sample: ${error.message}`
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const checkTelemetryStatus = async () => {
+    try {
+      const response = await fetch(`/api/race-data/${selectedTrack}/${selectedRace}`)
+      const data = await response.json()
+
+      if (data.telemetry?.available) {
+        setTelemetryStatus({
+          loaded: true,
+          ...data.telemetry
+        })
+      } else {
+        setTelemetryStatus({
+          noData: true,
+          track: selectedTrack,
+          race: selectedRace
+        })
+      }
+    } catch (error) {
+      setTelemetryStatus({
+        error: true,
+        message: 'Failed to check telemetry status'
+      })
+    }
   }
 
   // F1 Race Prediction Functions
@@ -608,11 +700,11 @@ export default function F1Page() {
             </button>
 
             <button
-              onClick={() => setShowPredictions(!showPredictions)}
-              className="bg-gradient-to-r from-racing-blue to-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
+              onClick={() => setShowTelemetryManager(!showTelemetryManager)}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
             >
-              <Target className="w-5 h-5" />
-              <span>{showPredictions ? 'Hide Predictions' : 'Show Predictions'}</span>
+              <TrendingUp className="w-5 h-5" />
+              <span>{showTelemetryManager ? 'Hide' : 'Manage'} Telemetry</span>
             </button>
           </div>
         </div>
@@ -1049,8 +1141,158 @@ export default function F1Page() {
           )}
         </div>
 
-        {/* F1 Predictions Section */}
-        {showPredictions && (
+        {/* F1 Telemetry Manager Section */}
+        {showTelemetryManager && (
+          <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-purple-500/20 shadow-xl backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <TrendingUp className="w-6 h-6 text-purple-500" />
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight">F1 Telemetry Manager</h2>
+                  <p className="text-sm text-gray-400">Upload and manage telemetry data files</p>
+                </div>
+              </div>
+              <button
+                onClick={checkTelemetryStatus}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Check Status</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Current Telemetry Status */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3">Current Status</h3>
+                {telemetryStatus ? (
+                  <div className="space-y-2">
+                    {telemetryStatus.success && (
+                      <div className="flex items-center space-x-2 text-green-400">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span>✅ {telemetryStatus.file} uploaded successfully</span>
+                      </div>
+                    )}
+                    {telemetryStatus.generated && (
+                      <div className="flex items-center space-x-2 text-blue-400">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span>📄 {telemetryStatus.file} generated and downloaded</span>
+                      </div>
+                    )}
+                    {telemetryStatus.loaded && (
+                      <div className="flex items-center space-x-2 text-green-400">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span>📊 Telemetry loaded: {telemetryStatus.totalPoints || telemetryStatus.points} points, {telemetryStatus.totalLaps || telemetryStatus.laps} laps</span>
+                      </div>
+                    )}
+                    {telemetryStatus.noData && (
+                      <div className="flex items-center space-x-2 text-yellow-400">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        <span>⚠️ No telemetry data found for {telemetryStatus.track} - {telemetryStatus.race}</span>
+                      </div>
+                    )}
+                    {telemetryStatus.error && (
+                      <div className="flex items-center space-x-2 text-red-400">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span>❌ {telemetryStatus.message}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-400">Click "Check Status" to see current telemetry availability</p>
+                )}
+              </div>
+
+              {/* File Upload Section */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3">Upload Telemetry Files</h3>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".json"
+                      onChange={(e) => e.target.files && handleTelemetryUpload(e.target.files)}
+                      className="hidden"
+                      id="telemetry-upload"
+                      disabled={isUploading}
+                    />
+                    <label
+                      htmlFor="telemetry-upload"
+                      className="cursor-pointer flex flex-col items-center space-y-2"
+                    >
+                      {isUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                          <span className="text-purple-400">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-gray-400" />
+                          <span className="text-gray-300">Click to upload telemetry files</span>
+                          <span className="text-sm text-gray-500">JSON files with telemetry data</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+
+                  {uploadedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">Uploaded Files:</h4>
+                      {uploadedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
+                          <span className="text-sm">{file.name}</span>
+                          <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sample Generation Section */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3">Generate Sample Data</h3>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-400">
+                    Generate realistic sample telemetry data for {tracks.find(t => t.id === selectedTrack)?.name} - {selectedRace}
+                  </p>
+
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={generateSampleTelemetry}
+                      disabled={isUploading}
+                      className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-2 rounded-lg font-semibold flex items-center space-x-2"
+                    >
+                      {isUploading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      <span>Generate & Download</span>
+                    </button>
+
+                    <div className="text-sm text-gray-400">
+                      Creates ~500 telemetry points across 5 sample laps
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* File Format Info */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3">File Format Requirements</h3>
+                <div className="space-y-2 text-sm text-gray-400">
+                  <p><strong>Expected filename:</strong> <code className="bg-gray-700 px-1 rounded">{selectedTrack}_{selectedRace}_f1_telemetry_data.json</code></p>
+                  <p><strong>Required fields:</strong> sessionId, telemetry[], laps[]</p>
+                  <p><strong>Telemetry points:</strong> High-frequency car data (RPM, speed, tires, etc.)</p>
+                  <p><strong>Lap data:</strong> Sector times, fuel levels, tire wear</p>
+                  <p><Link href="/F1_TELEMETRY_SETUP.md" className="text-purple-400 hover:text-purple-300">📖 View complete documentation</Link></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
           <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-blue/20 shadow-xl backdrop-blur-sm">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
