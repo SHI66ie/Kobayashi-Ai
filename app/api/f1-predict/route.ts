@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { f1Api, safeApiCall, transformApiData } from '../../../lib/f1-api'
-import { ergastApi, safeErgastCall, transformErgastData } from '../../../lib/ergast-api'
+import { jolpicaApi, safeJolpicaCall, transformJolpicaData } from '../../../lib/jolpica-api'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -92,14 +92,14 @@ export async function POST(request: NextRequest) {
       console.warn('Sportradar API unavailable, using provided data only:', apiError)
     }
 
-    // Fetch Ergast historical data
+    // Fetch JOLPICA historical data
     try {
-      const ergastStandingsResult = await safeErgastCall(() => ergastApi.getCurrentDriverStandings())
-      if (ergastStandingsResult.data?.MRData?.StandingsTable?.StandingsLists[0]?.DriverStandings) {
-        ergastData.standings = ergastStandingsResult.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.map(transformErgastData.driverStanding)
+      const jolpicaStandingsResult = await safeJolpicaCall(() => jolpicaApi.getCurrentDriverStandings())
+      if (jolpicaStandingsResult.data?.MRData?.StandingsTable?.StandingsLists[0]?.DriverStandings) {
+        ergastData.standings = jolpicaStandingsResult.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.map(transformJolpicaData.driverStanding)
       }
-    } catch (ergastError) {
-      console.warn('Ergast API unavailable:', ergastError)
+    } catch (jolpicaError) {
+      console.warn('JOLPICA API unavailable:', jolpicaError)
     }
 
     // Build AI prompt based on prediction type

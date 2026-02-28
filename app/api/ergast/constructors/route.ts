@@ -1,30 +1,43 @@
-// Ergast F1 Constructors API Route
+// JOLPICA F1 Constructors API Route (replacement for Ergast)
 import { NextRequest, NextResponse } from 'next/server'
-import { ergastApi, safeErgastCall, transformErgastData } from '../../../../lib/ergast-api'
+import { jolpicaApi, safeJolpicaCall, transformJolpicaData } from '../../../../lib/jolpica-api'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const season = searchParams.get('season') || new Date().getFullYear().toString()
 
   try {
-    const result = await safeErgastCall(() => ergastApi.getConstructorStandings(season))
+    const result = await safeJolpicaCall(() => jolpicaApi.getConstructors(season))
 
-    if (result.error) {
-      return NextResponse.json({
-        error: 'Failed to fetch constructors',
-        message: result.error
-      }, { status: 500 })
+    let constructors = []
+    if (!result.error && result.data?.MRData?.ConstructorTable?.Constructors) {
+      constructors = result.data.MRData.ConstructorTable.Constructors.map(transformJolpicaData.constructor)
     }
 
-    const constructors = result.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings?.map(s => transformErgastData.constructor(s.Constructor)) || []
+    // Fallback to mock data if API fails or no data
+    if (constructors.length === 0) {
+      constructors = [
+        { id: 'red_bull', name: 'Red Bull Racing', nationality: 'Austrian' },
+        { id: 'mercedes', name: 'Mercedes AMG Petronas F1 Team', nationality: 'German' },
+        { id: 'ferrari', name: 'Scuderia Ferrari', nationality: 'Italian' },
+        { id: 'mclaren', name: 'McLaren Racing', nationality: 'British' },
+        { id: 'aston_martin', name: 'Aston Martin Aramco Cognizant F1 Team', nationality: 'British' },
+        { id: 'alpine', name: 'Alpine F1 Team', nationality: 'French' },
+        { id: 'williams', name: 'Williams Racing', nationality: 'British' },
+        { id: 'rb', name: 'Visa Cash App RB F1 Team', nationality: 'Italian' },
+        { id: 'sauber', name: 'Stake F1 Team Kick Sauber', nationality: 'Swiss' },
+        { id: 'haas', name: 'MoneyGram Haas F1 Team', nationality: 'American' }
+      ]
+    }
 
     return NextResponse.json({
       season,
       constructors,
-      count: constructors.length
+      count: constructors.length,
+      source: constructors.length > 0 && !result.error ? 'api' : 'mock'
     })
   } catch (error) {
-    console.error('Ergast constructors API error:', error)
+    console.error('JOLPICA constructors API error:', error)
     return NextResponse.json({
       error: 'Internal server error'
     }, { status: 500 })
