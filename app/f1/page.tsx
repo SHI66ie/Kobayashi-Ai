@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
-import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft } from 'lucide-react'
+import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { f1Api, transformApiData, safeApiCall } from '../../lib/f1-api'
 
@@ -111,6 +111,31 @@ export default function F1Page() {
       ...prev,
       [field]: value
     }))
+  }
+
+  // Helper function to get country flag emoji
+  const getCountryFlag = (country: string) => {
+    const flags: { [key: string]: string } = {
+      'Monaco': '🇲🇨',
+      'UK': '🇬🇧',
+      'Belgium': '🇧🇪',
+      'Italy': '🇮🇹',
+      'Spain': '🇪🇸',
+      'Austria': '🇦🇹',
+      'UAE': '🇦🇪',
+      'Brazil': '🇧🇷',
+      'Bahrain': '🇧🇭',
+      'Saudi Arabia': '🇸🇦',
+      'USA': '🇺🇸',
+      'Hungary': '🇭🇺',
+      'Netherlands': '🇳🇱',
+      'Singapore': '🇸🇬',
+      'Japan': '🇯🇵',
+      'China': '🇨🇳',
+      'Azerbaijan': '🇦🇿',
+      'Australia': '🇦🇺'
+    }
+    return flags[country] || '🏁'
   }
 
   // Telemetry management functions
@@ -1293,6 +1318,9 @@ export default function F1Page() {
             </div>
           </div>
         )}
+
+        {/* F1 Predictions Section */}
+        {showPredictions && (
           <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-blue/20 shadow-xl backdrop-blur-sm">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
