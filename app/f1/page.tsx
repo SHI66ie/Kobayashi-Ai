@@ -107,6 +107,58 @@ export default function F1Page() {
     }))
   }
 
+  // Helper function to fill F1 form with random data
+  const fillRandomF1Data = () => {
+    const drivers = [
+      { name: 'Max Verstappen', number: '1', team: 'Red Bull Racing', exp: '10' },
+      { name: 'Charles Leclerc', number: '16', team: 'Ferrari', exp: '7' },
+      { name: 'Lando Norris', number: '4', team: 'McLaren', exp: '6' },
+      { name: 'Lewis Hamilton', number: '44', team: 'Ferrari', exp: '18' },
+      { name: 'George Russell', number: '63', team: 'Mercedes AMG', exp: '6' },
+      { name: 'Oscar Piastri', number: '81', team: 'McLaren', exp: '2' },
+      { name: 'Carlos Sainz', number: '55', team: 'Williams', exp: '10' },
+      { name: 'Fernando Alonso', number: '14', team: 'Aston Martin', exp: '23' },
+    ];
+    const tireCompounds = ['C1', 'C2', 'C3', 'C4', 'C5', 'Intermediate', 'Wet'];
+    const trackConds = ['dry', 'wet', 'damp'];
+
+    const randomDriver = drivers[Math.floor(Math.random() * drivers.length)];
+
+    setF1Data({
+      driverName: randomDriver.name,
+      driverNumber: randomDriver.number,
+      driverExperience: randomDriver.exp,
+      driverTeam: randomDriver.team,
+      carModel: `2026 Spec ${randomDriver.team.split(' ')[0]}`,
+      engineType: '2026 Standardized Power Unit',
+      tireCompound: tireCompounds[Math.floor(Math.random() * tireCompounds.length)],
+      fuelLoad: `${Math.floor(Math.random() * 20) + 90}kg`,
+      carWeight: '798kg',
+      aeroPackage: '2026 Ground Effect',
+      energyRecovery: '800kW',
+      trackCondition: trackConds[Math.floor(Math.random() * trackConds.length)],
+      safetyCar: Math.random() > 0.8,
+      redFlag: Math.random() > 0.9,
+      raceLaps: `${Math.floor(Math.random() * 20) + 50}`,
+      trackEvolution: 'medium',
+      airTemp: `${Math.floor(Math.random() * 20) + 15}`,
+      trackTemp: `${Math.floor(Math.random() * 30) + 20}`,
+      humidity: `${Math.floor(Math.random() * 50) + 30}`,
+      windSpeed: `${Math.floor(Math.random() * 15)}`,
+      rainProbability: `${Math.floor(Math.random() * 100)}`,
+      precipitation: Math.random() > 0.8 ? 'light rain' : 'none',
+      pitStrategy: Math.random() > 0.5 ? '1-stop' : '2-stop',
+      fuelStrategy: Math.random() > 0.5 ? 'conservative' : 'aggressive',
+      tireStrategy: 'C3-C4-C4',
+      overtakeAttempts: `${Math.floor(Math.random() * 10) + 1}`,
+      defensiveDriving: 'high',
+      sprintWeekend: Math.random() > 0.7
+    });
+
+    // Auto-show form if it's currently hidden when they generate data
+    if (!showF1DataInput) setShowF1DataInput(true);
+  }
+
   // Helper function to get country flag emoji
   const getCountryFlag = (country: string) => {
     const flags: { [key: string]: string } = {
@@ -633,13 +685,22 @@ export default function F1Page() {
                 <p className="text-sm text-gray-400">Input detailed Formula 1 race data for AI analysis</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowF1DataInput(!showF1DataInput)}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-2"
-            >
-              <span>{showF1DataInput ? 'Hide' : 'Show'} Input Form</span>
-              <span className={`transform transition-transform ${showF1DataInput ? 'rotate-180' : ''}`}>▼</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={fillRandomF1Data}
+                className="px-4 py-2 bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 rounded-lg transition-colors flex items-center space-x-2 font-semibold shadow-md"
+              >
+                <Zap className="w-4 h-4" />
+                <span>Random Data</span>
+              </button>
+              <button
+                onClick={() => setShowF1DataInput(!showF1DataInput)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <span>{showF1DataInput ? 'Hide' : 'Show'} Input Form</span>
+                <span className={`transform transition-transform ${showF1DataInput ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+            </div>
           </div>
 
           {showF1DataInput && (
