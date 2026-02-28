@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await safeJolpicaCall(() => jolpicaApi.getConstructors(season))
 
-    let constructors = []
+    let constructors: any[] = []
     if (!result.error && result.data?.MRData?.ConstructorTable?.Constructors) {
       constructors = result.data.MRData.ConstructorTable.Constructors.map(transformJolpicaData.constructor)
     }
