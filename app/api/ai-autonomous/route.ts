@@ -32,7 +32,7 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
+    const {
       sensorData,
       vehicleState,
       trackMap,
@@ -99,7 +99,7 @@ SAFETY CONSTRAINTS:
 `
 
     let systemPrompt = ''
-    
+
     switch (mode) {
       case 'autonomous_racing':
         systemPrompt = `You are an advanced Autonomous Racing AI system, combining the best of:
@@ -198,7 +198,7 @@ Respond with precise, actionable guidance as if you're an expert autonomous raci
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: 'You are an expert autonomous racing AI system. Provide precise, actionable real-time racing decisions.' },
             { role: 'user', content: fullPrompt }
@@ -207,7 +207,7 @@ Respond with precise, actionable guidance as if you're an expert autonomous raci
           max_tokens: 5000
         })
         analysis = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq autonomous error:', error.message)
@@ -279,7 +279,7 @@ function extractActionPlan(analysis: string): any {
   const steeringMatch = analysis.match(/steering.*?(-?\d+(?:\.\d+)?)/i)
   const throttleMatch = analysis.match(/throttle.*?(\d+(?:\.\d+)?)/i)
   const brakeMatch = analysis.match(/brake.*?(\d+(?:\.\d+)?)/i)
-  
+
   return {
     steering: steeringMatch ? parseFloat(steeringMatch[1]) : 0,
     throttle: throttleMatch ? parseFloat(throttleMatch[1]) : 0,
@@ -291,7 +291,7 @@ function extractActionPlan(analysis: string): any {
 function extractRiskAssessment(analysis: string): any {
   const riskMatch = analysis.match(/risk.*?(\d+(?:\.\d+)?)/i)
   const safetyMatch = analysis.match(/safety.*?(\d+(?:\.\d+)?)/i)
-  
+
   return {
     riskLevel: riskMatch ? parseFloat(riskMatch[1]) : 5,
     safetyLevel: safetyMatch ? parseFloat(safetyMatch[1]) : 8,
@@ -311,7 +311,7 @@ function extractHazards(analysis: string): string[] {
   const hazardKeywords = ['hazard', 'danger', 'risk', 'collision', 'obstacle']
   const lines = analysis.split('\n')
   const hazards: string[] = []
-  
+
   for (const line of lines) {
     for (const keyword of hazardKeywords) {
       if (line.toLowerCase().includes(keyword)) {
@@ -320,7 +320,7 @@ function extractHazards(analysis: string): string[] {
       }
     }
   }
-  
+
   return hazards.slice(0, 3)
 }
 
@@ -333,7 +333,7 @@ function extractNextActions(analysis: string): string[] {
   const actionKeywords = ['next', 'then', 'after', 'following']
   const lines = analysis.split('\n')
   const actions: string[] = []
-  
+
   for (const line of lines) {
     for (const keyword of actionKeywords) {
       if (line.toLowerCase().includes(keyword)) {
@@ -342,6 +342,6 @@ function extractNextActions(analysis: string): string[] {
       }
     }
   }
-  
+
   return actions.slice(0, 3)
 }

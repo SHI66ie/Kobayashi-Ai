@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare recent lap data
     const recentLaps = lapTimes?.slice(-10) || []
-    const avgLapTime = recentLaps.reduce((sum: number, lap: any) => 
+    const avgLapTime = recentLaps.reduce((sum: number, lap: any) =>
       sum + parseFloat(lap.lapTime || lap.time || 0), 0) / (recentLaps.length || 1)
 
     const prompt = `You are an expert Toyota GR Cup race strategist analyzing real-time telemetry.
@@ -117,7 +117,7 @@ Your final answer should read like a human-written race engineer report for the 
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.2-3b-preview',
           messages: [
             { role: 'system', content: 'You are an expert Toyota GR Cup race strategist. Provide a clear, narrative race prediction report in plain text. Do NOT output JSON or code fences.' },
             { role: 'user', content: prompt }
@@ -126,7 +126,7 @@ Your final answer should read like a human-written race engineer report for the 
           max_tokens: 2000
         })
         prediction = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.1-8b (Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (FREE via Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq prediction error:', error.message)
@@ -197,7 +197,7 @@ Your final answer should read like a human-written race engineer report for the 
     if (!prediction) {
       throw new Error('All AI providers failed to generate prediction')
     }
-    
+
     return NextResponse.json({
       success: true,
       prediction,
