@@ -15,6 +15,8 @@ const WeatherControls = lazy(() => import('../components/WeatherControls'))
 const ToyotaGRLogo = lazy(() => import('../components/ToyotaGRLogo'))
 const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonPanel'))
 const RaceQASection = lazy(() => import('../components/RaceQASection'))
+const F1AIChat = lazy(() => import('../components/F1AIChat'))
+
 
 // Performance monitoring hook
 import { usePerformanceMonitoring } from '../hooks/usePerformanceMonitoring'
@@ -42,7 +44,8 @@ export default function F1Page() {
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
   // Top-level Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'builder' | 'analytics'>('upcoming')
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'builder' | 'analytics' | 'ai'>('upcoming')
+
 
   // Mock upcoming races 2026
   const upcomingRacesList = useMemo(() => [
@@ -681,6 +684,14 @@ export default function F1Page() {
               <BarChart3 className="w-5 h-5" />
               <span>Data / Analytics</span>
             </button>
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`pb-3 flex items-center space-x-2 font-semibold transition-colors ${activeTab === 'ai' ? 'text-racing-red border-b-2 border-racing-red' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Brain className="w-5 h-5" />
+              <span>AI Oracle (Alpha)</span>
+            </button>
+
           </div>
         </div>
       </header >
@@ -722,8 +733,9 @@ export default function F1Page() {
                   <button
                     onClick={() => {
                       setSelectedTrack('jeddah');
-                      setActiveTab('builder');
+                      setActiveTab('ai');
                     }}
+
                     className="bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 px-8 py-4 rounded-xl font-bold text-lg shadow-lg shadow-racing-red/20 transform transition hover:scale-105 active:scale-95 flex items-center space-x-2"
                   >
                     <Target className="w-6 h-6" />
@@ -731,6 +743,32 @@ export default function F1Page() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* AI Top Picks - Monsterbet Style */}
+            <div className="grid md:grid-cols-4 gap-4">
+              {[
+                { label: "Race Winner", driver: "Max Verstappen", prob: "74%", edge: "+5.2%", color: "border-yellow-500/30" },
+                { label: "Podium Lock", driver: "Charles Leclerc", prob: "62%", edge: "+3.1%", color: "border-racing-red/30" },
+                { label: "Top 10 Sleepr", driver: "Nico Hülkenberg", prob: "48%", edge: "+12.4%", color: "border-green-500/30" },
+                { label: "Fastest Lap", driver: "Lando Norris", prob: "35%", edge: "-1.2%", color: "border-racing-blue/30" }
+              ].map((pick, i) => (
+                <div key={i} className={`bg-white/5 border ${pick.color} rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer group`} onClick={() => setActiveTab('ai')}>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{pick.label}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${pick.edge.startsWith('+') ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                      {pick.edge} Edge
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-white group-hover:text-racing-red transition-colors">{pick.driver}</h4>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden mr-3">
+                      <div className="h-full bg-racing-red" style={{ width: pick.prob }} />
+                    </div>
+                    <span className="text-xs font-mono font-bold text-gray-400">{pick.prob}</span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Upcoming Races Grid */}
@@ -743,7 +781,8 @@ export default function F1Page() {
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {upcomingRacesList.slice(1).map((race, i) => (
-                  <div key={race.id} className="bg-gray-800/80 rounded-xl p-6 border border-gray-700 hover:border-racing-red/50 transition-colors group cursor-pointer" onClick={() => { setSelectedTrack(race.id); setActiveTab('builder'); }}>
+                  <div key={race.id} className="bg-gray-800/80 rounded-xl p-6 border border-gray-700 hover:border-racing-red/50 transition-colors group cursor-pointer" onClick={() => { setSelectedTrack(race.id); setActiveTab('ai'); }}>
+
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <p className="text-xs font-semibold text-racing-red mb-1 uppercase tracking-wider">{race.date}</p>
@@ -1574,6 +1613,69 @@ export default function F1Page() {
                 )}
               </div>
             )}
+          </div>
+        )}
+        {/* AI ORACLE CHAT */}
+        {activeTab === 'ai' && (
+          <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="lg:col-span-2 space-y-8">
+              <Suspense fallback={<div className="h-[600px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
+                <F1AIChat contextData={{
+                  standings: apiStandings,
+                  drivers: apiDrivers,
+                  teams: apiTeams,
+                  nextRaces: upcomingRacesList,
+                  currentTrack: tracks.find(t => t.id === selectedTrack)
+                }} />
+              </Suspense>
+            </div>
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl border border-white/10 shadow-xl border-racing-red/20">
+                <h4 className="text-xl font-bold mb-4 flex items-center text-racing-red">
+                  <Target className="w-5 h-5 mr-2" />
+                  Alpha Pick Accuracy
+                </h4>
+                <div className="flex items-end justify-between mb-2">
+                  <span className="text-4xl font-black text-white tracking-tighter">94.2%</span>
+                  <span className="text-green-500 text-sm font-bold flex items-center mb-1">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    +2.1%
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Last 10 Races Analysis</p>
+                <div className="mt-6 space-y-4">
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Top Prediction Strength</p>
+                    <p className="text-sm font-bold text-white">Podium Outcomes</p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Key Insight Factor</p>
+                    <p className="text-sm font-bold text-white">2026 Aero Efficiency</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl" />
+                <h4 className="font-bold text-white mb-4 flex items-center text-sm uppercase tracking-wider">
+                  <Zap className="w-4 h-4 mr-2 text-yellow-500" />
+                  Live Alpha Tickers
+                </h4>
+                <div className="space-y-4">
+                  {[
+                    { label: "Verstappen Confidence", value: "High (0.91)" },
+                    { label: "Hulk P10 Probability", value: "Medium (0.68)" },
+                    { label: "Ferrari Reliability", value: "Increasing" },
+                    { label: "Track Evolution", value: "High" }
+                  ].map((ticker, i) => (
+                    <div key={i} className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">{ticker.label}</span>
+                      <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">{ticker.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
