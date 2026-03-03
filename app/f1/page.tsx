@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
 import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, Calendar, LayoutDashboard, Settings } from 'lucide-react'
 import Link from 'next/link'
-import { ergastApi, transformErgastData, safeErgastCall } from '../../lib/ergast-api'
+import { openf1Api, transformOpenF1Data } from '../../lib/openf1-api'
+
 
 // Lazy load heavy components for F1 optimization
 const SetupGuide = lazy(() => import('../components/SetupGuide'))
@@ -218,63 +219,66 @@ export default function F1Page() {
     }
   }
 
-  // Load real API data from Ergast
+  // Load real API data from OpenF1
   const loadApiData = useCallback(async () => {
     setApiLoading(true)
     setApiError(null)
 
     try {
-      const currentYear = new Date().getFullYear().toString()
-
-      // Load standings
-      let standingsResult = await safeErgastCall(() => ergastApi.getCurrentDriverStandings())
-      if (standingsResult.data && (!standingsResult.data.MRData.StandingsTable.StandingsLists || standingsResult.data.MRData.StandingsTable.StandingsLists.length === 0)) {
-        standingsResult = await safeErgastCall(() => ergastApi.getDriverStandings('2025'))
-      }
-      if (standingsResult.data && standingsResult.data.MRData.StandingsTable.StandingsLists[0]) {
-        const standings = standingsResult.data.MRData.StandingsTable.StandingsLists[0].DriverStandings
-
-        // Extract teams from driver standings
-        const teamsMap = new Map()
-        standings.forEach(s => {
-          if (s.Constructors && s.Constructors.length > 0) {
-            const team = transformErgastData.constructor(s.Constructors[0])
-            if (!teamsMap.has(team.id)) {
-              teamsMap.set(team.id, team)
-            }
-          }
-        })
-        setApiTeams(Array.from(teamsMap.values()))
-
-        setApiStandings(standings.map(transformErgastData.driverStanding))
-
-        // Extract drivers for predictions
-        const drivers = standings.map(s => transformErgastData.driver(s.Driver))
-        setApiDrivers(drivers)
+      // 1. Get latest session to find the active context
+      const sessions = await openf1Api.getLatestSession()
+      if (!sessions || sessions.length === 0) {
+        throw new Error('No active F1 sessions found')
       }
 
-      // Load races
-      let racesResult = await safeErgastCall(() => ergastApi.getRaces(currentYear))
-      if (racesResult.data && (!racesResult.data.MRData.RaceTable.Races || racesResult.data.MRData.RaceTable.Races.length === 0)) {
-        racesResult = await safeErgastCall(() => ergastApi.getRaces('2025'))
-      }
-      if (racesResult.data && racesResult.data.MRData.RaceTable.Races) {
-        setApiRaces(racesResult.data.MRData.RaceTable.Races.map(transformErgastData.race))
+      const latestSession = sessions[0]
+      const sessionKey = latestSession.session_key
+
+      // 2. Get drivers for this session
+      const driversData = await openf1Api.getDrivers(sessionKey)
+      setApiDrivers(driversData.map(transformOpenF1Data.driver))
+
+      // Extract teams from drivers
+      const teamsMap = new Map()
+      driversData.forEach(d => {
+        if (!teamsMap.has(d.team_name)) {
+          teamsMap.set(d.team_name, { id: d.team_name, name: d.team_name, color: d.team_colour })
+        }
+      })
+      setApiTeams(Array.from(teamsMap.values()))
+
+      // 3. Get standings (if available for this session)
+      try {
+        const standingsData = await openf1Api.getDriverStandings(sessionKey)
+        if (standingsData && standingsData.length > 0) {
+          setApiStandings(standingsData.map(s => transformOpenF1Data.standing(s, driversData)))
+        }
+      } catch (standingErr) {
+        console.warn('Standings not available for this session, using driver list order')
+        setApiStandings(driversData.map((d, i) => ({
+          position: i + 1,
+          driver: transformOpenF1Data.driver(d),
+          team: { name: d.team_name },
+          points: 0
+        })))
       }
 
-      if (standingsResult.error || racesResult.error) {
-        setApiError('Some Ergast API data could not be loaded. Using mock data as fallback.')
-        setUseRealData(false)
-      } else {
-        setUseRealData(true)
-      }
-    } catch (error) {
-      setApiError('Failed to load Ergast API data. Using mock data.')
+      // 4. Get recent sessions (races)
+      const year = new Date().getFullYear()
+      const allSessions = await openf1Api.getSessions(year)
+      const raceSessions = allSessions.filter(s => s.session_type === 'Race')
+      setApiRaces(raceSessions.map(transformOpenF1Data.session))
+
+      setUseRealData(true)
+    } catch (error: any) {
+      console.error('OpenF1 API Error:', error)
+      setApiError('Failed to load OpenF1 data. Using mock data.')
       setUseRealData(false)
     } finally {
       setApiLoading(false)
     }
   }, [])
+
 
   // Load API data on component mount
   useEffect(() => {
@@ -630,7 +634,8 @@ export default function F1Page() {
                       {useRealData ? (
                         <>
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-green-400">Live API Data</span>
+                          <span className="text-green-400">OpenF1 Live</span>
+
                         </>
                       ) : (
                         <>
