@@ -57,6 +57,10 @@ export default function HomePage() {
     router.push('/dashboard')
   }
 
+  const handleF1Predictions = () => {
+    router.push('/f1')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       {/* Header */}
@@ -118,6 +122,12 @@ export default function HomePage() {
               className="border border-gray-600 hover:border-gray-400 px-8 py-3 rounded-lg font-semibold transition-colors transform hover:scale-105 active:scale-95"
             >
               View Analytics
+            </button>
+            <button 
+              onClick={handleF1Predictions}
+              className="bg-racing-blue hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold transition-colors transform hover:scale-105 active:scale-95"
+            >
+              F1 Predictions
             </button>
           </div>
         </div>
