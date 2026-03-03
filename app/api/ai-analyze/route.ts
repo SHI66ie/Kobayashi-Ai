@@ -62,11 +62,11 @@ export async function POST(request: NextRequest) {
     const useCustomLLM = !useGroq && !useDeepSeek && customLLMUrl !== undefined
     const useGemini = !useGroq && !useDeepSeek && !useCustomLLM && gemini !== null
     const useOpenAI = !useGroq && !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
-    
+
     const aiProvider = useGroq ? 'Groq (FREE & FAST)' :
-                      useDeepSeek ? 'DeepSeek (FREE)' : 
-                      useCustomLLM ? 'Custom LLM' :
-                      useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
+      useDeepSeek ? 'DeepSeek (FREE)' :
+        useCustomLLM ? 'Custom LLM' :
+          useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
     console.log(`🤖 Using ${aiProvider} for analysis...`)
 
     // Prepare race data summary for AI
@@ -102,7 +102,7 @@ Drivers: ${raceDataSummary.totalDrivers} | Laps: ${raceDataSummary.totalLaps}
 Weather: ${JSON.stringify(raceDataSummary.weatherConditions)}
 
 Top 5 Finishers:
-${limitedResults?.map((r: any, i: number) => `${i+1}. ${r.driverName || r.driver} - ${r.totalTime || r.time || 'N/A'}`).join('\n') || 'No data'}
+${limitedResults?.map((r: any, i: number) => `${i + 1}. ${r.driverName || r.driver} - ${r.totalTime || r.time || 'N/A'}`).join('\n') || 'No data'}
 
 Sample Lap Times: ${limitedLapTimes?.slice(0, 5).map((l: any) => l.lapTime || l.time).join(', ') || 'N/A'}
 
@@ -124,7 +124,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
       try {
         console.log('⚡ Using Groq (FREE & FAST)...')
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: "system",
@@ -141,7 +141,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         })
 
         analysis = completion.choices[0]?.message?.content || 'No analysis generated'
-        modelUsed = 'llama-3.1-8b (FREE via Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (FREE via Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
 
       } catch (groqError: any) {
@@ -185,7 +185,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     if (!analysis && useCustomLLM && customLLMUrl) {
       try {
         console.log('🔧 Using Custom LLM...')
-        
+
         // Call the custom LLM endpoint
         const customResponse = await fetch('/api/ai-custom', {
           method: 'POST',
@@ -198,7 +198,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
             race
           })
         })
-        
+
         if (customResponse.ok) {
           const customResult: any = await customResponse.json()
           analysis = customResult.analysis || 'No analysis generated'
@@ -207,13 +207,13 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         } else {
           throw new Error('Custom LLM request failed')
         }
-        
+
       } catch (customError: any) {
         console.error('⚠️ Custom LLM error, falling back to Gemini/OpenAI:', customError.message)
         // Continue to Gemini/OpenAI fallback
       }
     }
-    
+
     // Use Gemini (FREE) if custom LLM failed or not available
     if (!analysis && useGemini && gemini) {
       try {
@@ -302,9 +302,9 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         track,
         race,
         provider: useGroq ? 'Groq (FREE)' :
-                 useDeepSeek ? 'DeepSeek (FREE)' : 
-                 useCustomLLM ? 'Custom LLM' :
-                 useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
+          useDeepSeek ? 'DeepSeek (FREE)' :
+            useCustomLLM ? 'Custom LLM' :
+              useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
       }
     })
 
