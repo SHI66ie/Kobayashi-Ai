@@ -32,14 +32,14 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      raceResults, 
-      lapTimes, 
-      weather, 
-      track, 
+    const {
+      raceResults,
+      lapTimes,
+      weather,
+      track,
       raceDuration,
       tireCompound,
-      fuelLoad 
+      fuelLoad
     } = await request.json()
 
     if (!groq && !gemini) {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     // Priority: Groq > Gemini
     const useGroq = groq !== null
     const useGemini = !useGroq && gemini !== null
-    
+
     console.log(`⚙️ Using ${useGroq ? 'Groq' : 'Gemini'} for strategy optimization...`)
 
     const prompt = `You are a Toyota GR Cup race strategist. Optimize race strategy:
@@ -66,9 +66,9 @@ Tire Compound: ${tireCompound || 'Medium'}
 Fuel Load: ${fuelLoad || 'Full'}
 
 TOP 5 RESULTS:
-${raceResults?.slice(0, 5).map((r: any, i: number) => 
-  `${i + 1}. ${r.driverName || r.driver} - ${r.totalTime || r.time}`
-).join('\n')}
+${raceResults?.slice(0, 5).map((r: any, i: number) =>
+      `${i + 1}. ${r.driverName || r.driver} - ${r.totalTime || r.time}`
+    ).join('\n')}
 
 AVERAGE LAP TIMES:
 ${lapTimes?.slice(0, 10).map((l: any) => l.lapTime || l.time).join(', ')}
@@ -94,7 +94,7 @@ Provide data-driven, specific recommendations with confidence levels.`
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: 'You are an expert Toyota GR Cup race strategist. Provide data-driven strategy recommendations.' },
             { role: 'user', content: prompt }
@@ -103,7 +103,7 @@ Provide data-driven, specific recommendations with confidence levels.`
           max_tokens: 3000
         })
         strategy = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq strategy error:', error.message)

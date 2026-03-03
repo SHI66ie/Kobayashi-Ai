@@ -32,7 +32,7 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
+    const {
       voiceCommand,
       currentContext,
       driverProfile,
@@ -79,7 +79,7 @@ RACE STATE:
 `
 
     let systemPrompt = ''
-    
+
     switch (mode) {
       case 'race_engineer':
         systemPrompt = `You are an AI Race Engineer with natural voice interaction capabilities.
@@ -184,7 +184,7 @@ Provide your radio response now:`
     if (groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.2-3b-preview',
           messages: [
             {
               role: 'system',
@@ -198,7 +198,7 @@ Provide your radio response now:`
         })
 
         aiResponse = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        modelUsed = 'llama-3.2-3b-preview (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq voice AI error:', error.message || error)
@@ -267,7 +267,7 @@ Provide your radio response now:`
 
 function extractCommandIntent(command: string): string {
   const lowerCommand = command.toLowerCase()
-  
+
   if (lowerCommand.includes('pit') || lowerCommand.includes('stop')) return 'pit_strategy'
   if (lowerCommand.includes('gap') || lowerCommand.includes('time')) return 'timing_info'
   if (lowerCommand.includes('tire') || lowerCommand.includes('tyre')) return 'tire_status'
@@ -277,25 +277,25 @@ function extractCommandIntent(command: string): string {
   if (lowerCommand.includes('weather') || lowerCommand.includes('rain')) return 'weather_info'
   if (lowerCommand.includes('pace') || lowerCommand.includes('speed')) return 'pace_analysis'
   if (lowerCommand.includes('traffic') || lowerCommand.includes('car')) return 'traffic_info'
-  
+
   return 'general_query'
 }
 
 function extractPriority(command: string, context: any): 'urgent' | 'important' | 'normal' {
   const lowerCommand = command.toLowerCase()
-  
+
   // Urgent - safety or immediate action needed
-  if (lowerCommand.includes('emergency') || lowerCommand.includes('problem') || 
-      lowerCommand.includes('issue') || lowerCommand.includes('help')) {
+  if (lowerCommand.includes('emergency') || lowerCommand.includes('problem') ||
+    lowerCommand.includes('issue') || lowerCommand.includes('help')) {
     return 'urgent'
   }
-  
+
   // Important - race-critical information
-  if (lowerCommand.includes('pit') || lowerCommand.includes('strategy') || 
-      lowerCommand.includes('position') || lowerCommand.includes('gap')) {
+  if (lowerCommand.includes('pit') || lowerCommand.includes('strategy') ||
+    lowerCommand.includes('position') || lowerCommand.includes('gap')) {
     return 'important'
   }
-  
+
   return 'normal'
 }
 
@@ -303,7 +303,7 @@ function generateAudioSuggestion(response: string): any {
   // Suggest audio parameters for text-to-speech
   const wordCount = response.split(' ').length
   const estimatedDuration = Math.max(2, wordCount * 0.4) // ~0.4 seconds per word
-  
+
   return {
     suggestedSpeed: wordCount > 30 ? 'fast' : 'normal',
     estimatedDuration: `${estimatedDuration.toFixed(1)}s`,

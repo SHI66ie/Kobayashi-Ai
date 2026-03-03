@@ -32,11 +32,11 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      telemetryData, 
-      trackLayout, 
-      weatherData, 
-      driverBehavior, 
+    const {
+      telemetryData,
+      trackLayout,
+      weatherData,
+      driverBehavior,
       raceContext,
       analysisType = 'comprehensive'
     }: any = await request.json()
@@ -86,7 +86,7 @@ RACE CONTEXT:
 `
 
     let analysisPrompt = ''
-    
+
     switch (analysisType) {
       case 'performance':
         analysisPrompt = `As an expert racing engineer with deep knowledge of vehicle dynamics and driver performance, analyze this comprehensive telemetry data.
@@ -159,7 +159,7 @@ Provide detailed, technical analysis with specific recommendations, numerical da
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: 'You are an expert multimodal racing AI analyst. Provide detailed technical analysis with specific recommendations.' },
             { role: 'user', content: fullPrompt }
@@ -168,7 +168,7 @@ Provide detailed, technical analysis with specific recommendations, numerical da
           max_tokens: 4000
         })
         analysis = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.1-8b-instant (Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq multimodal error:', error.message)
@@ -249,21 +249,21 @@ function calculateDataCompleteness(data: any): number {
     data.driverBehavior,
     data.raceContext
   ]
-  
+
   const completeness = fields.reduce((acc, field) => {
     if (!field) return acc
     const fieldKeys = Object.keys(field)
     const filledKeys = fieldKeys.filter(key => field[key] !== null && field[key] !== undefined && field[key] !== 'Unknown')
     return acc + (filledKeys.length / fieldKeys.length)
   }, 0)
-  
+
   return completeness / fields.length
 }
 
 function extractRecommendations(analysis: string): string[] {
   const recommendations: string[] = []
   const lines = analysis.split('\n')
-  
+
   for (const line of lines) {
     if (line.includes('recommend') || line.includes('suggest') || line.includes('should')) {
       const cleaned = line.replace(/^\d+\.\s*/, '').replace(/^[-*]\s*/, '').trim()
@@ -272,14 +272,14 @@ function extractRecommendations(analysis: string): string[] {
       }
     }
   }
-  
+
   return recommendations.slice(0, 5) // Top 5 recommendations
 }
 
 function extractRiskScores(analysis: string): any {
   const riskPattern = /risk.*?(\d+(?:\.\d+)?)/gi
   const matches = analysis.match(riskPattern)
-  
+
   return {
     overallRisk: matches ? Math.max(...matches.map(m => parseFloat(m.match(/\d+(?:\.\d+)?/)?.[0] || '0'))) : 0,
     riskFactors: matches?.slice(0, 3) || []
