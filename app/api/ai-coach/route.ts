@@ -30,18 +30,33 @@ try {
   console.error('Failed to initialize Gemini:', error)
 }
 
+// Initialize Qwen 3.5 (POWERFUL - secondary option)
+let qwen: OpenAI | null = null
+try {
+  if (process.env.QWEN_API_KEY) {
+    qwen = new OpenAI({
+      apiKey: process.env.QWEN_API_KEY,
+      baseURL: process.env.QWEN_BASE_URL || 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+      timeout: 50000,
+      maxRetries: 2
+    })
+  }
+} catch (error) {
+  console.error('Failed to initialize Qwen:', error)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { driverName, lapTimes, raceResults, telemetry, track, weather }: any = await request.json()
 
-    if (!groq && !gemini) {
+    if (!groq && !qwen && !gemini) {
       return NextResponse.json({
         error: 'No AI service configured',
-        message: 'Add GROQ_API_KEY (recommended) or GEMINI_API_KEY to .env.local'
+        message: 'Add GROQ_API_KEY (recommended), QWEN_API_KEY (powerful), or GEMINI_API_KEY to .env.local'
       }, { status: 503 })
     }
 
-    console.log(`🏁 Using ${groq ? 'Groq' : 'Gemini'} for driver coaching...`)
+    console.log(`🏁 Using ${groq ? 'Groq' : qwen ? 'Qwen 3.5' : 'Gemini'} for driver coaching...`)
 
     // Analyze driver performance with safe defaults
     const safeLapTimes = Array.isArray(lapTimes) ? lapTimes : []
@@ -120,6 +135,31 @@ Be specific, technical, and actionable. Use racing terminology.`
       }
     }
 
+    // Try Qwen 3.5 second
+    if (!coaching && qwen) {
+      try {
+        const completion = await qwen.chat.completions.create({
+          model: 'qwen3.5-plus',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a professional Toyota GR Cup driver coach. Provide a concise, structured coaching report in plain text. Do NOT mention that you are an AI and do NOT output JSON or code fences.'
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.6,
+          max_tokens: 2500
+        })
+
+        coaching = completion.choices[0]?.message?.content || ''
+        modelUsed = 'qwen3.5-plus (POWERFUL & FAST)'
+        tokensUsed = completion.usage?.total_tokens || 0
+      } catch (error: any) {
+        console.error('Qwen driver coaching error:', error.message || error)
+      }
+    }
+
     // Fallback to Gemini
     if (!coaching && gemini) {
       try {
@@ -163,7 +203,7 @@ Be specific, technical, and actionable. Use racing terminology.`
       metadata: {
         model: modelUsed,
         tokensUsed,
-        provider: groq ? 'Groq (FREE)' : 'Gemini (FREE)'
+        provider: groq ? 'Groq (FREE)' : qwen ? 'Qwen 3.5 (POWERFUL)' : 'Gemini (FREE)'
       }
     })
 
