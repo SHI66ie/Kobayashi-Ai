@@ -9,15 +9,8 @@ import { openf1Api, transformOpenF1Data } from '../../lib/openf1-api'
 
 
 // Lazy load heavy components for F1 optimization
-const SetupGuide = lazy(() => import('../components/SetupGuide'))
-const AIToolsPanel = lazy(() => import('../components/AIToolsPanel'))
-const AdvancedAIPanel = lazy(() => import('../components/AdvancedAIPanel'))
-const VoiceControlPanel = lazy(() => import('../components/VoiceControlPanel'))
 const TrackMapViewer = lazy(() => import('../components/TrackMapViewer'))
 const WeatherControls = lazy(() => import('../components/WeatherControls'))
-const ToyotaGRLogo = lazy(() => import('../components/ToyotaGRLogo'))
-const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonPanel'))
-const RaceQASection = lazy(() => import('../components/RaceQASection'))
 const F1AIChat = lazy(() => import('../components/F1AIChat'))
 const DecisionPanel = lazy(() => import('../components/DecisionPanel'))
 
@@ -580,7 +573,8 @@ export default function F1Page() {
           lapTimes: raceData.data[0]?.lapTimes,
           weather: simulatedWeather || raceData.data[0]?.weather,
           track: selectedTrack,
-          race: selectedRace
+          race: selectedRace,
+          series: 'Formula 1'
         })
       })
 
@@ -1714,7 +1708,7 @@ export default function F1Page() {
 
               {/* Decision Panel */}
               <Suspense fallback={<div className="h-[400px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
-                <DecisionPanel 
+                <DecisionPanel
                   driver="Max Verstappen"
                   race={tracks.find(t => t.id === selectedTrack)?.name || "Monaco Grand Prix"}
                   currentConditions={simulatedWeather}

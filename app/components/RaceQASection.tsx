@@ -7,9 +7,10 @@ interface RaceQASectionProps {
   raceData: any
   track: string
   race: string
+  series?: string
 }
 
-export default function RaceQASection({ raceData, track, race }: RaceQASectionProps) {
+export default function RaceQASection({ raceData, track, race, series }: RaceQASectionProps) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -26,7 +27,8 @@ export default function RaceQASection({ raceData, track, race }: RaceQASectionPr
         lapTimes: raceData?.lapTimes || [],
         weather: raceData?.weather || null,
         track,
-        race
+        race,
+        series
       }
 
       const response = await fetch('/api/ai-qa', {

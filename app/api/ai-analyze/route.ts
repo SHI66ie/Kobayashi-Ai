@@ -50,7 +50,7 @@ const customLLMKey = process.env.CUSTOM_LLM_API_KEY
 
 export async function POST(request: NextRequest) {
   try {
-    const { raceResults, lapTimes, weather, track, race }: any = await request.json()
+    const { raceResults, lapTimes, weather, track, race, series = 'Toyota GR Cup' }: any = await request.json()
 
     // Check if any AI service is available
     if (!groq && !deepseek && !qwen && !gemini && !openai && !customLLMUrl) {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     const limitedResults = raceResults ? raceResults.slice(0, 10) : null
 
     // Build analysis prompt
-    const prompt = `Analyze this Toyota GR Cup race data:
+    const prompt = `Analyze this ${series} race data:
 
 Track: ${track} | Race: ${race}
 Drivers: ${raceDataSummary.totalDrivers} | Laps: ${raceDataSummary.totalLaps}
@@ -142,7 +142,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
           messages: [
             {
               role: "system",
-              content: 'You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.'
+              content: `You are RaceMind AI, an expert racing analyst for ${series}. Provide detailed, data-driven insights with specific recommendations.`
             },
             {
               role: "user",
@@ -173,7 +173,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
           messages: [
             {
               role: "system",
-              content: 'You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.'
+              content: `You are RaceMind AI, an expert racing analyst for ${series}. Provide detailed, data-driven insights with specific recommendations.`
             },
             {
               role: "user",
@@ -204,7 +204,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
           messages: [
             {
               role: "system",
-              content: `You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.`
+              content: `You are RaceMind AI, an expert racing analyst for ${series}. Provide detailed, data-driven insights with specific recommendations.`
             },
             {
               role: "user",
@@ -286,7 +286,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
           messages: [
             {
               role: "system",
-              content: 'You are RaceMind AI, expert racing analyst for Toyota GR Cup.'
+              content: `You are RaceMind AI, expert racing analyst for ${series}.`
             },
             {
               role: "user",
@@ -312,7 +312,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
               messages: [
                 {
                   role: "system",
-                  content: 'You are RaceMind AI, expert racing analyst for Toyota GR Cup. Numbered insights.'
+                  content: `You are RaceMind AI, expert racing analyst for ${series}. Numbered insights.`
                 },
                 {
                   role: "user",

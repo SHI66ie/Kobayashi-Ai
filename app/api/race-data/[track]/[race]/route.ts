@@ -35,15 +35,54 @@ export async function GET(
     const awsConfigured = isAWSConfigured()
     
     if (!awsConfigured && !fs.existsSync(dataDir)) {
-      return NextResponse.json({ 
-        error: 'Data not found',
-        message: process.env.NODE_ENV === 'production' 
-          ? 'Local data is not available in production. This feature requires local development environment.'
-          : 'Please download the data from Google Drive and place it in the Data/ folder',
-        link: process.env.NODE_ENV === 'production' 
-          ? null 
-          : 'https://drive.google.com/drive/folders/1AvpoKZzY7CVtcSBX8wA7Oq8JfAWo-oou?usp=sharing'
-      }, { status: 404 })
+      console.log(`No local data found for ${track}, providing fallback mock data`)
+      return NextResponse.json({
+        track,
+        race,
+        raceResults: [
+          {
+            driver: "Max Verstappen",
+            team: "Red Bull Racing", 
+            position: 1,
+            totalTime: "1:23:45.678",
+            laps: 57
+          },
+          {
+            driver: "Charles Leclerc",
+            team: "Ferrari",
+            position: 2, 
+            totalTime: "1:23:47.123",
+            laps: 57
+          },
+          {
+            driver: "Lewis Hamilton",
+            team: "Mercedes",
+            position: 3,
+            totalTime: "1:23:49.234", 
+            laps: 57
+          }
+        ],
+        lapTimes: Array.from({ length: 20 }, (_, i) => ({
+          lap: i + 1,
+          lapTime: (90 + Math.random() * 8).toFixed(3) + "s",
+          driver: "Max Verstappen",
+          position: 1
+        })),
+        weather: {
+          airTemp: 22 + Math.random() * 8,
+          trackTemp: 32 + Math.random() * 12,
+          humidity: 40 + Math.random() * 30,
+          windSpeed: Math.random() * 10,
+          rain: Math.random() > 0.8
+        },
+        telemetry: {
+          available: true,
+          type: 'mock',
+          totalRows: 1000,
+          message: 'Using mock telemetry data for demonstration'
+        },
+        dataSource: 'mock'
+      })
     }
     
     if (awsConfigured) {
@@ -248,6 +287,51 @@ export async function GET(
     }
 
     const dataSource = awsConfigured ? 'aws' : 'local'
+
+    // If no real data was found, provide fallback mock data
+    if (!raceResults && !lapTimes && !weather) {
+      console.log(`No data found for ${track} ${race}, providing fallback mock data`)
+      return NextResponse.json({
+        track,
+        race,
+        raceResults: [
+          {
+            driver: "Max Verstappen",
+            team: "Red Bull Racing", 
+            position: 1,
+            totalTime: "1:23:45.678",
+            laps: 57
+          },
+          {
+            driver: "Charles Leclerc",
+            team: "Ferrari",
+            position: 2, 
+            totalTime: "1:23:47.123",
+            laps: 57
+          }
+        ],
+        lapTimes: Array.from({ length: 15 }, (_, i) => ({
+          lap: i + 1,
+          lapTime: (92 + Math.random() * 6).toFixed(3) + "s",
+          driver: "Max Verstappen",
+          position: 1
+        })),
+        weather: {
+          airTemp: 24,
+          trackTemp: 36,
+          humidity: 55,
+          windSpeed: 4.2,
+          rain: false
+        },
+        telemetry: {
+          available: true,
+          type: 'mock',
+          totalRows: 500,
+          message: 'Using mock telemetry data - no real data files found'
+        },
+        dataSource: 'mock-fallback'
+      })
+    }
 
     return NextResponse.json({
       track,
