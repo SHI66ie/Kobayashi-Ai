@@ -62,7 +62,7 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const { raceResults, lapTimes, weather, track, race, question }: any = await request.json()
+    const { raceResults, lapTimes, weather, track, race, question, series = 'Toyota GR Cup' }: any = await request.json()
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const limitedResults = Array.isArray(raceResults) ? raceResults.slice(0, 20) : []
 
     const systemPrompt =
-      'You are RaceMind AI, an expert Toyota GR Cup racing analyst. Answer questions about this race using ONLY the provided data. Be concise but specific. If data is missing, say what is uncertain.'
+      `You are RaceMind AI, an expert ${series} racing analyst. Answer questions about this race using ONLY the provided data. Be concise but specific. If data is missing, say what is uncertain.`
 
     const userPrompt = `RACE CONTEXT:\n${JSON.stringify(summary, null, 2)}\n\n` +
       `SAMPLE RACE RESULTS (truncated):\n${JSON.stringify(limitedResults, null, 2)}\n\n` +
