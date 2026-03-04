@@ -110,33 +110,8 @@ Be specific, technical, and actionable. Use racing terminology.`
     let modelUsed = ''
     let tokensUsed = 0
 
-    // Try Groq first
-    if (groq) {
-      try {
-        const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a professional Toyota GR Cup driver coach. Provide a concise, structured coaching report in plain text. Do NOT mention that you are an AI and do NOT output JSON or code fences.'
-            },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.6,
-          max_tokens: 2500
-        })
-
-        coaching = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.3-70b-versatile (Groq)'
-        tokensUsed = completion.usage?.total_tokens || 0
-      } catch (error: any) {
-        console.error('Groq driver coaching error:', error.message || error)
-      }
-    }
-
-    // Try Qwen 3.5 second
-    if (!coaching && qwen) {
+    // Try Qwen 3.5 first (POWERFUL & FAST)
+    if (qwen) {
       try {
         const completion = await qwen.chat.completions.create({
           model: 'qwen3.5-plus',
@@ -157,6 +132,31 @@ Be specific, technical, and actionable. Use racing terminology.`
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Qwen driver coaching error:', error.message || error)
+      }
+    }
+
+    // Try Groq second
+    if (!coaching && groq) {
+      try {
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.1-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a professional Toyota GR Cup driver coach. Provide a concise, structured coaching report in plain text. Do NOT mention that you are an AI and do NOT output JSON or code fences.'
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.6,
+          max_tokens: 2500
+        })
+
+        coaching = completion.choices[0]?.message?.content || ''
+        modelUsed = 'llama-3.1-70b-versatile (Groq)'
+        tokensUsed = completion.usage?.total_tokens || 0
+      } catch (error: any) {
+        console.error('Groq driver coaching error:', error.message || error)
       }
     }
 
@@ -203,7 +203,7 @@ Be specific, technical, and actionable. Use racing terminology.`
       metadata: {
         model: modelUsed,
         tokensUsed,
-        provider: groq ? 'Groq (FREE)' : qwen ? 'Qwen 3.5 (POWERFUL)' : 'Gemini (FREE)'
+        provider: qwen ? 'Qwen 3.5 (POWERFUL)' : groq ? 'Groq (FREE)' : 'Gemini (FREE)'
       }
     })
 
