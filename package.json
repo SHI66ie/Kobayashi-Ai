@@ -15,8 +15,9 @@
     "test-groq": "node scripts/test-groq.js",
     "test-deepseek": "node scripts/test-deepseek.js",
     "test-gemini": "node scripts/test-gemini.js",
+    "test-qwen": "node scripts/test-qwen.js",
     "test-custom-llm": "node scripts/test-custom-llm.js",
-    "test-all-ai": "npm run test-groq && npm run test-deepseek && npm run test-gemini && npm run test-custom-llm"
+    "test-all-ai": "npm run test-groq && npm run test-deepseek && npm run test-gemini && npm run test-qwen && npm run test-custom-llm"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

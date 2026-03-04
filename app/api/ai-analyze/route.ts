@@ -33,6 +33,17 @@ if (process.env.DEEPSEEK_API_KEY) {
   })
 }
 
+// For Qwen 3.5, use OpenAI-compatible client
+let qwen: any = null
+if (process.env.QWEN_API_KEY) {
+  qwen = new OpenAI({
+    apiKey: process.env.QWEN_API_KEY,
+    baseURL: process.env.QWEN_BASE_URL || 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    timeout: 50000,
+    maxRetries: 2
+  })
+}
+
 // Check for Custom LLM configuration
 const customLLMUrl = process.env.CUSTOM_LLM_URL
 const customLLMKey = process.env.CUSTOM_LLM_API_KEY
@@ -42,13 +53,14 @@ export async function POST(request: NextRequest) {
     const { raceResults, lapTimes, weather, track, race }: any = await request.json()
 
     // Check if any AI service is available
-    if (!groq && !deepseek && !gemini && !openai && !customLLMUrl) {
+    if (!groq && !deepseek && !qwen && !gemini && !openai && !customLLMUrl) {
       return NextResponse.json({
         error: 'No AI service configured',
-        message: 'Add GROQ_API_KEY (FREE & FAST), DEEPSEEK_API_KEY (FREE), GEMINI_API_KEY (FREE), CUSTOM_LLM_URL, or OPENAI_API_KEY to enable AI analysis',
+        message: 'Add GROQ_API_KEY (FREE & FAST), DEEPSEEK_API_KEY (FREE), QWEN_API_KEY (POWERFUL), GEMINI_API_KEY (FREE), CUSTOM_LLM_URL, or OPENAI_API_KEY to enable AI analysis',
         hints: {
           groq: 'Get FREE Groq key: https://console.groq.com/keys (RECOMMENDED - No phone needed)',
           deepseek: 'Get FREE DeepSeek key: https://platform.deepseek.com/api_keys (May need phone verification)',
+          qwen: 'Get Qwen 3.5 key: https://dashscope.console.aliyun.com/ (POWERFUL & FAST)',
           gemini: 'Get FREE Gemini key: https://makersuite.google.com/app/apikey',
           custom: 'Use your own LLM: Set CUSTOM_LLM_URL in .env.local',
           openai: 'Get OpenAI key (paid): https://platform.openai.com/api-keys'
@@ -56,17 +68,19 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Priority: Groq (free & fast) > DeepSeek (free) > Custom LLM > Gemini (free) > OpenAI (paid)
+    // Priority: Groq (free & fast) > Qwen 3.5 (powerful) > DeepSeek (free) > Custom LLM > Gemini (free) > OpenAI (paid)
     const useGroq = groq !== null
-    const useDeepSeek = !useGroq && deepseek !== null
-    const useCustomLLM = !useGroq && !useDeepSeek && customLLMUrl !== undefined
-    const useGemini = !useGroq && !useDeepSeek && !useCustomLLM && gemini !== null
-    const useOpenAI = !useGroq && !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
+    const useQwen = !useGroq && qwen !== null
+    const useDeepSeek = !useGroq && !useQwen && deepseek !== null
+    const useCustomLLM = !useGroq && !useQwen && !useDeepSeek && customLLMUrl !== undefined
+    const useGemini = !useGroq && !useQwen && !useDeepSeek && !useCustomLLM && gemini !== null
+    const useOpenAI = !useGroq && !useQwen && !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
 
     const aiProvider = useGroq ? 'Groq (FREE & FAST)' :
-      useDeepSeek ? 'DeepSeek (FREE)' :
-        useCustomLLM ? 'Custom LLM' :
-          useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
+      useQwen ? 'Qwen 3.5 (POWERFUL & FAST)' :
+        useDeepSeek ? 'DeepSeek (FREE)' :
+          useCustomLLM ? 'Custom LLM' :
+            useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
     console.log(`🤖 Using ${aiProvider} for analysis...`)
 
     // Prepare race data summary for AI
@@ -150,7 +164,38 @@ Format: Use numbered lists and bullet points. Be specific with data.`
       }
     }
 
-    // Use DeepSeek if Groq failed
+    // Use Qwen 3.5 if Groq failed
+    if (!analysis && useQwen && qwen) {
+      try {
+        console.log('🚀 Using Qwen 3.5 (POWERFUL & FAST)...')
+        const completion = await qwen.chat.completions.create({
+          model: 'qwen3.5-plus',
+          messages: [
+            {
+              role: "system",
+              content: 'You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.'
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: false
+        })
+
+        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
+        modelUsed = 'qwen3.5-plus (POWERFUL & FAST)'
+        tokensUsed = completion.usage?.total_tokens || 0
+
+      } catch (qwenError: any) {
+        console.error('⚠️ Qwen error, falling back to next provider:', qwenError.message)
+        // Continue to next provider
+      }
+    }
+
+    // Use DeepSeek if Groq and Qwen failed
     if (!analysis && useDeepSeek && deepseek) {
       try {
         console.log('🚀 Using DeepSeek (FREE & RELIABLE)...')
@@ -302,9 +347,10 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         track,
         race,
         provider: useGroq ? 'Groq (FREE)' :
-          useDeepSeek ? 'DeepSeek (FREE)' :
-            useCustomLLM ? 'Custom LLM' :
-              useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
+          useQwen ? 'Qwen 3.5 (POWERFUL)' :
+            useDeepSeek ? 'DeepSeek (FREE)' :
+              useCustomLLM ? 'Custom LLM' :
+                useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
       }
     })
 
