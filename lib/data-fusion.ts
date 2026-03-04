@@ -222,7 +222,20 @@ export class DataFusionService {
 
   // Private helper methods
   private async loadDriverHistoricalData(driverName: string, years: number[]) {
-    const performance = {
+    const performance: {
+      seasons: Array<{
+        year: number
+        qualifying_positions: number[]
+        race_positions: number[]
+        points: number[]
+        fastest_laps: number
+        dnfs: number
+      }>
+      averageQualifyingPosition: number
+      averageRacePosition: number
+      totalPoints: number
+      consistency: number
+    } = {
       seasons: [],
       averageQualifyingPosition: 0,
       averageRacePosition: 0,
@@ -307,11 +320,26 @@ export class DataFusionService {
   }
 
   private async loadConstructorHistoricalData(constructorName: string, years: number[]) {
-    const performance = {
+    const performance: {
+      seasons: Array<{
+        year: number
+        driverPositions: number[]
+        constructorPoints: number
+        wins: number
+        podiums: number
+      }>
+      averageTeamPosition: number
+      totalChampionshipPoints: number
+      dominance: number
+      safetyCarProbability: number
+      weatherPatterns: string[]
+    } = {
       seasons: [],
       averageTeamPosition: 0,
       totalChampionshipPoints: 0,
-      dominance: 0
+      dominance: 0,
+      safetyCarProbability: 0.3,
+      weatherPatterns: []
     }
 
     for (const year of years) {
@@ -368,7 +396,7 @@ export class DataFusionService {
 
     // Adjust predictions based on current form if available
     const currentFormAdjustment = liveData.recentForm && liveData.recentForm.length > 0
-      ? liveData.recentForm.reduce((a, b) => a + b, 0) / liveData.recentForm.length - avgRace
+      ? liveData.recentForm.reduce((a: number, b: number) => a + b, 0) / liveData.recentForm.length - avgRace
       : 0
 
     return {
@@ -400,7 +428,7 @@ export class DataFusionService {
     return {
       currentStatus: 'scheduled' as const,
       weather: null,
-      trackTemperature: null,
+      trackTemperature: undefined,
       date: 'TBD'
     }
   }

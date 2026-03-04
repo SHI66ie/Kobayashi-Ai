@@ -347,7 +347,7 @@ export class F1DecisionEngine {
     const historicalQualifying = patterns.qualifyingPerformance
 
     let strategy = 'Standard Q1-Q2-Q3 progression'
-    let priority = 'medium'
+    let priority: 'critical' | 'high' | 'medium' | 'low' = 'medium'
     let confidence = 0.7
 
     if (predictedPosition <= 5) {
