@@ -184,7 +184,7 @@ Provide your radio response now:`
     if (groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.2-3b-preview',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: 'system',
@@ -198,7 +198,7 @@ Provide your radio response now:`
         })
 
         aiResponse = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.2-3b-preview (Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq voice AI error:', error.message || error)

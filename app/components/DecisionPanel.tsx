@@ -2,7 +2,60 @@
 
 import React, { useState, useEffect } from 'react'
 import { Brain, Target, AlertTriangle, TrendingUp, Shield, Zap, Flag, Settings } from 'lucide-react'
-import { f1DecisionEngine, DecisionAnalysis, DecisionContext, DecisionRecommendation } from '../../lib/f1-decision-engine'
+
+// Interfaces matching the server-side DecisionAnalysis shape
+interface TireStint {
+  compound: string
+  laps: number
+}
+
+interface RaceStrategy {
+  tireStrategy: {
+    startCompound: string
+    stint1: TireStint
+    stint2: TireStint
+    stint3?: TireStint
+  }
+  pitStrategy: {
+    lapNumbers: number[]
+    expectedPitTime: number
+    safetyWindow: number[]
+  }
+  racePace: {
+    targetLapTime: string
+    fuelAdjustedPace: string
+    tireDegradationFactor: number
+  }
+}
+
+interface DecisionRecommendation {
+  type: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  confidence: number
+  recommendation: string
+  reasoning: string
+  dataPoints: string[]
+  expectedOutcome: string
+  riskLevel: 'low' | 'medium' | 'high'
+}
+
+interface DecisionAnalysis {
+  context: { driver: string; race: string; year: number }
+  recommendations: DecisionRecommendation[]
+  overallStrategy: RaceStrategy
+  riskAssessment: {
+    factors: string[]
+    overallRisk: 'low' | 'medium' | 'high'
+    mitigation: string[]
+  }
+  performancePrediction: {
+    qualifyingPosition: number
+    racePosition: number
+    pointsScored: number
+    probabilityOfPodium: number
+    probabilityOfWin: number
+  }
+}
 
 interface DecisionPanelProps {
   driver: string
@@ -25,18 +78,27 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
       setError(null)
 
       try {
-        const context: DecisionContext = {
-          driver,
-          race,
-          year,
-          currentConditions
-        }
+        const response = await fetch('/api/f1/decision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            driver,
+            race,
+            year,
+            currentConditions
+          })
+        })
 
-        const decisionAnalysis = await f1DecisionEngine.generateRaceDecision(context)
-        setAnalysis(decisionAnalysis)
+        const data = await response.json()
+
+        if (data.success && data.analysis) {
+          setAnalysis(data.analysis)
+        } else {
+          setError(data.message || 'Failed to generate decision analysis')
+        }
       } catch (err) {
         console.error('Error generating decision analysis:', err)
-        setError('Failed to generate decision analysis')
+        setError('Failed to connect to the decision engine')
       } finally {
         setLoading(false)
       }
@@ -82,9 +144,10 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
     return (
       <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-800">
         <div className="text-center py-8">
-          <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-500" />
-          <h3 className="text-lg font-semibold mb-2">Analysis Error</h3>
-          <p className="text-gray-400">{error}</p>
+          <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
+          <h3 className="text-lg font-semibold mb-2">Decision Engine</h3>
+          <p className="text-gray-400 text-sm">{error}</p>
+          <p className="text-gray-500 text-xs mt-2">The decision engine requires telemetry data files to work. Results will improve as more data is available.</p>
         </div>
       </div>
     )
@@ -123,33 +186,30 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
       <div className="flex space-x-1 mb-6 bg-gray-800 rounded-lg p-1">
         <button
           onClick={() => setActiveTab('strategy')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'strategy'
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'strategy'
               ? 'bg-racing-red text-white'
               : 'text-gray-400 hover:text-white hover:bg-gray-700'
-          }`}
+            }`}
         >
           <Target className="w-4 h-4 inline mr-2" />
           Strategy
         </button>
         <button
           onClick={() => setActiveTab('risks')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'risks'
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'risks'
               ? 'bg-racing-red text-white'
               : 'text-gray-400 hover:text-white hover:bg-gray-700'
-          }`}
+            }`}
         >
           <Shield className="w-4 h-4 inline mr-2" />
           Risks
         </button>
         <button
           onClick={() => setActiveTab('predictions')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'predictions'
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'predictions'
               ? 'bg-racing-red text-white'
               : 'text-gray-400 hover:text-white hover:bg-gray-700'
-          }`}
+            }`}
         >
           <TrendingUp className="w-4 h-4 inline mr-2" />
           Predictions
@@ -190,7 +250,7 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium text-gray-300 mb-2">Pit Strategy</h4>
                   <div className="space-y-1 text-xs">
@@ -273,29 +333,33 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
                   {analysis.riskAssessment.overallRisk.toUpperCase()}
                 </span>
               </div>
-              
+
               <div className="space-y-3">
                 <div>
                   <h4 className="text-sm font-medium text-gray-300 mb-2">Risk Factors</h4>
                   <ul className="space-y-1">
-                    {analysis.riskAssessment.factors.map((factor, idx) => (
+                    {analysis.riskAssessment.factors.length > 0 ? analysis.riskAssessment.factors.map((factor, idx) => (
                       <li key={idx} className="text-sm text-gray-400 flex items-center space-x-2">
                         <span className="text-red-400">•</span>
                         <span>{factor}</span>
                       </li>
-                    ))}
+                    )) : (
+                      <li className="text-sm text-gray-500">No significant risk factors identified</li>
+                    )}
                   </ul>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium text-gray-300 mb-2">Mitigation Strategies</h4>
                   <ul className="space-y-1">
-                    {analysis.riskAssessment.mitigation.map((strategy, idx) => (
+                    {analysis.riskAssessment.mitigation.length > 0 ? analysis.riskAssessment.mitigation.map((strategy, idx) => (
                       <li key={idx} className="text-sm text-gray-400 flex items-center space-x-2">
                         <span className="text-green-400">✓</span>
                         <span>{strategy}</span>
                       </li>
-                    ))}
+                    )) : (
+                      <li className="text-sm text-gray-500">Standard race procedures apply</li>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -310,7 +374,7 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
                 <TrendingUp className="w-5 h-5 mr-2" />
                 Performance Predictions
               </h3>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-racing-red">P{analysis.performancePrediction.qualifyingPosition}</div>
@@ -337,20 +401,20 @@ export default function DecisionPanel({ driver, race, year = new Date().getFullY
                     <span className="font-mono">{(analysis.performancePrediction.probabilityOfWin * 100).toFixed(1)}%</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-racing-red h-2 rounded-full transition-all duration-300"
                       style={{ width: `${analysis.performancePrediction.probabilityOfWin * 100}%` }}
                     ></div>
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-300">Podium Probability</span>
                     <span className="font-mono">{(analysis.performancePrediction.probabilityOfPodium * 100).toFixed(1)}%</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-racing-blue h-2 rounded-full transition-all duration-300"
                       style={{ width: `${analysis.performancePrediction.probabilityOfPodium * 100}%` }}
                     ></div>

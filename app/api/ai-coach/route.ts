@@ -139,7 +139,7 @@ Be specific, technical, and actionable. Use racing terminology.`
     if (!coaching && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.1-70b-versatile',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: 'system',
@@ -153,7 +153,7 @@ Be specific, technical, and actionable. Use racing terminology.`
         })
 
         coaching = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.1-70b-versatile (Groq)'
+        modelUsed = 'llama-3.3-70b-versatile (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq driver coaching error:', error.message || error)
