@@ -126,7 +126,7 @@ Your final answer should read like a human-written race engineer report for the 
           max_tokens: 2000
         })
         prediction = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.3-70b-versatile (FREE via Groq)'
+        modelUsed = 'llama-3.1-70b-versatile (FREE via Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq prediction error:', error.message)

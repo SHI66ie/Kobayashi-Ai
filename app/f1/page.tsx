@@ -19,6 +19,7 @@ const ToyotaGRLogo = lazy(() => import('../components/ToyotaGRLogo'))
 const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonPanel'))
 const RaceQASection = lazy(() => import('../components/RaceQASection'))
 const F1AIChat = lazy(() => import('../components/F1AIChat'))
+const DecisionPanel = lazy(() => import('../components/DecisionPanel'))
 
 
 // Performance monitoring hook
@@ -1649,65 +1650,76 @@ export default function F1Page() {
         {/* AI ORACLE CHAT */}
         {
           activeTab === 'ai' && (
-            <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="lg:col-span-2 space-y-8">
-                <Suspense fallback={<div className="h-[600px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
-                  <F1AIChat contextData={{
-                    standings: apiStandings,
-                    drivers: apiDrivers,
-                    teams: apiTeams,
-                    nextRaces: upcomingRacesList,
-                    currentTrack: tracks.find(t => t.id === selectedTrack)
-                  }} />
-                </Suspense>
-              </div>
-              <div className="space-y-6">
-                <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl border border-white/10 shadow-xl border-racing-red/20">
-                  <h4 className="text-xl font-bold mb-4 flex items-center text-racing-red">
-                    <Target className="w-5 h-5 mr-2" />
-                    Alpha Pick Accuracy
-                  </h4>
-                  <div className="flex items-end justify-between mb-2">
-                    <span className="text-4xl font-black text-white tracking-tighter">94.2%</span>
-                    <span className="text-green-500 text-sm font-bold flex items-center mb-1">
-                      <TrendingUp className="w-4 h-4 mr-1" />
-                      +2.1%
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Last 10 Races Analysis</p>
-                  <div className="mt-6 space-y-4">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                      <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Top Prediction Strength</p>
-                      <p className="text-sm font-bold text-white">Podium Outcomes</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                      <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Key Insight Factor</p>
-                      <p className="text-sm font-bold text-white">2026 Aero Efficiency</p>
-                    </div>
-                  </div>
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="grid lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                  <Suspense fallback={<div className="h-[600px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
+                    <F1AIChat contextData={{
+                      standings: apiStandings,
+                      drivers: apiDrivers,
+                      teams: apiTeams,
+                      nextRaces: upcomingRacesList,
+                      currentTrack: tracks.find(t => t.id === selectedTrack)
+                    }} />
+                  </Suspense>
                 </div>
-
-                <div className="bg-white/5 p-6 rounded-2xl border border-white/10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl" />
-                  <h4 className="font-bold text-white mb-4 flex items-center text-sm uppercase tracking-wider">
-                    <Zap className="w-4 h-4 mr-2 text-yellow-500" />
-                    Live Alpha Tickers
-                  </h4>
-                  <div className="space-y-4">
-                    {[
-                      { label: "Verstappen Confidence", value: "High (0.91)" },
-                      { label: "Hulk P10 Probability", value: "Medium (0.68)" },
-                      { label: "Ferrari Reliability", value: "Increasing" },
-                      { label: "Track Evolution", value: "High" }
-                    ].map((ticker, i) => (
-                      <div key={i} className="flex justify-between items-center text-xs">
-                        <span className="text-gray-400">{ticker.label}</span>
-                        <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">{ticker.value}</span>
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl border border-white/10 shadow-xl border-racing-red/20">
+                    <h4 className="text-xl font-bold mb-4 flex items-center text-racing-red">
+                      <Target className="w-5 h-5 mr-2" />
+                      Alpha Pick Accuracy
+                    </h4>
+                    <div className="flex items-end justify-between mb-2">
+                      <span className="text-4xl font-black text-white tracking-tighter">94.2%</span>
+                      <span className="text-green-500 text-sm font-bold flex items-center mb-1">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        +2.1%
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Last 10 Races Analysis</p>
+                    <div className="mt-6 space-y-4">
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Top Prediction Strength</p>
+                        <p className="text-sm font-bold text-white">Podium Outcomes</p>
                       </div>
-                    ))}
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Key Insight Factor</p>
+                        <p className="text-sm font-bold text-white">2026 Aero Efficiency</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 p-6 rounded-2xl border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl" />
+                    <h4 className="font-bold text-white mb-4 flex items-center text-sm uppercase tracking-wider">
+                      <Zap className="w-4 h-4 mr-2 text-yellow-500" />
+                      Live Alpha Tickers
+                    </h4>
+                    <div className="space-y-4">
+                      {[
+                        { label: "Verstappen Confidence", value: "High (0.91)" },
+                        { label: "Hulk P10 Probability", value: "Medium (0.68)" },
+                        { label: "Ferrari Reliability", value: "Increasing" },
+                        { label: "Track Evolution", value: "High" }
+                      ].map((ticker, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs">
+                          <span className="text-gray-400">{ticker.label}</span>
+                          <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">{ticker.value}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Decision Panel */}
+              <Suspense fallback={<div className="h-[400px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
+                <DecisionPanel 
+                  driver="Max Verstappen"
+                  race={tracks.find(t => t.id === selectedTrack)?.name || "Monaco Grand Prix"}
+                  currentConditions={simulatedWeather}
+                />
+              </Suspense>
             </div>
           )
         }
