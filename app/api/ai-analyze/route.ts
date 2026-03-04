@@ -68,16 +68,16 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Priority: Groq (free & fast) > Qwen 3.5 (powerful) > DeepSeek (free) > Custom LLM > Gemini (free) > OpenAI (paid)
-    const useGroq = groq !== null
-    const useQwen = !useGroq && qwen !== null
-    const useDeepSeek = !useGroq && !useQwen && deepseek !== null
-    const useCustomLLM = !useGroq && !useQwen && !useDeepSeek && customLLMUrl !== undefined
-    const useGemini = !useGroq && !useQwen && !useDeepSeek && !useCustomLLM && gemini !== null
-    const useOpenAI = !useGroq && !useQwen && !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
+    // Priority: Qwen 3.5 (powerful) > Groq (free & fast) > DeepSeek (free) > Custom LLM > Gemini (free) > OpenAI (paid)
+    const useQwen = qwen !== null
+    const useGroq = !useQwen && groq !== null
+    const useDeepSeek = !useQwen && !useGroq && deepseek !== null
+    const useCustomLLM = !useQwen && !useGroq && !useDeepSeek && customLLMUrl !== undefined
+    const useGemini = !useQwen && !useGroq && !useDeepSeek && !useCustomLLM && gemini !== null
+    const useOpenAI = !useQwen && !useGroq && !useDeepSeek && !useCustomLLM && !useGemini && openai !== null
 
-    const aiProvider = useGroq ? 'Groq (FREE & FAST)' :
-      useQwen ? 'Qwen 3.5 (POWERFUL & FAST)' :
+    const aiProvider = useQwen ? 'Qwen 3.5 (POWERFUL & FAST)' :
+      useGroq ? 'Groq (FREE & FAST)' :
         useDeepSeek ? 'DeepSeek (FREE)' :
           useCustomLLM ? 'Custom LLM' :
             useGemini ? 'Google Gemini (FREE)' : 'OpenAI GPT'
@@ -133,39 +133,8 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     let modelUsed = ''
     let tokensUsed = 0
 
-    // Use Groq (FREE & FAST) first
-    if (useGroq && groq) {
-      try {
-        console.log('⚡ Using Groq (FREE & FAST)...')
-        const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: "system",
-              content: 'You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.'
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-          stream: false
-        })
-
-        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
-        modelUsed = 'llama-3.3-70b-versatile (FREE via Groq)'
-        tokensUsed = completion.usage?.total_tokens || 0
-
-      } catch (groqError: any) {
-        console.error('⚠️ Groq error, falling back to next provider:', groqError.message)
-        // Continue to next provider
-      }
-    }
-
-    // Use Qwen 3.5 if Groq failed
-    if (!analysis && useQwen && qwen) {
+    // Use Qwen 3.5 first (POWERFUL & FAST)
+    if (useQwen && qwen) {
       try {
         console.log('🚀 Using Qwen 3.5 (POWERFUL & FAST)...')
         const completion = await qwen.chat.completions.create({
@@ -191,6 +160,37 @@ Format: Use numbered lists and bullet points. Be specific with data.`
 
       } catch (qwenError: any) {
         console.error('⚠️ Qwen error, falling back to next provider:', qwenError.message)
+        // Continue to next provider
+      }
+    }
+
+    // Use Groq (FREE & FAST) second
+    if (!analysis && useGroq && groq) {
+      try {
+        console.log('⚡ Using Groq (FREE & FAST)...')
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.1-70b-versatile',
+          messages: [
+            {
+              role: "system",
+              content: 'You are RaceMind AI, an expert racing analyst for Toyota GR Cup. Provide detailed, data-driven insights with specific recommendations.'
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: false
+        })
+
+        analysis = completion.choices[0]?.message?.content || 'No analysis generated'
+        modelUsed = 'llama-3.1-70b-versatile (FREE via Groq)'
+        tokensUsed = completion.usage?.total_tokens || 0
+
+      } catch (groqError: any) {
+        console.error('⚠️ Groq error, falling back to next provider:', groqError.message)
         // Continue to next provider
       }
     }
@@ -346,8 +346,8 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         tokensUsed,
         track,
         race,
-        provider: useGroq ? 'Groq (FREE)' :
-          useQwen ? 'Qwen 3.5 (POWERFUL)' :
+        provider: useQwen ? 'Qwen 3.5 (POWERFUL)' :
+          useGroq ? 'Groq (FREE)' :
             useDeepSeek ? 'DeepSeek (FREE)' :
               useCustomLLM ? 'Custom LLM' :
                 useGemini ? 'Google Gemini (FREE)' : 'OpenAI'
