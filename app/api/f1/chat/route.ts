@@ -17,6 +17,12 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null
 
+// Initialize Qwen 3.5 (POWERFUL)
+const qwen = process.env.QWEN_API_KEY ? new OpenAI({
+    apiKey: process.env.QWEN_API_KEY,
+    baseURL: process.env.QWEN_BASE_URL || 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+}) : null
+
 export async function POST(request: NextRequest) {
     try {
         const { message, context }: any = await request.json()
@@ -51,12 +57,22 @@ Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW
 `
 
 
-        // Priority: Groq > Gemini > OpenAI
+        // Priority: Qwen 3.5 > Groq > Gemini > OpenAI
         let analysis = ''
 
-        if (groq) {
+        if (qwen) {
+            const completion = await qwen.chat.completions.create({
+                model: 'qwen3.5-plus',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: message }
+                ],
+                temperature: 0.7,
+            })
+            analysis = completion.choices[0]?.message?.content || ''
+        } else if (groq) {
             const completion = await groq.chat.completions.create({
-                model: 'llama-3.3-70b-versatile',
+                model: 'llama-3.1-70b-versatile',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: message }
@@ -81,7 +97,10 @@ Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW
             })
             analysis = completion.choices[0]?.message?.content || ''
         } else {
-            return NextResponse.json({ error: 'No AI service configured' }, { status: 503 })
+            return NextResponse.json({ 
+                error: 'No AI service configured',
+                message: 'Add QWEN_API_KEY (powerful), GROQ_API_KEY (free), GEMINI_API_KEY (free), or OPENAI_API_KEY to .env.local'
+            }, { status: 503 })
         }
 
         return NextResponse.json({ success: true, response: analysis })

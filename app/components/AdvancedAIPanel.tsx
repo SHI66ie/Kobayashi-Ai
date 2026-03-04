@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Brain, Zap, Shield, Target, Activity, Cpu, Eye, Navigation } from 'lucide-react'
+import { dataFusionService, EnhancedDriverData, EnhancedRaceData } from '../../lib/data-fusion'
 
 interface AdvancedAIPanelProps {
   raceData: any
@@ -14,40 +15,98 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
   const [activeMode, setActiveMode] = useState<'multimodal' | 'autonomous' | 'safety'>('multimodal')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [enhancedDriverData, setEnhancedDriverData] = useState<EnhancedDriverData | null>(null)
+  const [enhancedRaceData, setEnhancedRaceData] = useState<EnhancedRaceData | null>(null)
+  const [selectedDriver, setSelectedDriver] = useState<string>('Max Verstappen')
+
+  // Load enhanced data when component mounts or driver changes
+  useEffect(() => {
+    const loadEnhancedData = async () => {
+      try {
+        const [driverData, raceData] = await Promise.all([
+          dataFusionService.getEnhancedDriverData(selectedDriver),
+          dataFusionService.getEnhancedRaceData(race, new Date().getFullYear())
+        ])
+        
+        setEnhancedDriverData(driverData)
+        setEnhancedRaceData(raceData)
+      } catch (error) {
+        console.error('Error loading enhanced data:', error)
+      }
+    }
+
+    if (selectedDriver && race) {
+      loadEnhancedData()
+    }
+  }, [selectedDriver, race])
 
   const runMultimodalAnalysis = async (analysisType: string) => {
     setLoading(true)
     try {
       const weatherData = simulatedWeather || raceData?.weather || {}
+      
+      // Get AI recommendations based on fused data
+      const recommendations = await dataFusionService.generateRecommendations(selectedDriver, race)
+      
+      // Enhanced analysis payload with historical and live data
+      const analysisPayload = {
+        // Enhanced driver data
+        driverPerformance: enhancedDriverData ? {
+          historical: enhancedDriverData.historicalPerformance,
+          currentForm: enhancedDriverData.liveData,
+          predictions: enhancedDriverData.predictions
+        } : {},
+        
+        // Enhanced race context
+        enhancedRaceContext: enhancedRaceData ? {
+          historical: enhancedRaceData.historicalContext,
+          currentConditions: enhancedRaceData.liveData,
+          analysis: enhancedRaceData.analysis
+        } : {},
+        
+        // Traditional telemetry data
+        telemetryData: raceData?.telemetry || {},
+        
+        // Track and weather
+        trackLayout: {
+          corners: 12,
+          elevation: 'Moderate',
+          surface: 'Asphalt',
+          length: '4.2km'
+        },
+        weatherData,
+        isSimulated: !!simulatedWeather,
+        
+        // AI recommendations
+        recommendations: recommendations,
+        
+        // Driver behavior (could be enhanced with historical patterns)
+        driverBehavior: {
+          brakingStyle: enhancedDriverData ? 
+            getBrakingStyleFromData(enhancedDriverData.historicalPerformance) : 'Aggressive',
+          corneringStyle: 'Late Apex',
+          throttleStyle: 'Progressive',
+          consistency: enhancedDriverData ? 
+            (1 - enhancedDriverData.historicalPerformance.consistency / 100).toString() : 'High'
+        },
+        
+        // Race context
+        raceContext: {
+          position: enhancedDriverData?.liveData.currentPosition || 3,
+          currentLap: 15,
+          totalLaps: 30,
+          gapToLeader: '+2.3s',
+          tireCondition: 'Good',
+          fuelLevel: 65
+        },
+        
+        analysisType
+      }
+      
       const response = await fetch('/api/ai-multimodal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telemetryData: raceData?.telemetry || {},
-          trackLayout: {
-            corners: 12,
-            elevation: 'Moderate',
-            surface: 'Asphalt',
-            length: '4.2km'
-          },
-          weatherData,
-          isSimulated: !!simulatedWeather,
-          driverBehavior: {
-            brakingStyle: 'Aggressive',
-            corneringStyle: 'Late Apex',
-            throttleStyle: 'Progressive',
-            consistency: 'High'
-          },
-          raceContext: {
-            position: 3,
-            currentLap: 15,
-            totalLaps: 30,
-            gapToLeader: '+2.3s',
-            tireCondition: 'Good',
-            fuelLevel: 65
-          },
-          analysisType
-        })
+        body: JSON.stringify(analysisPayload)
       })
       const data = await response.json()
       setResult(data)
@@ -56,6 +115,14 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
     } finally {
       setLoading(false)
     }
+  }
+
+  // Helper method to determine braking style from historical data
+  const getBrakingStyleFromData = (performance: any): string => {
+    const avgQualifyingPos = performance.averageQualifyingPosition
+    if (avgQualifyingPos <= 3) return 'Aggressive'
+    if (avgQualifyingPos <= 10) return 'Balanced'
+    return 'Conservative'
   }
 
   const runAutonomousAnalysis = async (mode: string) => {
@@ -323,6 +390,115 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
 
       {/* Results */}
       <div className="bg-gray-900/50 rounded-lg p-4 min-h-[300px]">
+        {/* Enhanced Data Insights */}
+        {enhancedDriverData && (
+          <div className="mb-6 bg-gray-900/50 rounded-lg p-4 border border-gray-800">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg flex items-center space-x-2">
+                <Target className="w-5 h-5 text-racing-red" />
+                <span>Data-Driven Insights</span>
+              </h3>
+              <select
+                value={selectedDriver}
+                onChange={(e) => setSelectedDriver(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-sm"
+              >
+                <option value="Max Verstappen">Max Verstappen</option>
+                <option value="Charles Leclerc">Charles Leclerc</option>
+                <option value="Lewis Hamilton">Lewis Hamilton</option>
+                <option value="George Russell">George Russell</option>
+                <option value="Carlos Sainz">Carlos Sainz</option>
+              </select>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Historical Performance */}
+              <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3">
+                <h4 className="font-medium text-blue-400 mb-2 text-sm">Historical Performance</h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Avg Qualifying:</span>
+                    <span className="font-mono">{enhancedDriverData.historicalPerformance.averageQualifyingPosition.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Avg Race:</span>
+                    <span className="font-mono">{enhancedDriverData.historicalPerformance.averageRacePosition.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Total Points:</span>
+                    <span className="font-mono">{enhancedDriverData.historicalPerformance.totalPoints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Consistency:</span>
+                    <span className="font-mono">{(enhancedDriverData.historicalPerformance.consistency * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Form */}
+              <div className="bg-green-900/20 border border-green-700/30 rounded-lg p-3">
+                <h4 className="font-medium text-green-400 mb-2 text-sm">Current Form</h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Current Position:</span>
+                    <span className="font-mono">#{enhancedDriverData.liveData.currentPosition || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Current Points:</span>
+                    <span className="font-mono">{enhancedDriverData.liveData.currentPoints || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Team:</span>
+                    <span className="font-mono">{enhancedDriverData.driver.team}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Status:</span>
+                    <span className="font-mono capitalize">{enhancedDriverData.liveData.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Predictions */}
+              <div className="bg-purple-900/20 border border-purple-700/30 rounded-lg p-3">
+                <h4 className="font-medium text-purple-400 mb-2 text-sm">AI Predictions</h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Next Qualifying:</span>
+                    <span className="font-mono">P{enhancedDriverData.predictions.nextRaceQualifying}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Next Race:</span>
+                    <span className="font-mono">P{enhancedDriverData.predictions.nextRaceRace}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Season Finish:</span>
+                    <span className="font-mono">P{enhancedDriverData.predictions.championshipFinish}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Confidence:</span>
+                    <span className="font-mono">{(enhancedDriverData.predictions.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Strategy Recommendations */}
+            {enhancedRaceData && enhancedRaceData.analysis.keyFactors.length > 0 && (
+              <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3">
+                <h4 className="font-medium text-yellow-400 mb-2 text-sm">Key Race Factors</h4>
+                <div className="flex flex-wrap gap-2">
+                  {enhancedRaceData.analysis.keyFactors.map((factor, idx) => (
+                    <span key={idx} className="px-2 py-1 bg-yellow-800/30 text-yellow-300 rounded text-xs">
+                      {factor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Results Section */}
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
