@@ -46,7 +46,7 @@ The name "Kobayashi" pays homage to Kamui Kobayashi and the precision and commit
 #### Backend & APIs
 - **Next.js API Routes** for serverless backend functions
 - **Multiple AI Providers**:
-  - **Groq** (llama3-8b-8192) - Primary, fast inference
+  - **Groq** (llama-3.1-8b-instant) - Primary, fast inference
   - **Google Gemini** (gemini-2.0-flash-exp) - Fallback, multimodal support
   - **DeepSeek** - Alternative reasoning model
   - **OpenAI** (GPT-4) - Premium fallback
@@ -341,4 +341,5 @@ Most importantly, this project proved that with modern AI tools and cloud infras
 ---
 
 *Built with ❤️ and ☕ by a racing enthusiast who believes AI should make motorsport more accessible to everyone.*
+
 

@@ -159,7 +159,7 @@ Provide detailed, technical analysis with specific recommendations, numerical da
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama3-8b-8192',
+          model: 'llama-3.1-8b-instant',
           messages: [
             { role: 'system', content: 'You are an expert multimodal racing AI analyst. Provide detailed technical analysis with specific recommendations.' },
             { role: 'user', content: fullPrompt }
@@ -168,7 +168,7 @@ Provide detailed, technical analysis with specific recommendations, numerical da
           max_tokens: 4000
         })
         analysis = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama3-8b-8192 (Groq)'
+        modelUsed = 'llama-3.1-8b-instant (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq multimodal error:', error.message)
@@ -285,4 +285,5 @@ function extractRiskScores(analysis: string): any {
     riskFactors: matches?.slice(0, 3) || []
   }
 }
+
 
