@@ -94,7 +94,7 @@ Provide data-driven, specific recommendations with confidence levels.`
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama3-8b-8192',
           messages: [
             { role: 'system', content: 'You are an expert Toyota GR Cup race strategist. Provide data-driven strategy recommendations.' },
             { role: 'user', content: prompt }
@@ -103,7 +103,7 @@ Provide data-driven, specific recommendations with confidence levels.`
           max_tokens: 3000
         })
         strategy = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.3-70b-versatile (Groq)'
+        modelUsed = 'llama3-8b-8192 (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq strategy error:', error.message)
@@ -156,3 +156,4 @@ Provide data-driven, specific recommendations with confidence levels.`
     }, { status: 500 })
   }
 }
+

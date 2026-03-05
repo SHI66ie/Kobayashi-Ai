@@ -47,7 +47,7 @@ Format your response as a valid JSON object only. No markdown formatting outside
         const prompt = `Simulate a ${type} outcome for ${f1Data.driverName || 'a top driver'} at ${track?.name || 'this track'} under ${f1Data.trackCondition} conditions.`
 
         const completion = await groq.chat.completions.create({
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama3-8b-8192',
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: prompt }
@@ -65,3 +65,4 @@ Format your response as a valid JSON object only. No markdown formatting outside
         return NextResponse.json({ error: 'Simulation failed', message: error.message }, { status: 500 })
     }
 }
+

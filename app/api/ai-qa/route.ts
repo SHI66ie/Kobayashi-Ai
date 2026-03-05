@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama3-8b-8192',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           max_tokens: 1500
         })
         answer = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.3-70b-versatile (Groq)'
+        modelUsed = 'llama3-8b-8192 (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq QA error:', error.message)
@@ -208,3 +208,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
