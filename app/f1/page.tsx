@@ -46,19 +46,37 @@ export default function F1Page() {
 
   // Mock upcoming races 2026
   const upcomingRacesList = useMemo(() => [
-    { id: 'saudi', name: 'Saudi Arabian GP', date: 'March 8, 2026', track: 'Jeddah Corniche Circuit', country: 'Saudi Arabia', leader: 'Max Verstappen', format: 'Standard' },
-    { id: 'australia', name: 'Australian GP', date: 'March 22, 2026', track: 'Albert Park Circuit', country: 'Australia', leader: 'Lando Norris', format: 'Standard' },
-    { id: 'japan', name: 'Japanese GP', date: 'April 5, 2026', track: 'Suzuka International Racing Course', country: 'Japan', leader: 'Charles Leclerc', format: 'Sprint' },
+    { id: 'melbourne', name: 'Australian GP', date: 'March 8, 2026', track: 'Albert Park Circuit', country: 'Australia', leader: 'Max Verstappen', format: 'Standard' },
+    { id: 'shanghai', name: 'Chinese GP', date: 'March 15, 2026', track: 'Shanghai International Circuit', country: 'China', leader: 'Lando Norris', format: 'Standard' },
+    { id: 'suzuka', name: 'Japanese GP', date: 'March 29, 2026', track: 'Suzuka International Racing Course', country: 'Japan', leader: 'Charles Leclerc', format: 'Sprint' },
   ], [])
 
   // API Data State
   const [apiTeams, setApiTeams] = useState<any[]>([])
   const [apiDrivers, setApiDrivers] = useState<any[]>([])
+  const [apiSessions, setApiSessions] = useState<any[]>([])
   const [apiRaces, setApiRaces] = useState<any[]>([])
   const [apiStandings, setApiStandings] = useState<any[]>([])
+  const [nextEvent, setNextEvent] = useState<any>(null)
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
   const [useRealData, setUseRealData] = useState(false)
+
+  // Derived race list from API or Mock
+  const raceList = useMemo(() => {
+    if (useRealData && apiRaces.length > 0) {
+      return apiRaces.map(r => ({
+        id: r.id,
+        name: r.name,
+        date: new Date(r.date).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }),
+        track: r.circuit,
+        country: r.country,
+        leader: 'TBD',
+        format: r.type === 'Sprint' ? 'Sprint' : 'Standard'
+      }))
+    }
+    return upcomingRacesList
+  }, [apiRaces, useRealData, upcomingRacesList])
 
   // F1 Data Input state - Updated for 2026 Regulations
   const [f1Data, setF1Data] = useState({
@@ -108,6 +126,59 @@ export default function F1Page() {
   const [predictionType, setPredictionType] = useState<'qualifying' | 'race' | 'podium' | 'pit-strategy' | 'overtake' | 'sprint'>('race')
   const [predictionResults, setPredictionResults] = useState<any>(null)
   const [isPredicting, setIsPredicting] = useState(false)
+
+  // Countdown Timer Logic
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 })
+  const [isLive, setIsLive] = useState(false)
+  const [isSessionDay, setIsSessionDay] = useState(false)
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date()
+
+      // Use nextEvent from API if available, else fallback to hardcoded March 8
+      const targetDateStr = nextEvent ? nextEvent.date_start : '2026-03-08T15:00:00'
+      const endDateStr = nextEvent ? nextEvent.date_end : '2026-03-08T17:00:00'
+
+      const targetDate = new Date(targetDateStr).getTime()
+      const endDate = new Date(endDateStr).getTime()
+      const nowTime = now.getTime()
+
+      // Check if session is LIVE
+      if (nowTime >= targetDate && nowTime <= endDate) {
+        setIsLive(true)
+        setIsSessionDay(true)
+        setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 })
+        return
+      }
+
+      setIsLive(false)
+
+      // Check if it's Session Day (but not yet started)
+      const isSameDay = now.toDateString() === new Date(targetDate).toDateString()
+      setIsSessionDay(isSameDay)
+
+      const difference = targetDate - nowTime
+
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          mins: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+          secs: Math.floor((difference % (1000 * 60)) / 1000)
+        })
+      } else {
+        setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 })
+      }
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [nextEvent])
+
+  const formatTime = (time: number) => time.toString().padStart(2, '0')
 
   // Helper function to update F1 data
   const updateF1Data = (field: string, value: any) => {
@@ -276,11 +347,23 @@ export default function F1Page() {
         })))
       }
 
-      // 4. Get recent sessions (races)
+      // 4. Get all sessions for the year
       const year = new Date().getFullYear()
       const allSessions = await openf1Api.getSessions(year)
+      setApiSessions(allSessions)
+
       const raceSessions = allSessions.filter(s => s.session_type === 'Race')
       setApiRaces(raceSessions.map(transformOpenF1Data.session))
+
+      // 5. Find next event
+      const now = new Date()
+      const upcoming = allSessions
+        .filter(s => new Date(s.date_end) > now)
+        .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())
+
+      if (upcoming.length > 0) {
+        setNextEvent(upcoming[0])
+      }
 
       setUseRealData(true)
     } catch (error: any) {
@@ -643,9 +726,16 @@ export default function F1Page() {
                       <span>Syncing OpenF1...</span>
                     </div>
                   ) : useRealData ? (
-                    <div className="flex items-center space-x-1 text-xs text-green-400">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="font-bold">LIVE OPENF1 FEED</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 text-xs text-green-400">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="font-bold">LIVE OPENF1 FEED</span>
+                      </div>
+                      {isLive && (
+                        <div className="flex items-center space-x-1 text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black animate-pulse">
+                          <span>LIVE</span>
+                        </div>
+                      )}
                     </div>
                   ) : apiError ? (
                     <div className="flex items-center space-x-1 text-xs text-yellow-500">
@@ -733,34 +823,71 @@ export default function F1Page() {
               <div className="absolute top-0 right-0 w-96 h-96 bg-racing-red/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
               <div className="relative z-10 flex flex-col md:flex-row justify-between items-center">
                 <div>
-                  <div className="inline-block px-3 py-1 bg-racing-red/20 border border-racing-red/30 text-racing-red font-semibold text-xs rounded-full uppercase tracking-wider mb-4">
-                    Next Race
+                  <div className={`inline-block px-3 py-1 ${isLive ? 'bg-green-500/20 border-green-500/30 text-green-400 animate-pulse' : 'bg-racing-red/20 border-racing-red/30 text-racing-red'} border font-semibold text-xs rounded-full uppercase tracking-wider mb-4`}>
+                    {isLive ? 'LIVE NOW' : isSessionDay ? 'SESSION DAY' : 'Next Event'}
                   </div>
-                  <h2 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">Saudi Arabian GP</h2>
-                  <p className="text-xl text-gray-400 mb-6 flex items-center"><Flag className="w-5 h-5 mr-2 text-gray-500" /> Jeddah Corniche Circuit • March 8, 2026</p>
+                  <h2 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">
+                    {nextEvent ? `${nextEvent.session_name} - ${nextEvent.location}` : upcomingRacesList[0].name}
+                  </h2>
+                  <p className="text-xl text-gray-400 mb-6 flex items-center">
+                    <Flag className="w-5 h-5 mr-2 text-gray-500" />
+                    {nextEvent ? `${nextEvent.circuit_short_name} • ${new Date(nextEvent.date_start).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}` : `${upcomingRacesList[0].track} • ${upcomingRacesList[0].date}`}
+                  </p>
 
-                  <div className="flex space-x-6">
-                    <div className="flex flex-col">
-                      <span className="text-sm text-gray-500 uppercase font-semibold">Days</span>
-                      <span className="text-3xl font-mono font-bold">08</span>
+                  {!isLive ? (
+                    <div className="flex space-x-6">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-gray-500 uppercase font-semibold">Days</span>
+                        <span className="text-3xl font-mono font-bold">{formatTime(timeLeft.days)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-gray-500 uppercase font-semibold">Hours</span>
+                        <span className="text-3xl font-mono font-bold">{formatTime(timeLeft.hours)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-gray-500 uppercase font-semibold">Mins</span>
+                        <span className="text-3xl font-mono font-bold">{formatTime(timeLeft.mins)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-gray-500 uppercase font-semibold text-racing-red">Secs</span>
+                        <span className="text-3xl font-mono font-bold text-racing-red">{formatTime(timeLeft.secs)}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm text-gray-500 uppercase font-semibold">Hours</span>
-                      <span className="text-3xl font-mono font-bold">14</span>
+                  ) : (
+                    <div className="flex items-center space-x-4 bg-green-500/10 border border-green-500/30 p-4 rounded-xl">
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                          <Play className="w-6 h-6 text-black fill-current" />
+                        </div>
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-gray-900 rounded-full"></div>
+                      </div>
+                      <div>
+                        <span className="text-green-400 font-bold text-xl block leading-tight">SESSION IS LIVE</span>
+                        <span className="text-gray-400 text-sm">Real-time telemetry and analysis available</span>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('analytics')}
+                        className="ml-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg transition-colors text-sm"
+                      >
+                        VIEW LIVE FEED
+                      </button>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm text-gray-500 uppercase font-semibold">Mins</span>
-                      <span className="text-3xl font-mono font-bold">42</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
                 <div className="mt-8 md:mt-0 flex flex-col items-center">
-                  <div className="w-32 h-32 rounded-full border-4 border-gray-700 p-2 mb-4 bg-gray-900 flex items-center justify-center">
-                    <span className="text-6xl">🇸🇦</span>
+                  <div className="w-32 h-32 rounded-full border-4 border-gray-700 p-2 mb-4 bg-gray-900 flex items-center justify-center overflow-hidden">
+                    {nextEvent ? (
+                      <span className="text-6xl">{getCountryFlag(nextEvent.country_name)}</span>
+                    ) : (
+                      <span className="text-6xl">🇦🇺</span>
+                    )}
                   </div>
                   <button
                     onClick={() => {
-                      setSelectedTrack('jeddah');
+                      if (nextEvent) {
+                        // Logic to select the track based on next event
+                      }
+                      setSelectedTrack(nextEvent ? nextEvent.circuit_short_name.toLowerCase() : 'melbourne');
                       setActiveTab('ai');
                     }}
 
@@ -840,28 +967,42 @@ export default function F1Page() {
                 </h3>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {upcomingRacesList.slice(1).map((race, i) => (
-                  <div key={race.id} className="bg-gray-800/80 rounded-xl p-6 border border-gray-700 hover:border-racing-red/50 transition-colors group cursor-pointer" onClick={() => { setSelectedTrack(race.id); setActiveTab('ai'); }}>
-
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <p className="text-xs font-semibold text-racing-red mb-1 uppercase tracking-wider">{race.date}</p>
-                        <h4 className="font-bold text-lg">{race.name}</h4>
-                        <p className="text-sm text-gray-400 truncate">{race.track}</p>
+                {(apiSessions.length > 0 ? raceList : upcomingRacesList.slice(1)).map((race, i) => {
+                  const isCurrentNext = nextEvent && race.name === nextEvent.session_name;
+                  return (
+                    <div
+                      key={race.id || i}
+                      className={`bg-gray-800/80 rounded-xl p-6 border ${isCurrentNext ? 'border-racing-red' : 'border-gray-700'} hover:border-racing-red/50 transition-colors group cursor-pointer relative overflow-hidden`}
+                      onClick={() => {
+                        setSelectedTrack(race.id || 'melbourne');
+                        setActiveTab('ai');
+                      }}
+                    >
+                      {isCurrentNext && (
+                        <div className="absolute top-0 right-0 bg-racing-red text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-tighter">
+                          Up Next
+                        </div>
+                      )}
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-xs font-semibold text-racing-red mb-1 uppercase tracking-wider">{race.date}</p>
+                          <h4 className="font-bold text-lg group-hover:text-racing-red transition-colors">{race.name}</h4>
+                          <p className="text-sm text-gray-400 truncate">{race.track}</p>
+                        </div>
+                        <span className="text-2xl">{getCountryFlag(race.country)}</span>
                       </div>
-                      <span className="text-2xl">{getCountryFlag(race.country)}</span>
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-700">
+                        <div className="text-sm">
+                          <span className="text-gray-500">{apiSessions.length > 0 ? 'Location: ' : 'Predicted Leader: '}</span>
+                          <span className="font-semibold text-gray-200">{apiSessions.length > 0 ? race.country : race.leader}</span>
+                        </div>
+                        <div className={`text-xs px-2 py-1 ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700 text-gray-300'} rounded font-semibold`}>
+                          {race.format}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-700">
-                      <div className="text-sm">
-                        <span className="text-gray-500">Predicted Leader: </span>
-                        <span className="font-semibold text-gray-200">{race.leader}</span>
-                      </div>
-                      <div className="text-xs px-2 py-1 bg-gray-700 rounded font-semibold text-gray-300">
-                        {race.format}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

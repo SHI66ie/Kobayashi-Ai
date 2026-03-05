@@ -95,8 +95,8 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
                                 {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-racing-red" />}
                             </div>
                             <div className={`p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user'
-                                    ? 'bg-racing-blue/20 border border-racing-blue/30 text-white rounded-tr-none'
-                                    : 'bg-white/5 border border-white/10 text-gray-200 rounded-tl-none'
+                                ? 'bg-racing-blue/20 border border-racing-blue/30 text-white rounded-tr-none'
+                                : 'bg-white/5 border border-white/10 text-gray-200 rounded-tl-none'
                                 }`}>
                                 {m.content.split('\n').map((line, idx) => (
                                     <p key={idx} className={line.trim() === '' ? 'h-2' : 'mb-1 last:mb-0'}>
@@ -126,9 +126,9 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
             <div className="px-6 py-2 overflow-x-auto whitespace-nowrap scrollbar-none flex space-x-2 bg-black/20">
                 {[
                     "Hulk position prediction?",
-                    "Who wins at Saudi Arabian GP?",
+                    "Who wins at Australian GP?",
                     "Podium prediction for 2026?",
-                    "Track analysis for Jeddah",
+                    "Track analysis for Melbourne",
                     "Tire strategy impact"
                 ].map((s, i) => (
                     <button
