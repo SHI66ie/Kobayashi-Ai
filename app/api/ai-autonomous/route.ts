@@ -198,7 +198,7 @@ Respond with precise, actionable guidance as if you're an expert autonomous raci
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama3-8b-8192',
+          model: 'llama-3.1-8b-instant',
           messages: [
             { role: 'system', content: 'You are an expert autonomous racing AI system. Provide precise, actionable real-time racing decisions.' },
             { role: 'user', content: fullPrompt }
@@ -207,7 +207,7 @@ Respond with precise, actionable guidance as if you're an expert autonomous raci
           max_tokens: 5000
         })
         analysis = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama3-8b-8192 (Groq)'
+        modelUsed = 'llama-3.1-8b-instant (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq autonomous error:', error.message)
@@ -345,4 +345,5 @@ function extractNextActions(analysis: string): string[] {
 
   return actions.slice(0, 3)
 }
+
 

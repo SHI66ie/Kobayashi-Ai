@@ -184,7 +184,7 @@ Provide your radio response now:`
     if (groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama3-8b-8192',
+          model: 'llama-3.1-8b-instant',
           messages: [
             {
               role: 'system',
@@ -198,7 +198,7 @@ Provide your radio response now:`
         })
 
         aiResponse = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama3-8b-8192 (Groq)'
+        modelUsed = 'llama-3.1-8b-instant (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error: any) {
         console.error('Groq voice AI error:', error.message || error)
@@ -311,4 +311,5 @@ function generateAudioSuggestion(response: string): any {
     volume: response.includes('URGENT') || response.includes('WARNING') ? 'loud' : 'normal'
   }
 }
+
 

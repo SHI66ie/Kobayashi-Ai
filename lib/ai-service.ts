@@ -66,7 +66,7 @@ export async function getAICompletion(prompt: string, systemPrompt: string = "Yo
     if (groq) {
         try {
             const completion = await groq.chat.completions.create({
-                model: 'llama3-8b-8192',
+                model: 'llama-3.1-8b-instant',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: prompt }
@@ -75,7 +75,7 @@ export async function getAICompletion(prompt: string, systemPrompt: string = "Yo
             });
             return {
                 content: completion.choices[0]?.message?.content || '',
-                model: 'llama3-8b-8192',
+                model: 'llama-3.1-8b-instant',
                 provider: 'Groq'
             };
         } catch (e) { console.error("Groq failed", e); }
