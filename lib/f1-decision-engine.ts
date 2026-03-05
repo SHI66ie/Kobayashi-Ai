@@ -3,6 +3,8 @@
 
 import { dataFusionService, EnhancedDriverData, EnhancedRaceData } from './data-fusion'
 import { telemetryService } from './telemetry-data'
+import { getRecentContext, addMemoryEntry } from './memory'
+import { getAICompletion } from './ai-service'
 
 export interface DecisionContext {
   driver: string
@@ -88,43 +90,89 @@ export class F1DecisionEngine {
         throw new Error('Unable to load required data for decision analysis')
       }
 
+      // Memory retrieval
+      const pastContext = getRecentContext(3);
+
       // Analyze historical patterns
       const historicalPatterns = await this.analyzeHistoricalPatterns(driverData, raceData)
-      
+
       // Generate strategy recommendations
       const strategyRecommendations = await this.generateStrategyRecommendations(
-        driverData, 
-        raceData, 
+        driverData,
+        raceData,
         context,
         historicalPatterns
       )
 
       // Create overall race strategy
       const overallStrategy = await this.createRaceStrategy(
-        driverData, 
-        raceData, 
+        driverData,
+        raceData,
         context,
         historicalPatterns
       )
+
+      // AI Reasoning Step
+      const aiPrompt = `
+Analyze the F1 Race Context.
+Driver: ${context.driver}
+Race: ${context.race} (${context.year})
+Current Conditions: ${JSON.stringify(context.currentConditions)}
+Strategy: ${JSON.stringify(overallStrategy)}
+
+PAST PREDICTIONS:
+${pastContext}
+
+TASK: Provide a logical critique and refinement. Respond in one paragraph.
+`;
+
+      let aiInsights = "";
+      try {
+        const response = await getAICompletion(aiPrompt, "You are a senior F1 Race Strategist.");
+        aiInsights = response.content;
+      } catch (e) {
+        console.error("AI reasoning step failed", e);
+      }
+
+      if (aiInsights) {
+        strategyRecommendations.unshift({
+          type: 'strategy',
+          priority: 'critical',
+          confidence: 0.9,
+          recommendation: 'AI LOGICAL REFINEMENT',
+          reasoning: aiInsights,
+          dataPoints: ['Memory Analysis'],
+          expectedOutcome: 'Refined strategy based on historical outcomes',
+          riskLevel: 'low'
+        });
+      }
 
       // Assess risks
       const riskAssessment = await this.assessRisks(driverData, raceData, context)
 
       // Predict performance
       const performancePrediction = await this.predictPerformance(
-        driverData, 
-        raceData, 
+        driverData,
+        raceData,
         context,
         overallStrategy
       )
 
-      return {
+      const finalAnalysis = {
         context,
         recommendations: strategyRecommendations,
         overallStrategy,
         riskAssessment,
         performancePrediction
       }
+
+      // Save to memory
+      addMemoryEntry({
+        context,
+        analysis: aiInsights || "Analysis generated."
+      });
+
+      return finalAnalysis;
 
     } catch (error) {
       console.error('Error generating race decision:', error)
@@ -236,8 +284,8 @@ export class F1DecisionEngine {
   }
 
   private async generateStrategyRecommendations(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     patterns: any
   ): Promise<DecisionRecommendation[]> {
@@ -266,8 +314,8 @@ export class F1DecisionEngine {
   }
 
   private async recommendTireCompound(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     patterns: any
   ): Promise<DecisionRecommendation> {
@@ -311,8 +359,8 @@ export class F1DecisionEngine {
   }
 
   private async recommendCarSetup(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     patterns: any
   ): Promise<DecisionRecommendation> {
@@ -338,8 +386,8 @@ export class F1DecisionEngine {
   }
 
   private async recommendQualifyingStrategy(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     patterns: any
   ): Promise<DecisionRecommendation> {
@@ -377,8 +425,8 @@ export class F1DecisionEngine {
   }
 
   private async recommendStartStrategy(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     patterns: any
   ): Promise<DecisionRecommendation> {
@@ -407,8 +455,8 @@ export class F1DecisionEngine {
   }
 
   private async createRaceStrategy(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     patterns: any
   ): Promise<RaceStrategy> {
@@ -425,8 +473,8 @@ export class F1DecisionEngine {
   }
 
   private async assessRisks(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext
   ) {
     const factors = []
@@ -461,8 +509,8 @@ export class F1DecisionEngine {
   }
 
   private async predictPerformance(
-    driverData: EnhancedDriverData, 
-    raceData: EnhancedRaceData, 
+    driverData: EnhancedDriverData,
+    raceData: EnhancedRaceData,
     context: DecisionContext,
     strategy: RaceStrategy
   ) {
@@ -501,7 +549,7 @@ export class F1DecisionEngine {
       monza: { highDegradation: false, lowGrip: false, degradationLevel: 'low' },
       silverstone: { highDegradation: true, lowGrip: false, degradationLevel: 'medium' }
     }
-    
+
     return characteristics[circuit.toLowerCase() as keyof typeof characteristics] || {
       highDegradation: false,
       lowGrip: false,
