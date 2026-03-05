@@ -4,6 +4,7 @@
 import { telemetryService, QualifyingResult, RaceResult, ChampionshipStanding } from './telemetry-data'
 import { jolpicaApi, JolpicaApiResponse, transformJolpicaData } from './jolpica-api'
 import { f1Api, safeApiCall } from './f1-api'
+import { openf1Api, transformOpenF1Data } from './openf1-api'
 
 // Enhanced data interfaces combining telemetry and live data
 export interface EnhancedDriverData {
@@ -114,24 +115,37 @@ export class DataFusionService {
   // Get comprehensive driver analysis combining historical and live data
   async getEnhancedDriverData(driverName: string, years: number[] = [2024, 2023, 2022]): Promise<EnhancedDriverData | null> {
     try {
-      // Load historical telemetry data
-      const historicalData = await this.loadDriverHistoricalData(driverName, years)
+      console.log(`🔍 Getting enhanced data for ${driverName}...`)
       
-      // Get current live data from APIs
+      // Load historical telemetry data from local Data folder
+      const historicalData = await this.loadDriverHistoricalData(driverName, years)
+      console.log(`📊 Local historical data: ${historicalData.performance.seasons.length} seasons`)
+      
+      // Get current live data from APIs including OpenF1
       const liveData = await this.loadDriverLiveData(driverName)
+      console.log(`📡 Live data loaded: ${liveData.currentTeam || 'No team data'}`)
+      
+      // Get OpenF1 data for real telemetry
+      const openF1Data = await this.getOpenF1DriverData(driverName)
+      console.log(`🏎️ OpenF1 data: ${openF1Data.laps.length} laps, ${openF1Data.telemetry.length} telemetry points`)
+      
+      // Combine all data sources
+      const combinedData = this.combineDriverDataSources(historicalData, liveData, openF1Data)
       
       // Generate predictions based on combined data
-      const predictions = await this.generateDriverPredictions(historicalData, liveData)
+      const predictions = await this.generateDriverPredictions(combinedData.historical, combinedData.live)
 
+      console.log(`✅ Enhanced data ready for ${driverName}`)
       return {
         driver: {
           id: this.generateDriverId(driverName),
           name: driverName,
-          nationality: historicalData.nationality || 'Unknown',
-          team: liveData.currentTeam || historicalData.recentTeam || 'Unknown'
+          code: openF1Data.driver?.code || driverName.substring(0, 3).toUpperCase(),
+          nationality: combinedData.historical.nationality || openF1Data.driver?.nationality || 'Unknown',
+          team: combinedData.live.currentTeam || combinedData.historical.recentTeam || openF1Data.driver?.team || 'Unknown'
         },
-        historicalPerformance: historicalData.performance,
-        liveData: liveData,
+        historicalPerformance: combinedData.historical.performance,
+        liveData: combinedData.live,
         predictions: predictions
       }
     } catch (error) {
@@ -166,24 +180,37 @@ export class DataFusionService {
   // Get enhanced race analysis
   async getEnhancedRaceData(raceName: string, year: number): Promise<EnhancedRaceData | null> {
     try {
+      console.log(`🏁 Getting enhanced race data for ${raceName} ${year}...`)
+      
+      // Load local race data from Data folder
       const raceData = await telemetryService.getRaceData(year, raceName)
-      if (!raceData) return null
+      if (!raceData) {
+        console.log(`⚠️ No local race data found for ${raceName}, will use OpenF1 data`)
+      }
 
+      // Get OpenF1 race data
+      const openF1RaceData = await this.getOpenF1RaceData(raceName, year)
+      console.log(`🏎️ OpenF1 race data: ${openF1RaceData.sessions.length} sessions`)
+
+      // Combine local and OpenF1 data
+      const combinedRaceData = this.combineRaceDataSources(raceData, openF1RaceData)
+      
       const historicalContext = await this.analyzeRaceHistoricalContext(raceName, year)
       const liveData = await this.loadRaceLiveData(raceName, year)
-      const analysis = await this.generateRaceAnalysis(raceData, historicalContext)
+      const analysis = await this.generateRaceAnalysis(combinedRaceData, historicalContext)
 
+      console.log(`✅ Enhanced race data ready for ${raceName}`)
       return {
         race: {
-          name: raceData.race_name,
+          name: combinedRaceData.race_name || openF1RaceData.session?.session_name || raceName,
           year,
-          round: this.extractRoundFromName(raceData.race_name),
-          circuit: this.extractCircuitFromName(raceData.race_name),
-          date: liveData.date || 'TBD'
+          round: this.extractRoundFromName(combinedRaceData.race_name || raceName),
+          circuit: this.extractCircuitFromName(combinedRaceData.race_name || raceName),
+          date: liveData.date || openF1RaceData.session?.date_start || 'TBD'
         },
-        historicalContext,
-        liveData,
-        analysis
+        historicalContext: this.enhanceHistoricalContextWithOpenF1(historicalContext, openF1RaceData),
+        liveData: this.enhanceLiveDataWithOpenF1(liveData, openF1RaceData),
+        analysis: this.enhanceAnalysisWithOpenF1(analysis, openF1RaceData)
       }
     } catch (error) {
       console.error(`Error generating enhanced race data for ${raceName}:`, error)
@@ -480,6 +507,386 @@ export class DataFusionService {
       risk: 'medium' as const,
       confidence: 0.75
     }
+  }
+
+  // Get OpenF1 data for a specific driver
+  private async getOpenF1DriverData(driverName: string): Promise<{
+    driver?: any,
+    laps: any[],
+    telemetry: any[],
+    weather: any[]
+  }> {
+    try {
+      console.log(`🏎️ Fetching OpenF1 data for ${driverName}...`)
+      
+      // Get latest session data
+      const sessions = await openf1Api.getSessions(new Date().getFullYear())
+      const latestSession = sessions[0]
+      
+      if (!latestSession) {
+        console.log('No OpenF1 sessions available')
+        return { laps: [], telemetry: [], weather: [] }
+      }
+
+      // Get drivers for this session
+      const drivers = await openf1Api.getDrivers(latestSession.session_key)
+      const targetDriver = drivers.find(d => 
+        d.full_name.toLowerCase().includes(driverName.toLowerCase())
+      )
+
+      if (!targetDriver) {
+        console.log(`Driver ${driverName} not found in OpenF1 data`)
+        return { laps: [], telemetry: [], weather: [] }
+      }
+
+      // Get telemetry data for this driver
+      const [carData, lapData, weatherData] = await Promise.all([
+        openf1Api.getCarData(latestSession.session_key, targetDriver.driver_number),
+        openf1Api.getLaps(latestSession.session_key, targetDriver.driver_number),
+        openf1Api.getWeatherData(latestSession.session_key)
+      ])
+
+      console.log(`✅ OpenF1 data loaded: ${carData.length} telemetry points, ${lapData.length} laps`)
+      
+      return {
+        driver: {
+          name: targetDriver.full_name,
+          code: targetDriver.name_acronym,
+          team: targetDriver.team_name,
+          nationality: 'International' // OpenF1 doesn't provide nationality
+        },
+        laps: lapData,
+        telemetry: carData,
+        weather: weatherData
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching OpenF1 data for ${driverName}:`, error)
+      return { laps: [], telemetry: [], weather: [] }
+    }
+  }
+
+  // Combine data from local sources and OpenF1 API
+  private combineDriverDataSources(
+    historicalData: any, 
+    liveData: any, 
+    openF1Data: { driver?: any, laps: any[], telemetry: any[], weather: any[] }
+  ): {
+    historical: any,
+    live: any
+  } {
+    try {
+      // Combine historical data (local) with OpenF1 performance data
+      const enhancedHistorical = { ...historicalData }
+      
+      // Add OpenF1 lap data to historical performance if available
+      if (openF1Data.laps.length > 0) {
+        const openF1Performance = this.analyzeOpenF1LapData(openF1Data.laps)
+        enhancedHistorical.performance = {
+          ...enhancedHistorical.performance,
+          // Blend local data with OpenF1 data
+          averageQualifyingPosition: this.blendPerformanceMetrics(
+            enhancedHistorical.performance.averageQualifyingPosition,
+            openF1Performance.avgPosition
+          ),
+          averageRacePosition: this.blendPerformanceMetrics(
+            enhancedHistorical.performance.averageRacePosition,
+            openF1Performance.avgPosition
+          ),
+          consistency: this.blendPerformanceMetrics(
+            enhancedHistorical.performance.consistency,
+            openF1Performance.consistency
+          ),
+          // Add OpenF1 specific metrics
+          recentLapTimes: openF1Data.laps.slice(-10).map(lap => lap.lap_duration),
+          topSpeed: Math.max(...openF1Data.telemetry.map(t => t.speed))
+        }
+      }
+
+      // Enhance live data with OpenF1 telemetry
+      const enhancedLive = { ...liveData }
+      if (openF1Data.telemetry.length > 0) {
+        const latestTelemetry = openF1Data.telemetry[openF1Data.telemetry.length - 1]
+        enhancedLive.currentSpeed = latestTelemetry.speed
+        enhancedLive.currentThrottle = latestTelemetry.throttle
+        enhancedLive.currentGear = latestTelemetry.n_gear
+        enhancedLive.currentRPM = latestTelemetry.rpm
+        enhancedLive.currentDRS = latestTelemetry.drs
+      }
+
+      // Add weather data from OpenF1
+      if (openF1Data.weather.length > 0) {
+        const latestWeather = openF1Data.weather[openF1Data.weather.length - 1]
+        enhancedLive.weather = {
+          airTemp: latestWeather.air_temperature,
+          trackTemp: latestWeather.track_temperature,
+          humidity: latestWeather.humidity,
+          windSpeed: latestWeather.wind_speed,
+          rainfall: latestWeather.rainfall
+        }
+      }
+
+      console.log('🔄 Data sources combined successfully')
+      return {
+        historical: enhancedHistorical,
+        live: enhancedLive
+      }
+    } catch (error) {
+      console.error('❌ Error combining data sources:', error)
+      return {
+        historical: historicalData,
+        live: liveData
+      }
+    }
+  }
+
+  // Analyze OpenF1 lap data to extract performance metrics
+  private analyzeOpenF1LapData(lapData: any[]): {
+    avgPosition: number,
+    consistency: number,
+    avgLapTime: number
+  } {
+    if (!lapData.length) {
+      return { avgPosition: 10, consistency: 0.8, avgLapTime: 90 }
+    }
+
+    const lapTimes = lapData.map(lap => lap.lap_duration).filter(time => time > 0)
+    const avgLapTime = lapTimes.reduce((sum, time) => sum + time, 0) / lapTimes.length
+    
+    // Calculate consistency (lower variance = higher consistency)
+    const variance = lapTimes.reduce((sum, time) => {
+      const mean = avgLapTime
+      return sum + Math.pow(time - mean, 2)
+    }, 0) / lapTimes.length
+    
+    const consistency = Math.max(0.1, 1 - (Math.sqrt(variance) / avgLapTime))
+    
+    // Estimate position based on lap time (faster = better position)
+    const avgPosition = Math.max(1, Math.min(20, Math.round(20 - (avgLapTime - 80) / 2)))
+
+    return { avgPosition, consistency, avgLapTime }
+  }
+
+  // Blend performance metrics from different data sources
+  private blendPerformanceMetrics(localValue: number, openF1Value: number, weight: number = 0.6): number {
+    // Give more weight to local historical data, but incorporate OpenF1 data
+    return Math.round((localValue * weight) + (openF1Value * (1 - weight)))
+  }
+
+  // Get OpenF1 race data for a specific race
+  private async getOpenF1RaceData(raceName: string, year: number): Promise<{
+    session?: any,
+    sessions: any[],
+    weather: any[],
+    laps: any[]
+  }> {
+    try {
+      console.log(`🏎️ Fetching OpenF1 race data for ${raceName} ${year}...`)
+      
+      // Get sessions for the year
+      const sessions = await openf1Api.getSessions(year)
+      
+      // Find matching session
+      const matchingSession = sessions.find(s => 
+        s.location.toLowerCase().includes(raceName.toLowerCase()) ||
+        s.circuit_short_name.toLowerCase().includes(raceName.toLowerCase()) ||
+        s.session_name.toLowerCase().includes(raceName.toLowerCase())
+      ) || sessions[0] // fallback to first session
+
+      if (!matchingSession) {
+        console.log(`No OpenF1 sessions found for ${raceName}`)
+        return { sessions: [], weather: [], laps: [] }
+      }
+
+      // Get weather and lap data for this session
+      const [weatherData, lapData] = await Promise.all([
+        openf1Api.getWeatherData(matchingSession.session_key),
+        openf1Api.getLaps(matchingSession.session_key)
+      ])
+
+      console.log(`✅ OpenF1 race data loaded: ${weatherData.length} weather points, ${lapData.length} laps`)
+      
+      return {
+        session: matchingSession,
+        sessions: sessions,
+        weather: weatherData,
+        laps: lapData
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching OpenF1 race data for ${raceName}:`, error)
+      return { sessions: [], weather: [], laps: [] }
+    }
+  }
+
+  // Combine race data from local sources and OpenF1 API
+  private combineRaceDataSources(localData: any, openF1Data: any): any {
+    try {
+      // If local data exists, use it as primary and enhance with OpenF1
+      if (localData) {
+        return {
+          ...localData,
+          // Add OpenF1 enhancements
+          openF1Sessions: openF1Data.sessions,
+          openF1Weather: openF1Data.weather,
+          openF1Laps: openF1Data.laps
+        }
+      }
+      
+      // If no local data, create structure from OpenF1 data
+      return {
+        race_name: openF1Data.session?.session_name || 'Unknown Race',
+        data: openF1Data.laps.map((lap: any) => ({
+          section: 'race_results',
+          driver: `Driver ${lap.driver_number}`,
+          position: lap.lap_number,
+          time: lap.lap_duration
+        }))
+      }
+    } catch (error) {
+      console.error('❌ Error combining race data sources:', error)
+      return localData || { race_name: 'Unknown Race', data: [] }
+    }
+  }
+
+  // Enhance historical context with OpenF1 data
+  private enhanceHistoricalContextWithOpenF1(localContext: any, openF1Data: any): any {
+    try {
+      const enhanced = { ...localContext }
+      
+      // Add OpenF1 weather patterns
+      if (openF1Data.weather.length > 0) {
+        const weatherPatterns = this.analyzeOpenF1WeatherPatterns(openF1Data.weather)
+        enhanced.weatherPatterns = [
+          ...(localContext.weatherPatterns || []),
+          ...weatherPatterns
+        ]
+      }
+
+      // Add OpenF1 session data
+      if (openF1Data.sessions.length > 0) {
+        enhanced.recentSessions = openF1Data.sessions.slice(-5)
+      }
+
+      return enhanced
+    } catch (error) {
+      console.error('❌ Error enhancing historical context:', error)
+      return localContext
+    }
+  }
+
+  // Enhance live data with OpenF1 data
+  private enhanceLiveDataWithOpenF1(localLiveData: any, openF1Data: any): any {
+    try {
+      const enhanced = { ...localLiveData }
+      
+      // Add current weather from OpenF1
+      if (openF1Data.weather.length > 0) {
+        const latestWeather = openF1Data.weather[openF1Data.weather.length - 1]
+        enhanced.weather = {
+          temperature: latestWeather.air_temperature,
+          trackTemperature: latestWeather.track_temperature,
+          humidity: latestWeather.humidity,
+          windSpeed: latestWeather.wind_speed,
+          rainfall: latestWeather.rainfall
+        }
+      }
+
+      // Add session status
+      if (openF1Data.session) {
+        enhanced.currentStatus = 'completed' // OpenF1 data is from completed sessions
+        enhanced.sessionInfo = {
+          name: openF1Data.session.session_name,
+          date: openF1Data.session.date_start,
+          location: openF1Data.session.location
+        }
+      }
+
+      return enhanced
+    } catch (error) {
+      console.error('❌ Error enhancing live data:', error)
+      return localLiveData
+    }
+  }
+
+  // Enhance analysis with OpenF1 data
+  private enhanceAnalysisWithOpenF1(localAnalysis: any, openF1Data: any): any {
+    try {
+      const enhanced = { ...localAnalysis }
+      
+      // Add OpenF1 specific insights
+      if (openF1Data.laps.length > 0) {
+        const lapAnalysis = this.analyzeOpenF1LapData(openF1Data.laps)
+        enhanced.openF1Insights = {
+          averageLapTime: lapAnalysis.avgLapTime,
+          consistency: lapAnalysis.consistency,
+          estimatedDifficulty: lapAnalysis.avgLapTime < 85 ? 'hard' : lapAnalysis.avgLapTime > 95 ? 'easy' : 'medium'
+        }
+      }
+
+      // Add weather impact analysis
+      if (openF1Data.weather.length > 0) {
+        enhanced.weatherImpact = this.analyzeOpenF1WeatherImpact(openF1Data.weather)
+      }
+
+      // Add key factors from OpenF1 data
+      const openF1Factors = ['Real telemetry data', 'Actual lap times', 'Live weather conditions']
+      enhanced.keyFactors = [
+        ...(localAnalysis.keyFactors || []),
+        ...openF1Factors.filter(factor => !localAnalysis.keyFactors?.includes(factor))
+      ]
+
+      return enhanced
+    } catch (error) {
+      console.error('❌ Error enhancing analysis:', error)
+      return localAnalysis
+    }
+  }
+
+  // Analyze OpenF1 weather patterns
+  private analyzeOpenF1WeatherPatterns(weatherData: any[]): Array<{ condition: string, frequency: number }> {
+    if (!weatherData.length) return [{ condition: 'sunny', frequency: 70 }]
+    
+    const sunny = weatherData.filter(w => w.rainfall === 0).length
+    const rainy = weatherData.filter(w => w.rainfall > 0).length
+    const cloudy = weatherData.filter(w => w.rainfall === 0 && w.humidity > 60).length
+    const total = weatherData.length
+    
+    return [
+      { condition: 'sunny', frequency: Math.round((sunny / total) * 100) },
+      { condition: 'rainy', frequency: Math.round((rainy / total) * 100) },
+      { condition: 'cloudy', frequency: Math.round((cloudy / total) * 100) }
+    ]
+  }
+
+  // Analyze OpenF1 weather impact on racing
+  private analyzeOpenF1WeatherImpact(weatherData: any[]): {
+    impact: 'low' | 'medium' | 'high',
+    factors: string[]
+  } {
+    if (!weatherData.length) return { impact: 'medium', factors: ['Unknown weather'] }
+    
+    const factors: string[] = []
+    let impactScore = 0
+
+    const avgRainfall = weatherData.reduce((sum, w) => sum + w.rainfall, 0) / weatherData.length
+    if (avgRainfall > 0) {
+      factors.push('Rain detected')
+      impactScore += 30
+    }
+
+    const avgWindSpeed = weatherData.reduce((sum, w) => sum + w.wind_speed, 0) / weatherData.length
+    if (avgWindSpeed > 10) {
+      factors.push('High wind speeds')
+      impactScore += 20
+    }
+
+    const avgHumidity = weatherData.reduce((sum, w) => sum + w.humidity, 0) / weatherData.length
+    if (avgHumidity > 70) {
+      factors.push('High humidity')
+      impactScore += 10
+    }
+
+    const impact = impactScore > 25 ? 'high' : impactScore > 10 ? 'medium' : 'low'
+    return { impact, factors }
   }
 }
 
