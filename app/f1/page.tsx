@@ -1736,20 +1736,30 @@ export default function F1Page() {
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={[
-                    { lap: 1, time: 94.2, p2: 95.1 }, { lap: 2, time: 93.8, p2: 94.5 }, { lap: 3, time: 93.5, p2: 94.2 },
-                    { lap: 4, time: 93.2, p2: 93.9 }, { lap: 5, time: 93.1, p2: 93.8 }, { lap: 6, time: 94.5, p2: 94.1 },
-                    { lap: 7, time: 93.8, p2: 93.7 }, { lap: 8, time: 93.6, p2: 93.5 }, { lap: 9, time: 93.4, p2: 93.4 },
-                    { lap: 10, time: 93.3, p2: 93.3 }
+                    { lap: 1, p1: 94.2, p2: 95.1, p3: 95.8, p4: 96.2, p5: 96.5 },
+                    { lap: 2, p1: 93.8, p2: 94.5, p3: 95.2, p4: 95.7, p5: 96.1 },
+                    { lap: 3, p1: 93.5, p2: 94.2, p3: 94.8, p4: 95.3, p5: 95.8 },
+                    { lap: 4, p1: 93.2, p2: 93.9, p3: 94.5, p4: 95.0, p5: 95.4 },
+                    { lap: 5, p1: 93.1, p2: 93.8, p3: 94.4, p4: 94.8, p5: 95.2 },
+                    { lap: 6, p1: 94.5, p2: 94.1, p3: 94.8, p4: 95.2, p5: 95.6 },
+                    { lap: 7, p1: 93.8, p2: 93.7, p3: 94.3, p4: 94.9, p5: 95.3 },
+                    { lap: 8, p1: 93.6, p2: 93.5, p3: 94.1, p4: 94.6, p5: 95.1 },
+                    { lap: 9, p1: 93.4, p2: 93.4, p3: 94.0, p4: 94.5, p5: 95.0 },
+                    { lap: 10, p1: 93.3, p2: 93.3, p3: 93.9, p4: 94.4, p5: 94.9 }
                   ]}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
                     <XAxis dataKey="lap" stroke="#718096" fontSize={12} tickLine={false} axisLine={false} label={{ value: 'Lap Number', position: 'bottom', fill: '#4a5568', fontSize: 10 }} />
-                    <YAxis stroke="#718096" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
+                    <YAxis stroke="#718096" fontSize={12} tickLine={false} axisLine={false} domain={['92', '98']} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#1a202c', border: 'none', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}
                       itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                     />
-                    <Line type="monotone" dataKey="time" name="Hülkenberg (P1)" stroke="#e10600" strokeWidth={3} dot={{ r: 4, fill: '#e10600', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                    <Legend verticalAlign="top" height={36} iconType="circle" />
+                    <Line type="monotone" dataKey="p1" name="Hülkenberg (P1)" stroke="#e10600" strokeWidth={3} dot={{ r: 4, fill: '#e10600', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                     <Line type="monotone" dataKey="p2" name="Verstappen (P2)" stroke="#1e40af" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                    <Line type="monotone" dataKey="p3" name="Leclerc (P3)" stroke="#ef4444" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                    <Line type="monotone" dataKey="p4" name="Norris (P4)" stroke="#ff8000" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+                    <Line type="monotone" dataKey="p5" name="Russell (P5)" stroke="#00d2be" strokeWidth={2} strokeDasharray="2 2" dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
