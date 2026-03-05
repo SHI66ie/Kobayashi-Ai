@@ -68,8 +68,16 @@ export const openf1Api = {
     // Get latest session
     async getLatestSession(): Promise<OpenF1Session[]> {
         return await openf1Fetch<OpenF1Session[]>('/sessions', { session_key: 'latest' })
+    },
+
+    // Get laps for a specific session (useful for practice/testing analysis)
+    async getLaps(sessionKey: number, driverNumber?: number): Promise<any[]> {
+        const params: any = { session_key: sessionKey }
+        if (driverNumber) params.driver_number = driverNumber
+        return await openf1Fetch<any[]>('/laps', params)
     }
 }
+
 
 export const transformOpenF1Data = {
     driver(d: OpenF1Driver): any {

@@ -66,7 +66,7 @@ export async function getAICompletion(prompt: string, systemPrompt: string = "Yo
     if (groq) {
         try {
             const completion = await groq.chat.completions.create({
-                model: 'llama-3.3-70b-versatile',
+                model: 'llama3-8b-8192',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: prompt }
@@ -75,7 +75,7 @@ export async function getAICompletion(prompt: string, systemPrompt: string = "Yo
             });
             return {
                 content: completion.choices[0]?.message?.content || '',
-                model: 'llama-3.3-70b-versatile',
+                model: 'llama3-8b-8192',
                 provider: 'Groq'
             };
         } catch (e) { console.error("Groq failed", e); }
@@ -137,3 +137,4 @@ export async function getAICompletion(prompt: string, systemPrompt: string = "Yo
 
     throw new Error("No AI providers available or all failed.");
 }
+

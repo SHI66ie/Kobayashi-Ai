@@ -98,7 +98,7 @@ Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW
             try {
                 console.log('⚡ F1 Chat: Trying Groq...')
                 const completion = await groq.chat.completions.create({
-                    model: 'llama-3.3-70b-versatile',
+                    model: 'llama3-8b-8192',
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: message }
@@ -107,7 +107,7 @@ Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW
                     max_tokens: 2000
                 })
                 analysis = completion.choices[0]?.message?.content || ''
-                modelUsed = 'llama-3.3-70b-versatile (Groq)'
+                modelUsed = 'llama3-8b-8192 (Groq)'
             } catch (error: any) {
                 console.error('⚠️ Groq F1 Chat error:', error.message || error)
             }
@@ -168,3 +168,4 @@ Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW
         return NextResponse.json({ error: 'Failed to process request', message: error.message }, { status: 500 })
     }
 }
+

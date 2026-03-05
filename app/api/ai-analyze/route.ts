@@ -169,7 +169,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
       try {
         console.log('⚡ Using Groq (FREE & FAST)...')
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama3-8b-8192',
           messages: [
             {
               role: "system",
@@ -186,7 +186,7 @@ Format: Use numbered lists and bullet points. Be specific with data.`
         })
 
         analysis = completion.choices[0]?.message?.content || 'No analysis generated'
-        modelUsed = 'llama-3.3-70b-versatile (FREE via Groq)'
+        modelUsed = 'llama3-8b-8192 (FREE via Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
 
       } catch (groqError: any) {
@@ -363,3 +363,4 @@ Format: Use numbered lists and bullet points. Be specific with data.`
     }, { status: 500 })
   }
 }
+

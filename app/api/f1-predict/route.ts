@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (useGroq && groq) {
       try {
         const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama3-8b-8192',
           messages: [
             { role: 'system', content: 'You are an expert F1 analyst providing data-driven predictions. Respond in plain text with structured sections.' },
             { role: 'user', content: prompt }
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
           max_tokens: 2500
         })
         prediction = completion.choices[0]?.message?.content || ''
-        modelUsed = 'llama-3.3-70b-versatile (Groq)'
+        modelUsed = 'llama3-8b-8192 (Groq)'
         tokensUsed = completion.usage?.total_tokens || 0
       } catch (error) {
         console.error('Groq error:', error)
@@ -360,3 +360,4 @@ function parsePredictionResponse(response: string, type: string) {
       }
   }
 }
+
