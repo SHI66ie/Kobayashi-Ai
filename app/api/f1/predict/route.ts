@@ -37,14 +37,17 @@ INPUT DATA:
 TASK:
 Provide a highly detailed, data-driven prediction in JSON format.
 Include:
-1. "analysis": A deep technical explanation (2-3 sentences) in "Monsterbet" style.
+1. "analysis": A deep technical explanation (2-3 sentences) in "Monsterbet" style. Include specific mention of tire degradation impact and strategy windows if applicable.
 2. "confidence": A percentage string (e.g. "92%").
 3. "outcomes": An array of 3 possible scenarios with "label" and "probability" (e.g. "P1 Finish", "85%").
 4. "factors": 3-5 technical factors influenced by 2026 rules.
+5. "sim_metrics": (Optional) Object containing "tire_degradation" (array for chart), "pit_window" (range string), and "mgu_k_depletion" (percentage).
 
 Format your response as a valid JSON object only. No markdown formatting outside the JSON.`
 
-        const prompt = `Simulate a ${type} outcome for ${f1Data.driverName || 'a top driver'} at ${track?.name || 'this track'} under ${f1Data.trackCondition} conditions.`
+        const prompt = context?.featuredScenario === 'melbourne_undercut'
+            ? `FEATURED SCENARIO: Melbourne Undercut. Simulate a high-intensity battle at Albert Park where Verstappen is leading but Leclerc is closing fast via an aggressive undercut strategy. Focus on the lap 20-25 window and MGU-K usage under the 2026 active aero regs.`
+            : `Simulate a ${type} outcome for ${f1Data.driverName || 'a top driver'} at ${track?.name || 'this track'} under ${f1Data.trackCondition} conditions.`
 
         const completion = await groq.chat.completions.create({
             model: 'llama-3.1-8b-instant',

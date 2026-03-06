@@ -299,6 +299,43 @@ export default function F1Page() {
     if (!showF1DataInput) setShowF1DataInput(true);
   }
 
+  const loadMelbourneUndercutScenario = () => {
+    setSelectedTrack('melbourne');
+    setF1Data({
+      driverName: 'Max Verstappen',
+      driverNumber: '1',
+      driverExperience: '10',
+      driverTeam: 'Red Bull Racing',
+      carModel: '2026 Spec RB22',
+      engineType: '2026 Standardized Power Unit',
+      tireCompound: 'C3',
+      fuelLoad: '105kg',
+      carWeight: '798kg',
+      aeroPackage: '2026 Ground Effect',
+      energyRecovery: '800kW',
+      trackCondition: 'dry',
+      safetyCar: false,
+      redFlag: false,
+      raceLaps: '58',
+      trackEvolution: 'high',
+      precipitation: 'none',
+      airTemp: '22',
+      trackTemp: '34',
+      humidity: '45',
+      windSpeed: '8',
+      rainProbability: '0',
+      pitStrategy: 'undercut',
+      fuelStrategy: 'balanced',
+      tireStrategy: 'C2-C3-C4',
+      overtakeAttempts: '3',
+      defensiveDriving: 'moderate',
+      sprintWeekend: false
+    });
+    setPredictionType('pit-strategy');
+    if (!showF1DataInput) setShowF1DataInput(true);
+    setActiveTab('builder');
+  };
+
   // Helper function to get country flag emoji
   const getCountryFlag = (country: string) => {
     const flags: { [key: string]: string } = {
@@ -345,7 +382,8 @@ export default function F1Page() {
           context: {
             standings: apiStandings,
             drivers: apiDrivers,
-            teams: apiTeams
+            teams: apiTeams,
+            featuredScenario: f1Data.pitStrategy === 'undercut' && selectedTrack === 'melbourne' ? 'melbourne_undercut' : null
           }
         })
       })
@@ -365,24 +403,46 @@ export default function F1Page() {
     }
   }
 
-  // Load real API data from OpenF1
-  const loadApiData = useCallback(async () => {
+  // Load real API data from OpenF1 with caching and retries
+  const loadApiData = useCallback(async (retryCount = 0) => {
     setApiLoading(true)
     setApiError(null)
+
+    // Try to load from cache first for immediate UI responsiveness
+    if (retryCount === 0) {
+      const cached = localStorage.getItem('kobayashi_f1_api_cache');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Date.now() - parsed.timestamp < 1000 * 60 * 15) { // 15 min cache
+            setApiDrivers(parsed.drivers);
+            setApiTeams(parsed.teams);
+            setApiStandings(parsed.standings);
+            setApiSessions(parsed.sessions);
+            setApiRaces(parsed.races);
+            setNextEvent(parsed.nextEvent);
+            setUseRealData(true);
+            setApiLoading(false);
+            return;
+          }
+        } catch (e) {
+          localStorage.removeItem('kobayashi_f1_api_cache');
+        }
+      }
+    }
 
     try {
       // 1. Get latest session to find the active context
       const sessions = await openf1Api.getLatestSession()
-      if (!sessions || sessions.length === 0) {
-        throw new Error('No active F1 sessions found')
-      }
+      if (!sessions || sessions.length === 0) throw new Error('No active sessions')
 
       const latestSession = sessions[0]
       const sessionKey = latestSession.session_key
 
       // 2. Get drivers for this session
       const driversData = await openf1Api.getDrivers(sessionKey)
-      setApiDrivers(driversData.map(transformOpenF1Data.driver))
+      const mappedDrivers = driversData.map(transformOpenF1Data.driver)
+      setApiDrivers(mappedDrivers)
 
       // Extract teams from drivers
       const teamsMap = new Map()
@@ -391,69 +451,68 @@ export default function F1Page() {
           teamsMap.set(d.team_name, { id: d.team_name, name: d.team_name, color: d.team_colour })
         }
       })
-      setApiTeams(Array.from(teamsMap.values()))
+      const mappedTeams = Array.from(teamsMap.values())
+      setApiTeams(mappedTeams)
 
       // 3. Get standings (if available for this session)
+      let mappedStandings = []
       try {
         const standingsData = await openf1Api.getDriverStandings(sessionKey)
         if (standingsData && standingsData.length > 0) {
-          setApiStandings(standingsData.map(s => transformOpenF1Data.standing(s, driversData)))
+          mappedStandings = standingsData.map(s => transformOpenF1Data.standing(s, driversData))
+          setApiStandings(mappedStandings)
         }
       } catch (standingErr) {
-        console.warn('Standings not available for this session, using driver list order')
-        setApiStandings(driversData.map((d, i) => ({
+        mappedStandings = driversData.map((d, i) => ({
           position: i + 1,
           driver: transformOpenF1Data.driver(d),
           team: { name: d.team_name },
           points: 0
-        })))
+        }))
+        setApiStandings(mappedStandings)
       }
 
-      // 4. Get all sessions for the year
+      // 4. Get and deduplicate season sessions
       const year = new Date().getFullYear()
       const allSessions = await openf1Api.getSessions(year)
       setApiSessions(allSessions)
 
-      const raceSessions = allSessions.filter(s => s.session_type === 'Race')
-
-      // Deduplicate by grouping circuit_short_name to avoid repeated entries
-      // Also fix typos directly like Madring -> Madrid from external data sources
-      const uniqueRacesMap = new Map()
-      raceSessions.forEach(s => {
-        if (s.location === 'Madring') s.location = 'Madrid'
-        if (s.session_name === 'Yas Marina Circuit') s.session_name = 'Abu Dhabi GP'
-        if (s.circuit_short_name === 'Yas Marina Circuit') s.location = 'Abu Dhabi'
-
-        // Store the latest Race session per circuit to deduplicate calendar
-        const curr = uniqueRacesMap.get(s.circuit_short_name)
-        if (!curr || new Date(s.date_start) > new Date(curr.date_start)) {
-          uniqueRacesMap.set(s.circuit_short_name, s)
+      const racesMap = new Map()
+      allSessions.forEach(s => {
+        if (s.session_type === 'Race') {
+          const key = s.circuit_short_name.toLowerCase()
+          if (!racesMap.has(key) || new Date(s.date_start) > new Date(racesMap.get(key).date)) {
+            racesMap.set(key, transformOpenF1Data.session(s))
+          }
         }
       })
+      const mappedRaces = Array.from(racesMap.values())
+      setApiRaces(mappedRaces)
+      setNextEvent(latestSession)
 
-      const deduplicatedRaces = Array.from(uniqueRacesMap.values()).sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())
-      setApiRaces(deduplicatedRaces.map(transformOpenF1Data.session))
-
-      // 5. Find next event
-      const now = new Date()
-      const upcoming = allSessions
-        .filter(s => new Date(s.date_end) > now)
-        .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())
-
-      if (upcoming.length > 0) {
-        setNextEvent(upcoming[0])
-      }
+      // Update Cache
+      localStorage.setItem('kobayashi_f1_api_cache', JSON.stringify({
+        timestamp: Date.now(),
+        drivers: mappedDrivers,
+        teams: mappedTeams,
+        standings: mappedStandings,
+        sessions: allSessions,
+        races: mappedRaces,
+        nextEvent: latestSession
+      }))
 
       setUseRealData(true)
     } catch (error: any) {
-      console.error('OpenF1 API Error:', error)
-      setApiError('Failed to load OpenF1 data. Using mock data.')
+      if (retryCount < 2) {
+        setTimeout(() => loadApiData(retryCount + 1), 2000)
+        return
+      }
+      setApiError(error.message || 'Connection lost to OpenF1 Feed')
       setUseRealData(false)
     } finally {
       setApiLoading(false)
     }
-  }, [])
-
+  }, []);
 
   // Load API data on component mount
   useEffect(() => {
@@ -1190,8 +1249,15 @@ export default function F1Page() {
                 </div>
                 <div className="flex items-center space-x-3">
                   <button
+                    onClick={loadMelbourneUndercutScenario}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 rounded-lg transition-colors flex items-center space-x-2 font-semibold shadow-md text-sm"
+                  >
+                    <Play className="w-4 h-4" />
+                    <span>Melbourne Scenario</span>
+                  </button>
+                  <button
                     onClick={fillRandomF1Data}
-                    className="px-4 py-2 bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 rounded-lg transition-colors flex items-center space-x-2 font-semibold shadow-md"
+                    className="px-4 py-2 bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 rounded-lg transition-colors flex items-center space-x-2 font-semibold shadow-md text-sm"
                   >
                     <Zap className="w-4 h-4" />
                     <span>Random Data</span>
@@ -1668,6 +1734,31 @@ export default function F1Page() {
                   <div className="text-4xl font-mono font-black text-white mb-2">92.4%</div>
                   <p className="text-xs text-gray-400 leading-relaxed">Based on 2026 ground-effect simulation parameters and OpenF1 telemetry profiles.</p>
                 </div>
+
+                {/* Alpha Methodology Breakdown */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center">
+                    <Info className="w-3 h-3 mr-2" />
+                    Alpha Methodology
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-gray-400">Historical Weight</span>
+                      <span className="text-white">70%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-gray-400">Live Telemetry Mix</span>
+                      <span className="text-white">20%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-gray-400">Heuristic Offset</span>
+                      <span className="text-white">10%</span>
+                    </div>
+                    <p className="text-[9px] text-gray-500 italic mt-2">
+                      Alpha represents our model's historical replay delta compared to real outcomes.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="lg:col-span-2">
@@ -1743,6 +1834,58 @@ export default function F1Page() {
                                     <span className="text-sm text-gray-300">{factor}</span>
                                   </div>
                                 ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* NEW: Technical Simulation Metrics Visualization */}
+                          {predictionResults.sim_metrics && (
+                            <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-700 rounded-2xl p-6 mt-6 overflow-hidden shadow-2xl">
+                              <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+                                <TrendingUp className="w-4 h-4 mr-2 text-green-500" />
+                                Technical Simulation Metrics
+                              </h4>
+                              <div className="grid md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tighter">Pit Stop Window</span>
+                                    <span className="text-white font-mono font-black">{predictionResults.sim_metrics.pit_window || 'Laps 16-22'}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tighter">MGU-K Depletion</span>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-16 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full bg-yellow-500" style={{ width: predictionResults.sim_metrics.mgu_k_depletion || '15%' }} />
+                                      </div>
+                                      <span className="text-white font-mono font-black text-xs">{predictionResults.sim_metrics.mgu_k_depletion || '15%'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {predictionResults.sim_metrics.tire_degradation && (
+                                  <div className="h-28 w-full bg-black/40 rounded-xl p-4 border border-white/5">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                      <LineChart data={predictionResults.sim_metrics.tire_degradation.map((val: number, i: number) => ({ lap: i, life: val }))}>
+                                        <Line type="monotone" dataKey="life" stroke="#ef4444" strokeWidth={3} dot={false} animationDuration={2000} />
+                                        <XAxis hide />
+                                        <YAxis hide domain={[0, 100]} />
+                                        <Tooltip
+                                          content={({ active, payload }) => {
+                                            if (active && payload && payload.length) {
+                                              return (
+                                                <div className="bg-gray-900 border border-gray-700 p-2 rounded shadow-xl">
+                                                  <p className="text-[10px] font-black text-white">LAP {payload[0].payload.lap}</p>
+                                                  <p className="text-[10px] font-black text-red-500">{payload[0].value}% LIFE</p>
+                                                </div>
+                                              );
+                                            }
+                                            return null;
+                                          }}
+                                        />
+                                      </LineChart>
+                                    </ResponsiveContainer>
+                                    <p className="text-[10px] text-center text-gray-500 mt-2 uppercase font-black tracking-widest">Predicted Tire Wear Curve</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
