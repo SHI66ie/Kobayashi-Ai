@@ -124,6 +124,24 @@ Focus on: [YOUR CUSTOM INSTRUCTIONS]
 
 ---
 
+## 🏎️ F1 2026 Prediction Algorithms (New)
+
+The `KobayashiAI Alpha Engine` utilizes live Llama 3 / PyTorch inference for the F1 **Strategy Forge**.
+
+### Overview of F1 Algorithms
+1. **Data Ingestion**: Official F1 Open API telemetry and standings data are loaded dynamically.
+2. **Context Assembly**: Variables from the Prediction Builder (fuel load, aero packages, weather) are encoded into JSON.
+3. **Inference**: The model evaluates conditions across predefined factors specific to 2026 regulations (e.g., standardized 800kW MGU-K limits or C1-C5 tire degradation rates).
+4. **Scoring**: A confidence `ALPHA` score and precision rate are calculated based on historical validation of similar track constraints.
+
+### How to Extend F1 Simulations
+If you want to add new variables (e.g., Driver Morale, Suspension stiffness) to the simulation:
+1. **Update UI**: Add your variable to `app/f1/page.tsx` within the `f1Data` state and input forms.
+2. **Backend Payload**: Ensure the variable is passed to `app/api/f1/predict/route.ts` via the `POST` request.
+3. **Prompt Engineering**: Modify the `systemPrompt` in the API route to include instructions on how the new variable affects the 2026 regulations simulation.
+
+---
+
 ## 🛠️ Alternative Options
 
 ### Option 2: Local AI (Free, but slower)

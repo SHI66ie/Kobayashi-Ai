@@ -6,7 +6,13 @@ RaceMind AI is an autonomous co-driver prototype that replays Toyota GR Cup tele
 
 ## 🚀 Core Features
 
-### 🎯 **3-Lap Hindsight Predictor**
+### 🎯 **F1 2026 Predictive Oracle (New Feature)**
+- Forward modeling for 2026 F1 Technical Regulations
+- User-configurable Strategy Forge (tire wear, weather, aero limits)
+- Powered by live PyTorch/LLM inference (Llama 3 context)
+- Real-time OpenF1 integration with dynamic prediction validation
+
+### 🏎️ **3-Lap Hindsight Predictor (GR Cup Core)**
 - Replays telemetry to forecast lap deltas, tire wear, fuel for next 3 laps
 - Uses lap times, throttle/brake traces, GPS, tire temp/pressure from datasets
 - 89-95% prediction accuracy based on historical patterns
@@ -145,10 +151,16 @@ RaceMind AI processes **only** the provided Toyota GR Cup datasets:
 - ✅ **Demo Ready**: Full race replay with validation (4h)
 
 ### **Future Enhancements:**
-- **Real-time Integration**: Live race data streaming
-- **Advanced ML Models**: LSTM for deeper pattern recognition
-- **Mobile App**: Native iOS/Android application
-- **Toyota GR Integration**: Direct export to official training systems
+- **F1 Open API Scaling**: True predictive AI across larger datasets.
+- **Advanced ML Models**: LSTM/Transformer integrations for live track simulation.
+- **Mobile App**: Native iOS/Android application with responsive interfaces.
+- **Toyota GR Integration**: Direct export to official training systems.
+
+## 🤝 Community & Issue Tracking
+We welcome community contributions! Please check out the [Issues tab](../../issues) on GitHub to report bugs or request features. 
+- **Bug Reports**: Please include a reproducible trace or the OpenF1 session ID.
+- **Feature Requests**: PRs are welcome for expanding the F1 Strategy Forge.
+- Active development is prioritized based on community feedback.
 
 ## 🏁 Toyota GR Cup Hackathon 2025 - Wildcard Submission
 
