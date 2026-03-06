@@ -640,11 +640,7 @@ export class DataFusionService {
   }
 
   // Analyze OpenF1 lap data to extract performance metrics
-  private analyzeOpenF1LapData(lapData: any[]): {
-    avgPosition: number,
-    consistency: number,
-    avgLapTime: number
-  } {
+  private analyzeOpenF1LapData(lapData: any[]): { avgPosition: number; consistency: number; avgLapTime: number } {
     if (!lapData.length) {
       return { avgPosition: 10, consistency: 0.8, avgLapTime: 90 }
     }
@@ -661,7 +657,7 @@ export class DataFusionService {
     const consistency = Math.max(0.1, 1 - (Math.sqrt(variance) / avgLapTime))
     
     // Estimate position based on lap time (faster = better position)
-    const avgPosition = Math.max(1, Math.min(20, Math.round(20 - (avgLapTime - 80) / 2))
+    const avgPosition = Math.max(1, Math.min(20, Math.round(20 - (avgLapTime - 80) / 2)))
 
     return { avgPosition, consistency, avgLapTime }
   }
