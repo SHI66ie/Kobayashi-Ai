@@ -1565,6 +1565,7 @@ export default function F1Page() {
                     </button>
                   </div>
                 </div>
+              )}
             </div>
 
             {/* Prediction Execution Section - Monsterbet Style */}
@@ -2261,6 +2262,8 @@ export default function F1Page() {
               </div>
             )}
           </div>
-  </div>
-      )
+        )}
+      </div>
+    </div>
+  )
 }
