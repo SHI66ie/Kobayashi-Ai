@@ -1670,7 +1670,7 @@ export default function F1Page() {
                               <div>
                                 <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Win/Loss Probabilities</h4>
                                 <div className="space-y-4">
-                                  {predictionResults.outcomes?.slice(0, 3).map((out: any, i: number) => (
+                                  {(predictionResults.outcomes || []).slice(0, 3).map((out: any, i: number) => (
                                     <div key={i} className="space-y-2">
                                       <div className="flex justify-between text-sm">
                                         <span className="font-bold">{out.label}</span>
@@ -1711,7 +1711,7 @@ export default function F1Page() {
                               </h4>
                               <p className="text-xs text-gray-500 mb-4">Step-by-step breakdown of how outcomes were derived based on your inputs:</p>
                               <div className="grid md:grid-cols-2 gap-4">
-                                {predictionResults.factors.map((factor: string, i: number) => (
+                                {(predictionResults.factors || []).map((factor: string, i: number) => (
                                   <div key={i} className="flex items-start space-x-3 bg-black/20 p-3 rounded-lg border border-white/5">
                                     <div className="w-6 h-6 rounded-full bg-racing-blue/20 text-racing-blue flex items-center justify-center font-bold text-xs shrink-0">
                                       {i + 1}
@@ -1749,7 +1749,7 @@ export default function F1Page() {
                                 {predictionResults.sim_metrics.tire_degradation && (
                                   <div className="h-28 w-full bg-black/40 rounded-xl p-4 border border-white/5">
                                     <ResponsiveContainer width="100%" height="100%">
-                                      <LineChart data={predictionResults.sim_metrics.tire_degradation.map((val: number, i: number) => ({ lap: i, life: val }))}>
+                                      <LineChart data={(predictionResults.sim_metrics.tire_degradation || []).map((val: number, i: number) => ({ lap: i, life: val }))}>
                                         <Line type="monotone" dataKey="life" stroke="#ef4444" strokeWidth={3} dot={false} animationDuration={2000} />
                                         <XAxis hide />
                                         <YAxis hide domain={[0, 100]} />
