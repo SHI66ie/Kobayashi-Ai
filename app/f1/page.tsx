@@ -668,18 +668,16 @@ export default function F1Page() {
         return {
           type: 'Pit Strategy Predictions (2026 Regulations)',
           track: track?.name,
-          predictions: {
-            optimalStrategy: isSprintWeekend ? '1-stop sprint strategy' : '2-stop strategy',
-            tireCompounds: ['Soft', 'Medium', 'Hard', 'Intermediate', 'Wet'],
-            pitStops: isSprintWeekend ? [
-              { stop: 1, lap: 12, from: 'Soft', to: 'Medium', time: '19.8s' }
-            ] : [
-              { stop: 1, lap: 16, from: 'Soft', to: 'Medium', time: '20.2s' },
-              { stop: 2, lap: 32, from: 'Medium', to: 'Hard', time: '20.8s' }
-            ],
-            confidence: 0.84,
-            tireWearFactor: trackFactor.tireWear
-          },
+          predictions: [
+            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.94 },
+            { position: 2, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.88 },
+            { position: 3, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', confidence: 0.82 }
+          ],
+          outcomes: [
+            { label: (isSprintWeekend ? 'Sprint ' : 'Optimal ') + 'Stop Window', probability: (100 * trackFactor.tireWear).toFixed(0) + '%' },
+            { label: 'Fuel Load Management', probability: '92%' }
+          ],
+          analysis: `Simulation suggests a ${isSprintWeekend ? '1-stop' : '2-stop'} strategy. 2026 regs favor an early MGU-K energy dump to undercut rivals.`,
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 Tire Compound Characteristics', 'Track-Specific Degradation', '2026 Aero Impact', 'Power Unit Fuel Efficiency'],
           rules: '2026 Tire Rules: 5 compounds (C1-C5), mandatory sets reduced, enhanced sustainability',
@@ -694,10 +692,15 @@ export default function F1Page() {
           type: 'Overtaking Opportunities (2026 Technical Rules)',
           track: track?.name,
           predictions: [
-            { zone: 'DRS Zone 1 (Main Straight)', difficulty: overtakeTrackFactor.power > 0.92 ? 'Easy' : 'Medium', successRate: 0.82, drivers: [realDrivers.slice(0, 4).join(', ')] },
-            { zone: 'DRS Zone 2 (Back Straight)', difficulty: overtakeTrackFactor.aero > 0.90 ? 'Medium' : 'Hard', successRate: 0.68, drivers: [realDrivers.slice(4, 8).join(', ')] },
-            { zone: 'Corner Complex (DRS Available)', difficulty: overtakeTrackFactor.handling > 0.90 ? 'Easy' : 'Medium', successRate: 0.75, drivers: [realDrivers.slice(2, 6).join(', ')] }
+            { position: 1, driver: 'DRS Zone 1', team: 'Main Straight', confidence: 0.82 },
+            { position: 2, driver: 'DRS Zone 2', team: 'Back Straight', confidence: 0.68 },
+            { position: 3, driver: 'Corner Complex', team: 'Infield', confidence: 0.75 }
           ],
+          outcomes: [
+            { label: 'Success Rate (Zone 1)', probability: '82%' },
+            { label: 'Success Rate (Zone 2)', probability: '68%' }
+          ],
+          analysis: "Overtaking delta analysis shows significant benefit from the 2026 active aero straights mode. Success depends on MGU-K harvest rates in previous sectors.",
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 DRS Zone Optimization', 'Corner Speed Differentials', '2026 Aero Wake Effects', 'Tire Grip Levels'],
           rules: '2026 DRS Rules: Maintained from 2023, enhanced activation zones, improved detection',
@@ -712,6 +715,10 @@ export default function F1Page() {
             track: track?.name,
             note: 'Not a sprint weekend - regular qualifying format applies',
             sprintWeekends: sprintWeekends.map(id => id.charAt(0).toUpperCase() + id.slice(1)),
+            outcomes: [
+              { label: 'Regular Qualifying Forecast', probability: '100%' }
+            ],
+            analysis: 'This is not a designated 2026 Sprint Weekend. Simulation results shown are for the standard Qualifying format.',
             accuracy: 100,
             factors: ['Sprint Weekend Schedule'],
             dataSource: useRealData ? 'Real API Data' : 'Mock Data'
@@ -728,6 +735,11 @@ export default function F1Page() {
             { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', points: 5, pole: false },
             { position: 5, driver: realDrivers[4] || 'George Russell', team: 'Mercedes AMG', points: 4, pole: false }
           ],
+          outcomes: [
+            { label: (realDrivers[0] || 'Max Verstappen') + ' Sprint Pole', probability: '91%' },
+            { label: (realDrivers[1] || 'Lewis Hamilton') + ' Sprint Podium', probability: '78%' }
+          ],
+          analysis: 'Sprint simulation for 2026 indicates high energy recovery requirements in the 100km race. Overtaking is predicted to be high on the main straight via X-mode aero.',
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['Sprint Qualifying Performance', 'Short Race Strategy', 'Overtaking Opportunities'],
           rules: '2026 Sprint Format: 100km race, points for top 8 (8-7-6-5-4-3-2-1), pole for race winner',
@@ -1788,17 +1800,17 @@ export default function F1Page() {
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-white/5">
-                                    {(predictionResults.predictions as any[]).map((p, i) => (
+                                    {Array.isArray(predictionResults.predictions) && (predictionResults.predictions as any[]).map((p, i) => (
                                       <tr key={i} className="hover:bg-white/10 transition-colors">
-                                        <td className="px-6 py-3 font-mono font-bold text-gray-400">{p.position}</td>
-                                        <td className="px-6 py-3 font-bold text-white uppercase">{p.driver}</td>
-                                        <td className="px-6 py-3 text-gray-400">{p.team}</td>
+                                        <td className="px-6 py-3 font-mono font-bold text-gray-400">{p.position || i + 1}</td>
+                                        <td className="px-6 py-3 font-bold text-white uppercase">{p.driver || p.zone || 'Unknown'}</td>
+                                        <td className="px-6 py-3 text-gray-400">{p.team || p.difficulty || 'TBD'}</td>
                                         <td className="px-6 py-3 text-right">
                                           <div className="flex items-center justify-end space-x-2">
                                             <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-racing-red" style={{ width: `${(p.confidence || 0.7) * 100}%` }} />
+                                              <div className="h-full bg-racing-red" style={{ width: `${(p.confidence || p.successRate || 0.7) * 100}%` }} />
                                             </div>
-                                            <span className="font-mono text-gray-400">{((p.confidence || 0.7) * 100).toFixed(0)}%</span>
+                                            <span className="font-mono text-gray-400">{((p.confidence || p.successRate || 0.7) * 100).toFixed(0)}%</span>
                                           </div>
                                         </td>
                                       </tr>
