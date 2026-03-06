@@ -415,14 +415,19 @@ export default function F1Page() {
 
       const result = await response.json()
 
-      if (result.success) {
+      // Hybrid Simulation Logic: Use AI (Alpha) results if rich, else use local engine (Logic Engine)
+      if (result.success && (result.outcomes || result.sim_metrics)) {
         setPredictionResults(result)
       } else {
-        throw new Error(result.message || 'Simulation failed')
+        console.warn("AI result shallow or failed, using local Logic Engine fallback")
+        const fallback = generatePredictionResults(predictionType, track)
+        setPredictionResults({ ...fallback, isFallback: true })
       }
     } catch (error: any) {
-      console.error('Prediction error:', error)
-      setPredictionResults({ error: error.message || 'Failed to generate predictions' })
+      console.error('Prediction engine error, switching to fallback:', error)
+      const track = tracks.find(t => t.id === selectedTrack)
+      const fallback = generatePredictionResults(predictionType, track)
+      setPredictionResults({ ...fallback, isFallback: true, error: null })
     } finally {
       setIsPredicting(false)
     }
@@ -591,6 +596,11 @@ export default function F1Page() {
         return {
           type: 'Qualifying Predictions (2026 Rules)',
           track: track?.name,
+          outcomes: [
+            { label: (realDrivers[0] || 'Max Verstappen') + ' Pole Position', probability: '94%' },
+            { label: (realDrivers[1] || 'Lewis Hamilton') + ' Front Row', probability: '82%' },
+            { label: (realDrivers[2] || 'Charles Leclerc') + ' Top 3', probability: '76%' }
+          ],
           predictions: [
             { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', time: '1:09.543', confidence: 0.94 },
             { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', time: '1:09.678', confidence: 0.89 },
@@ -598,6 +608,7 @@ export default function F1Page() {
             { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', time: '1:10.034', confidence: 0.83 },
             { position: 5, driver: realDrivers[4] || 'George Russell', team: 'Mercedes AMG', time: '1:10.156', confidence: 0.80 }
           ],
+          analysis: "Qualifying simulation indicates extreme aero efficiency requirements. The 2026 ground effect profile favors low-rake setups at this circuit. Track evolution will be critical in Q3.",
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 Aero Package Efficiency', 'Power Unit Performance', 'Driver Skill', 'Track-Specific Setup', 'Tire Strategy'],
           rules: '2026 Technical Regulations: New aero philosophy, standardized power units, enhanced sustainability',
@@ -608,6 +619,11 @@ export default function F1Page() {
         return {
           type: 'Race Finish Predictions (2026 Format)',
           track: track?.name,
+          outcomes: [
+            { label: (realDrivers[0] || 'Max Verstappen') + ' Win', probability: '88%' },
+            { label: (realDrivers[2] || 'Charles Leclerc') + ' Podium', probability: '72%' },
+            { label: 'Safety Car Probability', probability: '35%' }
+          ],
           predictions: [
             { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.91, points: 26 },
             { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.78, points: 19 },
@@ -618,6 +634,7 @@ export default function F1Page() {
             { position: 7, driver: realDrivers[6] || 'Oscar Piastri', team: 'McLaren', confidence: 0.59, points: 7 },
             { position: 8, driver: realDrivers[7] || 'Fernando Alonso', team: 'Aston Martin', confidence: 0.56, points: 5 }
           ],
+          analysis: "Race simulation predicts high tire degradation on the soft compound. Strategy will likely pivot to a 2-stop medium-hard-hard sequence. Active aero management will be the deciding factor.",
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['Starting Position', '2026 Tire Degradation Model', 'DRS Strategy', 'Pit Window Timing', '2026 Power Unit Efficiency'],
           rules: '2026 Points System: 26-19-16-13-11-9-7-5-3-1 + 1 for fastest lap',
@@ -628,11 +645,17 @@ export default function F1Page() {
         return {
           type: 'Podium Predictions (2026 Season)',
           track: track?.name,
+          outcomes: [
+            { label: (realDrivers[0] || 'Max Verstappen') + ' Podium', probability: '92%' },
+            { label: (realDrivers[3] || 'Lando Norris') + ' Podium', probability: '64%' },
+            { label: (realDrivers[5] || 'Carlos Sainz') + ' Podium', probability: '58%' }
+          ],
           predictions: [
             { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.87, odds: '1.35' },
             { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.75, odds: '3.10' },
             { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.70, odds: '4.20' }
           ],
+          analysis: "High probability for a Red Bull/Ferrari podium split. McLaren showing strong long-run pace in current simulation variables. Ferrari reliability remains the primary risk factor.",
           accuracy: Math.round(baseAccuracy * 100),
           factors: ['2026 Championship Standings', 'Recent Performance', '2026 Technical Package', 'Team Strategy'],
           rules: '2026 Sprint Points: 8-7-6-5-4-3-2-1 for sprint races (Austria, USA, Qatar, Brazil, China, Qatar)',
@@ -1577,18 +1600,36 @@ export default function F1Page() {
                     <span>Quick Selectors</span>
                   </h3>
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                    {['Qualifying', 'Race', 'Podium', 'Pit Strategy', 'Overtakes', 'Sprint'].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setPredictionType(type.toLowerCase() as any)}
-                        className={`py-3 px-2 rounded-xl text-xs font-bold transition-all border ${predictionType === type.toLowerCase()
-                          ? 'bg-racing-red border-racing-red text-white shadow-lg shadow-racing-red/20'
-                          : 'bg-white/5 border-gray-700 text-gray-400 hover:border-gray-500'
-                          }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
+                    {['Qualifying', 'Race', 'Podium', 'Pit Strategy', 'Overtakes', 'Sprint'].map((type) => {
+                      const mappedType = type === 'Pit Strategy' ? 'pit-strategy' : type === 'Overtakes' ? 'overtake' : type.toLowerCase();
+                      const isActive = predictionType === mappedType;
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => {
+                            setPredictionType(mappedType as any);
+                            // Auto-populate data if form is empty
+                            if (!f1Data.driverName) {
+                              fillRandomF1Data();
+                            }
+                          }}
+                          className={`py-3 px-2 rounded-xl text-xs font-bold transition-all border ${isActive
+                            ? 'bg-racing-red border-racing-red text-white shadow-lg shadow-racing-red/20'
+                            : 'bg-white/5 border-gray-700 text-gray-400 hover:border-gray-500'
+                            }`}
+                        >
+                          {type}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="bg-racing-blue/10 border border-racing-blue/20 rounded-xl p-4 mb-6">
+                    <div className="flex items-center space-x-2 text-racing-blue mb-1">
+                      <Database className="w-4 h-4" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Logic Engine Sync</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400">Ready to simulate under 2026 Regulations. Parameters loaded.</p>
                   </div>
 
                   <button
@@ -1597,7 +1638,10 @@ export default function F1Page() {
                     className="w-full bg-gradient-to-r from-racing-red to-red-600 hover:from-red-600 hover:to-red-500 py-4 rounded-xl font-black text-lg shadow-xl shadow-racing-red/30 transform transition active:scale-95 flex items-center justify-center space-x-3 mb-4"
                   >
                     {isPredicting ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+                      <div className="flex items-center space-x-3">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+                        <span>Alpha Computing...</span>
+                      </div>
                     ) : (
                       <>
                         <Brain className="w-6 h-6" />
@@ -1723,55 +1767,52 @@ export default function F1Page() {
                             </div>
                           )}
 
-                          {/* NEW: Technical Simulation Metrics Visualization */}
-                          {predictionResults.sim_metrics && (
-                            <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-700 rounded-2xl p-6 mt-6 overflow-hidden shadow-2xl">
-                              <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center">
-                                <TrendingUp className="w-4 h-4 mr-2 text-green-500" />
-                                Technical Simulation Metrics
-                              </h4>
-                              <div className="grid md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tighter">Pit Stop Window</span>
-                                    <span className="text-white font-mono font-black">{predictionResults.sim_metrics.pit_window || 'Laps 16-22'}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tighter">MGU-K Depletion</span>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="w-16 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-yellow-500" style={{ width: predictionResults.sim_metrics.mgu_k_depletion || '15%' }} />
-                                      </div>
-                                      <span className="text-white font-mono font-black text-xs">{predictionResults.sim_metrics.mgu_k_depletion || '15%'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                {predictionResults.sim_metrics.tire_degradation && (
-                                  <div className="h-28 w-full bg-black/40 rounded-xl p-4 border border-white/5">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                      <LineChart data={(predictionResults.sim_metrics.tire_degradation || []).map((val: number, i: number) => ({ lap: i, life: val }))}>
-                                        <Line type="monotone" dataKey="life" stroke="#ef4444" strokeWidth={3} dot={false} animationDuration={2000} />
-                                        <XAxis hide />
-                                        <YAxis hide domain={[0, 100]} />
-                                        <Tooltip
-                                          content={({ active, payload }) => {
-                                            if (active && payload && payload.length) {
-                                              return (
-                                                <div className="bg-gray-900 border border-gray-700 p-2 rounded shadow-xl">
-                                                  <p className="text-[10px] font-black text-white">LAP {payload[0].payload.lap}</p>
-                                                  <p className="text-[10px] font-black text-red-500">{payload[0].value}% LIFE</p>
-                                                </div>
-                                              );
-                                            }
-                                            return null;
-                                          }}
-                                        />
-                                      </LineChart>
-                                    </ResponsiveContainer>
-                                    <p className="text-[10px] text-center text-gray-500 mt-2 uppercase font-black tracking-widest">Predicted Tire Wear Curve</p>
-                                  </div>
-                                )}
+                          {/* NEW: Simulation Leaderboard - Driver Rankings */}
+                          {predictionResults.predictions && predictionResults.predictions.length > 0 && (
+                            <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden mt-8">
+                              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center">
+                                  <Trophy className="w-4 h-4 mr-2 text-yellow-500" />
+                                  Simulated Leaderboard
+                                </h4>
+                                <span className="text-[10px] font-mono text-racing-blue bg-racing-blue/10 px-2 py-0.5 rounded border border-racing-blue/20">2026 COMPLIANT</span>
                               </div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead>
+                                    <tr className="text-gray-500 border-b border-white/5 uppercase font-black bg-black/20">
+                                      <th className="px-6 py-3">Pos</th>
+                                      <th className="px-6 py-3">Driver</th>
+                                      <th className="px-6 py-3">Team</th>
+                                      <th className="px-6 py-3 text-right">Confidence</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5">
+                                    {(predictionResults.predictions as any[]).map((p, i) => (
+                                      <tr key={i} className="hover:bg-white/10 transition-colors">
+                                        <td className="px-6 py-3 font-mono font-bold text-gray-400">{p.position}</td>
+                                        <td className="px-6 py-3 font-bold text-white uppercase">{p.driver}</td>
+                                        <td className="px-6 py-3 text-gray-400">{p.team}</td>
+                                        <td className="px-6 py-3 text-right">
+                                          <div className="flex items-center justify-end space-x-2">
+                                            <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                              <div className="h-full bg-racing-red" style={{ width: `${(p.confidence || 0.7) * 100}%` }} />
+                                            </div>
+                                            <span className="font-mono text-gray-400">{((p.confidence || 0.7) * 100).toFixed(0)}%</span>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {predictionResults.isFallback && (
+                            <div className="flex items-center justify-center space-x-2 mt-8 text-[10px] text-gray-500 uppercase font-black tracking-widest">
+                              <Info className="w-3 h-3 text-racing-blue" />
+                              <span>Alpha Engine Unavailable / Insufficient Depth. Using Kobayashi Logic Engine (v4.2-2026) Fallback.</span>
                             </div>
                           )}
                         </div>
