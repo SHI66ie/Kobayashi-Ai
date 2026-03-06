@@ -661,7 +661,7 @@ export class DataFusionService {
     const consistency = Math.max(0.1, 1 - (Math.sqrt(variance) / avgLapTime))
     
     // Estimate position based on lap time (faster = better position)
-    const avgPosition = Math.max(1, Math.min(20, Math.round(20 - (avgLapTime - 80) / 2)))
+    const avgPosition = Math.max(1, Math.min(20, Math.round(20 - (avgLapTime - 80) / 2))
 
     return { avgPosition, consistency, avgLapTime }
   }
