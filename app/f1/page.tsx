@@ -26,7 +26,50 @@ interface RaceData {
 
 export default function F1Page() {
   // F1 Performance monitoring
-  usePerformanceMonitoring()
+  try {
+    usePerformanceMonitoring()
+  } catch (error) {
+    console.error('Performance monitoring error:', error)
+  }
+
+  // Error boundary state
+  const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  // Error boundary wrapper
+  const handleError = (error: Error) => {
+    console.error('F1 Page Error:', error)
+    setHasError(true)
+    setErrorMessage(error.message)
+  }
+
+  // Wrap component in error boundary
+  if (hasError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-red-500 mb-4">
+            Something went wrong
+          </h2>
+          <p className="text-gray-400 mb-4">
+            An error occurred while loading the F1 page.
+          </p>
+          <details className="text-left text-gray-500 mb-4">
+            <summary>Error details</summary>
+            <pre className="mt-2 p-4 bg-gray-800 rounded text-sm overflow-auto">
+              {errorMessage}
+            </pre>
+          </details>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // State declarations for F1
   const [selectedTrack, setSelectedTrack] = useState('monaco')
@@ -425,9 +468,14 @@ export default function F1Page() {
       }
     } catch (error: any) {
       console.error('Prediction engine error, switching to fallback:', error)
-      const track = tracks.find(t => t.id === selectedTrack)
-      const fallback = generatePredictionResults(predictionType, track)
-      setPredictionResults({ ...fallback, isFallback: true, error: null })
+      try {
+        const track = tracks.find(t => t.id === selectedTrack)
+        const fallback = generatePredictionResults(predictionType, track)
+        setPredictionResults({ ...fallback, isFallback: true, error: null })
+      } catch (fallbackError) {
+        console.error('Fallback prediction failed:', fallbackError)
+        handleError(fallbackError as Error)
+      }
     } finally {
       setIsPredicting(false)
     }
@@ -546,7 +594,12 @@ export default function F1Page() {
 
   // Load API data on component mount
   useEffect(() => {
-    loadApiData()
+    try {
+      loadApiData()
+    } catch (error) {
+      console.error("API data loading useEffect error:", error)
+      handleError(error as Error)
+    }
   }, [loadApiData])
 
   const generatePredictionResults = (type: string, track: any) => {
