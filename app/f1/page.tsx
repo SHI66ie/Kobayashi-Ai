@@ -1170,62 +1170,7 @@ export default function F1Page() {
           </div>
         )}
 
-        {/* DATA ANALYTICS DASHBOARD */}
-        {activeTab === 'analytics' && (
-          <div className="animate-in fade-in duration-500">
-            {/* Control Panel */}
-            <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
-              <div className="flex items-center space-x-3 mb-6">
-                <Flag className="w-5 h-5 text-racing-red" />
-                <h2 className="text-xl font-bold tracking-tight">F1 Race Analysis Controls</h2>
-              </div>
-              <div className="flex flex-wrap gap-4">
-                <button
-                  onClick={() => {
-                    setIsReplaying(true)
-                    loadRaceData()
-                    setTimeout(() => setIsReplaying(false), 3000)
-                  }}
-                  disabled={isReplaying || dataSourceMode === 'custom'}
-                  className="bg-gradient-to-r from-racing-red to-red-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
-                >
-                  {isReplaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                  <span>{isReplaying ? 'Analyzing...' : 'Start Race Replay'}</span>
-                </button>
 
-                <button
-                  onClick={() => loadRaceData()}
-                  disabled={raceData.loading}
-                  className="border-2 border-racing-blue px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  <span>{raceData.loading ? 'Loading...' : 'Load Analytics'}</span>
-                </button>
-
-                <button
-                  onClick={exportReport}
-                  disabled={isGeneratingReport || raceData.data.length === 0}
-                  className="bg-gradient-to-r from-racing-blue to-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
-                >
-                  {isGeneratingReport ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  ) : (
-                    <Download className="w-5 h-5" />
-                  )}
-                  <span>Generate AI Report</span>
-                </button>
-
-                <button
-                  onClick={() => setShowPredictions(!showPredictions)}
-                  className="bg-gradient-to-r from-racing-blue to-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
-                >
-                  <Target className="w-5 h-5" />
-                  <span>{showPredictions ? 'Hide Predictions' : 'Show Predictions'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* PREDICTION BUILDER */}
         {activeTab === 'builder' && (
@@ -1378,19 +1323,19 @@ export default function F1Page() {
                     </div>
                   </div>
 
-                  {/* Race Conditions */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                      <span>Race Conditions</span>
+                  {/* Track Conditions */}
+                  <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700/50">
+                    <h3 className="text-base font-black mb-6 flex items-center space-x-3 uppercase tracking-widest text-gray-400">
+                      <span className="w-6 h-0.5 bg-yellow-500 rounded-full"></span>
+                      <span>Track Conditions</span>
                     </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Track Condition</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Surface</label>
                         <select
                           value={f1Data.trackCondition}
                           onChange={(e) => updateF1Data('trackCondition', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-semibold appearance-none"
                         >
                           <option value="dry">Dry</option>
                           <option value="damp">Damp</option>
@@ -1398,217 +1343,191 @@ export default function F1Page() {
                           <option value="flooded">Flooded</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Safety Car</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={f1Data.safetyCar}
-                            onChange={(e) => updateF1Data('safetyCar', e.target.checked)}
-                            className="w-4 h-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500"
-                          />
-                          <span className="text-sm">Safety Car Deployed</span>
-                        </div>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Evolution</label>
+                        <select
+                          value={f1Data.trackEvolution}
+                          onChange={(e) => updateF1Data('trackEvolution', e.target.value)}
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-semibold appearance-none"
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Red Flag</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={f1Data.redFlag}
-                            onChange={(e) => updateF1Data('redFlag', e.target.checked)}
-                            className="w-4 h-4 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
-                          />
-                          <span className="text-sm">Race Stopped</span>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Race Laps</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Total Laps</label>
                         <input
                           type="number"
                           value={f1Data.raceLaps}
                           onChange={(e) => updateF1Data('raceLaps', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-semibold"
                           placeholder="e.g., 70"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Track Evolution</label>
-                        <select
-                          value={f1Data.trackEvolution}
-                          onChange={(e) => updateF1Data('trackEvolution', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        >
-                          <option value="low">Low Evolution</option>
-                          <option value="medium">Medium Evolution</option>
-                          <option value="high">High Evolution</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Sprint Weekend</label>
-                        <div className="flex items-center space-x-2">
+                      <div className="flex flex-col justify-end space-y-3">
+                        <div className="flex items-center space-x-3 bg-black/20 p-2.5 rounded-xl border border-gray-800">
                           <input
                             type="checkbox"
-                            checked={f1Data.sprintWeekend}
-                            onChange={(e) => updateF1Data('sprintWeekend', e.target.checked)}
-                            className="w-4 h-4 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                            checked={f1Data.safetyCar}
+                            onChange={(e) => updateF1Data('safetyCar', e.target.checked)}
+                            className="w-4 h-4 text-yellow-500 bg-gray-900 border-gray-700 rounded focus:ring-yellow-500"
                           />
-                          <span className="text-sm">Sprint Race Format</span>
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Safety Car</span>
+                        </div>
+                        <div className="flex items-center space-x-3 bg-black/20 p-2.5 rounded-xl border border-gray-800">
+                          <input
+                            type="checkbox"
+                            checked={f1Data.redFlag}
+                            onChange={(e) => updateF1Data('redFlag', e.target.checked)}
+                            className="w-4 h-4 text-red-500 bg-gray-900 border-gray-700 rounded focus:ring-red-500"
+                          />
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Red Flag</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Weather Data */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      <span>Weather Data</span>
+                  {/* Environmental Telemetry */}
+                  <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700/50">
+                    <h3 className="text-base font-black mb-6 flex items-center space-x-3 uppercase tracking-widest text-gray-400">
+                      <span className="w-6 h-0.5 bg-blue-500 rounded-full"></span>
+                      <span>Environmental Telemetry</span>
                     </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Air Temperature (°C)</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Air Temp (°C)</label>
                         <input
                           type="number"
                           value={f1Data.airTemp}
                           onChange={(e) => updateF1Data('airTemp', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold"
                           placeholder="25"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Track Temperature (°C)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Track Temp (°C)</label>
                         <input
                           type="number"
                           value={f1Data.trackTemp}
                           onChange={(e) => updateF1Data('trackTemp', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold"
                           placeholder="35"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Humidity (%)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Humidity (%)</label>
                         <input
                           type="number"
                           value={f1Data.humidity}
                           onChange={(e) => updateF1Data('humidity', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold"
                           placeholder="50"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Wind Speed (km/h)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Wind (km/h)</label>
                         <input
                           type="number"
                           value={f1Data.windSpeed}
                           onChange={(e) => updateF1Data('windSpeed', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold"
                           placeholder="5"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Rain Probability (%)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Rain Prob (%)</label>
                         <input
                           type="number"
                           value={f1Data.rainProbability}
                           onChange={(e) => updateF1Data('rainProbability', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold"
                           placeholder="0"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Precipitation</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Precipitation</label>
                         <select
                           value={f1Data.precipitation}
                           onChange={(e) => updateF1Data('precipitation', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold appearance-none"
                         >
                           <option value="none">None</option>
-                          <option value="light">Light Rain</option>
-                          <option value="moderate">Moderate Rain</option>
-                          <option value="heavy">Heavy Rain</option>
+                          <option value="light">Light</option>
+                          <option value="moderate">Med</option>
+                          <option value="heavy">Heavy</option>
                           <option value="storm">Storm</option>
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  {/* Strategy Inputs */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      <span>Strategy Inputs</span>
+                  {/* Execution Strategy */}
+                  <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700/50">
+                    <h3 className="text-base font-black mb-6 flex items-center space-x-3 uppercase tracking-widest text-gray-400">
+                      <span className="w-6 h-0.5 bg-green-500 rounded-full"></span>
+                      <span>Execution Strategy</span>
                     </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Pit Strategy</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Pit Plan</label>
                         <select
                           value={f1Data.pitStrategy}
                           onChange={(e) => updateF1Data('pitStrategy', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all text-sm font-semibold appearance-none"
                         >
-                          <option value="1-stop">1-Stop Strategy</option>
-                          <option value="2-stop">2-Stop Strategy</option>
-                          <option value="3-stop">3-Stop Strategy</option>
-                          <option value="undercut">Undercut Strategy</option>
-                          <option value="overcut">Overcut Strategy</option>
+                          <option value="1-stop">1-Stop</option>
+                          <option value="2-stop">2-Stop</option>
+                          <option value="3-stop">3-Stop</option>
+                          <option value="undercut">Undercut</option>
+                          <option value="overcut">Overcut</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Fuel Strategy</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Fuel Mode</label>
                         <select
                           value={f1Data.fuelStrategy}
                           onChange={(e) => updateF1Data('fuelStrategy', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all text-sm font-semibold appearance-none"
                         >
                           <option value="conservative">Conservative</option>
                           <option value="balanced">Balanced</option>
                           <option value="aggressive">Aggressive</option>
-                          <option value="push">Push to Limit</option>
+                          <option value="push">Max Push</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Tire Strategy</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Tire Rotation</label>
                         <select
                           value={f1Data.tireStrategy}
                           onChange={(e) => updateF1Data('tireStrategy', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all text-sm font-semibold appearance-none"
                         >
-                          <option value="C3-C4-C4">C3-C4-C4 (Standard)</option>
-                          <option value="C2-C3-C4">C2-C3-C4 (Soft Start)</option>
-                          <option value="C3-C4-C5">C3-C4-C5 (Hard Finish)</option>
-                          <option value="C2-C4-C4">C2-C4-C4 (One Soft)</option>
-                          <option value="C4-C4-C4">C4-C4-C4 (All Medium)</option>
+                          <option value="C3-C4-C4">Balanced (C3-C4-C4)</option>
+                          <option value="C2-C3-C4">Soft Start</option>
+                          <option value="C3-C4-C5">Hard Finish</option>
+                          <option value="C2-C4-C4">One Soft</option>
+                          <option value="C4-C4-C4">Max Consistency</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Overtake Attempts</label>
-                        <input
-                          type="number"
-                          value={f1Data.overtakeAttempts}
-                          onChange={(e) => updateF1Data('overtakeAttempts', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="e.g., 5"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Defensive Driving</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Defense Prio</label>
                         <select
                           value={f1Data.defensiveDriving}
                           onChange={(e) => updateF1Data('defensiveDriving', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all text-sm font-semibold appearance-none"
                         >
-                          <option value="aggressive">Aggressive Defense</option>
-                          <option value="moderate">Moderate Defense</option>
-                          <option value="conservative">Conservative Defense</option>
-                          <option value="passive">Passive Defense</option>
+                          <option value="aggressive">High Defense</option>
+                          <option value="moderate">Moderate</option>
+                          <option value="conservative">Low Yield</option>
+                          <option value="passive">Passive</option>
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  {/* Reset Form Button */}
-                  <div className="flex justify-end">
+                  {/* Form Actions */}
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                     <button
                       onClick={() => setF1Data({
                         driverName: '',
@@ -1640,13 +1559,12 @@ export default function F1Page() {
                         defensiveDriving: '',
                         sprintWeekend: false
                       })}
-                      className="px-6 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors"
+                      className="px-6 py-2.5 bg-black/40 hover:bg-black/60 border border-gray-700 rounded-xl transition-all text-xs font-black uppercase tracking-widest text-gray-400"
                     >
-                      Reset Form
+                      Clear Inputs
                     </button>
                   </div>
                 </div>
-              )}
             </div>
 
             {/* Prediction Execution Section - Monsterbet Style */}
@@ -1678,7 +1596,7 @@ export default function F1Page() {
                     className="w-full bg-gradient-to-r from-racing-red to-red-600 hover:from-red-600 hover:to-red-500 py-4 rounded-xl font-black text-lg shadow-xl shadow-racing-red/30 transform transition active:scale-95 flex items-center justify-center space-x-3 mb-4"
                   >
                     {isPredicting ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
                     ) : (
                       <>
                         <Brain className="w-6 h-6" />
@@ -1870,10 +1788,62 @@ export default function F1Page() {
           </div>
         )}
 
-
         {/* DATA ANALYTICS DASHBOARD - Race Data Display */}
         {activeTab === 'analytics' && (
           <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Control Panel */}
+            <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3">
+                  <Flag className="w-5 h-5 text-racing-red" />
+                  <h2 className="text-xl font-bold tracking-tight">Race Analysis Controls</h2>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => {
+                      setIsReplaying(true)
+                      loadRaceData()
+                      setTimeout(() => setIsReplaying(false), 3000)
+                    }}
+                    disabled={isReplaying || dataSourceMode === 'custom'}
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-racing-red to-red-700 px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
+                  >
+                    {isReplaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    <span>{isReplaying ? 'Analyzing...' : 'Replay'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => loadRaceData()}
+                    disabled={raceData.loading}
+                    className="flex-1 sm:flex-none border-2 border-racing-blue px-4 py-2 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    <span>{raceData.loading ? 'Syncing...' : 'Sync'}</span>
+                  </button>
+
+                  <button
+                    onClick={exportReport}
+                    disabled={isGeneratingReport || raceData.data.length === 0}
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-racing-blue to-blue-700 px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider shadow-lg shadow-blue-900/20"
+                  >
+                    {isGeneratingReport ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span>Export</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowPredictions(!showPredictions)}
+                    className="flex-1 sm:flex-none bg-gray-800 hover:bg-gray-700 border border-gray-700 px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
+                  >
+                    <Target className="w-4 h-4 text-racing-red" />
+                    <span>{showPredictions ? 'Hide' : 'Forecast'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
             {/* Analytics Header Section */}
             <div className="grid lg:grid-cols-4 gap-6">
               {[
@@ -2072,7 +2042,16 @@ export default function F1Page() {
                     <p className="text-sm text-gray-400 leading-relaxed max-h-48 overflow-y-auto font-medium mb-4 italic">
                       {generatedReport.slice(0, 300)}...
                     </p>
-                    <button className="w-full py-3 bg-racing-red/10 hover:bg-racing-red/20 border border-racing-red/30 rounded-xl text-racing-red text-xs font-black uppercase tracking-widest transition-all">
+                    <button
+                      onClick={() => {
+                        setActiveTab('ai');
+                        setTimeout(() => {
+                          const el = document.getElementById('intel-matrix');
+                          el?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }}
+                      className="w-full py-3 bg-racing-red/10 hover:bg-racing-red/20 border border-racing-red/30 rounded-xl text-racing-red text-xs font-black uppercase tracking-widest transition-all"
+                    >
                       Open Full Intelligence
                     </button>
                   </div>
@@ -2083,81 +2062,129 @@ export default function F1Page() {
         )}
 
         {/* AI ORACLE CHAT */}
-        {
-          activeTab === 'ai' && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                  <Suspense fallback={<div className="h-[600px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
-                    <F1AIChat contextData={{
-                      standings: apiStandings,
-                      drivers: apiDrivers,
-                      teams: apiTeams,
-                      nextRaces: upcomingRacesList,
-                      currentTrack: tracks.find(t => t.id === selectedTrack)
-                    }} />
-                  </Suspense>
-                </div>
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl border border-white/10 shadow-xl border-racing-red/20">
-                    <h4 className="text-xl font-bold mb-4 flex items-center text-racing-red">
-                      <Target className="w-5 h-5 mr-2" />
-                      Alpha Pick Accuracy
-                    </h4>
-                    <div className="flex items-end justify-between mb-2">
-                      <span className="text-4xl font-black text-white tracking-tighter">94.2%</span>
-                      <span className="text-green-500 text-sm font-bold flex items-center mb-1">
-                        <TrendingUp className="w-4 h-4 mr-1" />
-                        +2.1%
-                      </span>
+        {activeTab === 'ai' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
+                <Suspense fallback={<div className="h-[600px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
+                  <F1AIChat contextData={{
+                    standings: apiStandings,
+                    drivers: apiDrivers,
+                    teams: apiTeams,
+                    nextRaces: upcomingRacesList,
+                    currentTrack: tracks.find(t => t.id === selectedTrack),
+                    historicalArchives: historicalData
+                  }} />
+                </Suspense>
+              </div>
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl border border-white/10 shadow-xl border-racing-red/20">
+                  <h4 className="text-xl font-bold mb-4 flex items-center text-racing-red">
+                    <Target className="w-5 h-5 mr-2" />
+                    Alpha Pick Accuracy
+                  </h4>
+                  <div className="flex items-end justify-between mb-2">
+                    <span className="text-4xl font-black text-white tracking-tighter">94.2%</span>
+                    <span className="text-green-500 text-sm font-bold flex items-center mb-1">
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                      +2.1%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Last 10 Races Analysis</p>
+                  <div className="mt-6 space-y-4">
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                      <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Top Prediction Strength</p>
+                      <p className="text-sm font-bold text-white">Podium Outcomes</p>
                     </div>
-                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Last 10 Races Analysis</p>
-                    <div className="mt-6 space-y-4">
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                        <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Top Prediction Strength</p>
-                        <p className="text-sm font-bold text-white">Podium Outcomes</p>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                        <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Key Insight Factor</p>
-                        <p className="text-sm font-bold text-white">2026 Aero Efficiency</p>
-                      </div>
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                      <p className="text-[10px] text-gray-400 mb-1 uppercase font-bold">Key Insight Factor</p>
+                      <p className="text-sm font-bold text-white">2026 Aero Efficiency</p>
                     </div>
                   </div>
+                </div>
 
-                  <div className="bg-white/5 p-6 rounded-2xl border border-white/10 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl" />
-                    <h4 className="font-bold text-white mb-4 flex items-center text-sm uppercase tracking-wider">
-                      <Zap className="w-4 h-4 mr-2 text-yellow-500" />
-                      Live Alpha Tickers
-                    </h4>
-                    <div className="space-y-4">
-                      {[
-                        { label: "Verstappen Confidence", value: "High (0.91)" },
-                        { label: "Hulk P10 Probability", value: "Medium (0.68)" },
-                        { label: "Ferrari Reliability", value: "Increasing" },
-                        { label: "Track Evolution", value: "High" }
-                      ].map((ticker, i) => (
-                        <div key={i} className="flex justify-between items-center text-xs">
-                          <span className="text-gray-400">{ticker.label}</span>
-                          <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">{ticker.value}</span>
-                        </div>
-                      ))}
-                    </div>
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/10 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl" />
+                  <h4 className="font-bold text-white mb-4 flex items-center text-sm uppercase tracking-wider">
+                    <Zap className="w-4 h-4 mr-2 text-yellow-500" />
+                    Live Alpha Tickers
+                  </h4>
+                  <div className="space-y-4">
+                    {[
+                      { label: "Verstappen Confidence", value: "High (0.91)" },
+                      { label: "Hulk P10 Probability", value: "Medium (0.68)" },
+                      { label: "Ferrari Reliability", value: "Increasing" },
+                      { label: "Track Evolution", value: "High" }
+                    ].map((ticker, i) => (
+                      <div key={i} className="flex justify-between items-center text-xs">
+                        <span className="text-gray-400">{ticker.label}</span>
+                        <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">{ticker.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-
-              {/* Decision Panel */}
-              <Suspense fallback={<div className="h-[400px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
-                <DecisionPanel
-                  driver="Max Verstappen"
-                  race={tracks.find(t => t.id === selectedTrack)?.name || "Monaco Grand Prix"}
-                  currentConditions={simulatedWeather}
-                />
-              </Suspense>
             </div>
-          )
-        }
+            {/* Decision Panel */}
+            <Suspense fallback={<div className="h-[400px] w-full bg-gray-800 animate-pulse rounded-2xl" />}>
+              <DecisionPanel
+                driver="Max Verstappen"
+                race={tracks.find(t => t.id === selectedTrack)?.name || "Monaco Grand Prix"}
+                currentConditions={simulatedWeather}
+              />
+            </Suspense>
+
+            {/* Combined Intelligence Matrix Section */}
+            <div id="intel-matrix" className="bg-gradient-to-r from-gray-900 to-black rounded-2xl border border-white/5 p-8 shadow-2xl relative overflow-hidden block mt-8">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-racing-blue/5 rounded-full blur-[100px] pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-2xl font-black text-white flex items-center uppercase tracking-tight">
+                      <Database className="w-6 h-6 mr-3 text-racing-blue" />
+                      Global Intelligence Matrix
+                    </h3>
+                    <p className="text-sm text-gray-400 mt-1 uppercase font-bold tracking-widest text-[10px]">Unified Live API + Historical DNA Simulation</p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <span className="px-3 py-1 bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] font-black rounded-full uppercase">API Synchronized</span>
+                    <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[10px] font-black rounded-full uppercase">Data Archives Active</span>
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-4 gap-6">
+                  <div className="bg-white/5 rounded-xl p-5 border border-white/5 transform hover:scale-105 transition-all">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Archive Delta</p>
+                    <div className="text-2xl font-mono font-black text-white">{historicalData.length > 0 ? '+0.422s' : '--'}</div>
+                    <p className="text-[9px] text-gray-400 mt-2 italic">Avg. 2026 Lap vs Historical Baseline</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-5 border border-white/5 transform hover:scale-105 transition-all">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Strategy Reliability</p>
+                    <div className="text-2xl font-mono font-black text-white">88.5%</div>
+                    <div className="w-full bg-gray-800 h-1 rounded-full mt-2 overflow-hidden">
+                      <div className="bg-racing-blue h-full w-[88.5%]" />
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-5 border border-white/5 transform hover:scale-105 transition-all">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Sector Heat Map</p>
+                    <div className="flex items-center space-x-1 mt-2">
+                      <div className="w-4 h-4 bg-green-500 rounded" />
+                      <div className="w-4 h-4 bg-green-500 rounded" />
+                      <div className="w-4 h-4 bg-yellow-500 rounded" />
+                      <div className="w-4 h-4 bg-yellow-500 rounded" />
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-5 border border-white/5 transform hover:scale-105 transition-all">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Predictive Rank</p>
+                    <div className="text-2xl font-mono font-black text-racing-red">ALPHA-1</div>
+                    <p className="text-[9px] text-gray-400 mt-2 uppercase font-black">Kobayashi Top Tier</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* PRACTICE & TESTING DASHBOARD */}
         {activeTab === 'practice' && (
           <div className="space-y-8 animate-in fade-in duration-500">
@@ -2234,9 +2261,6 @@ export default function F1Page() {
               </div>
             )}
           </div>
-        )}
-      </div >
-
-    </div >
-  )
+  </div>
+      )
 }
