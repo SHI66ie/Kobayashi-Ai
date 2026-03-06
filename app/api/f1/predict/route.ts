@@ -9,12 +9,52 @@ const groq = process.env.GROQ_API_KEY ? new OpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
 }) : null
 
+import fs from 'fs'
+import path from 'path'
+
 export async function POST(request: NextRequest) {
     try {
         const { type, track, f1Data, context }: any = await request.json()
 
         if (!groq) {
             return NextResponse.json({ error: 'Groq API not configured' }, { status: 503 })
+        }
+
+        // --- NEW: Load Historical DNA from local Data directory ---
+        let historicalDNA = ""
+        try {
+            const dataDir = path.join(process.cwd(), 'Data', 'f1-telemetry')
+            if (fs.existsSync(dataDir)) {
+                const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'))
+
+                // Track-specific results extraction
+                const trackKeywords = track?.name?.split(' ')[0].toLowerCase() || ""
+                let matchingResults: any[] = []
+
+                for (const file of files) {
+                    const filePath = path.join(dataDir, file)
+                    const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+
+                    // Handle different JSON structures found in Data/
+                    const dataArray = Array.isArray(content) ? content : (content[" 2024 Race Data"] || [])
+
+                    if (Array.isArray(dataArray)) {
+                        const match = dataArray.find((r: any) =>
+                            (r.race_name && r.race_name.toLowerCase().includes(trackKeywords)) ||
+                            (r.Race && r.Race.toLowerCase().includes(trackKeywords))
+                        )
+                        if (match) {
+                            matchingResults.push({ file, summary: match.data ? match.data.slice(0, 10) : match })
+                        }
+                    }
+                }
+
+                if (matchingResults.length > 0) {
+                    historicalDNA = JSON.stringify(matchingResults.slice(0, 2))
+                }
+            }
+        } catch (dnaErr) {
+            console.warn("Failed to load historical DNA:", dnaErr)
         }
 
         const systemPrompt = `
@@ -33,11 +73,13 @@ INPUT DATA:
 - Track: ${track?.name || 'Unknown'}
 - Driver/Car Variables: ${JSON.stringify(f1Data)}
 - Global Context: ${JSON.stringify(context?.standings?.slice(0, 5))}
+- Historical DNA (Actual Past Results): ${historicalDNA}
 
 TASK:
 Provide a highly detailed, data-driven prediction in JSON format.
+Incorporate BOTH live context and Historical DNA into your 2026 simulation.
 Include:
-1. "analysis": A deep technical explanation (2-3 sentences) in "Monsterbet" style. Include specific mention of tire degradation impact and strategy windows if applicable.
+1. "analysis": A deep technical explanation (2-3 sentences) in "Monsterbet" style. Include specific mention of tire degradation impact and strategy windows if applicable. Use the Historical DNA to inform your reasoning.
 2. "confidence": A percentage string (e.g. "92%").
 3. "outcomes": An array of 3 possible scenarios with "label" and "probability" (e.g. "P1 Finish", "85%").
 4. "factors": 3-5 technical factors influenced by 2026 rules.
