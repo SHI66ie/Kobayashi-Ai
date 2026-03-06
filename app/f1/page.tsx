@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
-import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, Calendar, LayoutDashboard, Settings, Info, Cloud, Thermometer, Wind, Droplets } from 'lucide-react'
+import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, Calendar, LayoutDashboard, Settings, Info, Cloud, Thermometer, Wind, Droplets, History, Database } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 import Link from 'next/link'
@@ -67,6 +67,31 @@ export default function F1Page() {
   const [selectedPracticeSession, setSelectedPracticeSession] = useState<number | null>(null)
   const [practiceData, setPracticeData] = useState<any[]>([])
   const [practiceLoading, setPracticeLoading] = useState(false)
+
+  // New Historical Data States
+  const [historicalData, setHistoricalData] = useState<any[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  // UseEffect to fetch historical data
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!selectedTrack) return;
+      setHistoryLoading(true);
+      try {
+        const track = upcomingRacesList.find(t => t.id === selectedTrack)?.name || selectedTrack;
+        const res = await fetch(`/api/f1/history?track=${encodeURIComponent(track)}`);
+        const data = await res.json();
+        if (data.success) {
+          setHistoricalData(data.history);
+        }
+      } catch (err) {
+        console.error("History fetch error:", err);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    fetchHistory();
+  }, [selectedTrack, upcomingRacesList]);
 
   // UseEffect to filter practice sessions
   useEffect(() => {
@@ -838,123 +863,96 @@ export default function F1Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
       {/* Header */}
-      <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10">
-        <div className="container mx-auto px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+      <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10 sticky top-0 z-50">
+        <div className="container mx-auto px-4 md:px-6 py-4 md:py-5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-4 w-full md:w-auto">
               <Link href="/" className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors">
                 <ArrowLeft className="w-5 h-5" />
-                <span>Dashboard</span>
+                <span className="hidden sm:inline">Dashboard</span>
               </Link>
-              {/* <div className="relative">
-                <Suspense fallback={<div className="w-10 h-10 bg-gray-700 rounded-full animate-pulse" />}>
-                  <ToyotaGRLogo className="w-10 h-10 text-racing-red" />
-                </Suspense>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-racing-blue rounded-full animate-pulse" />
-              </div> */}
               <div>
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  KobayashiAI - F1 Analysis
+                <h1 className="text-lg md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  KobayashiAI - F1
                 </h1>
-                <div className="flex items-center space-x-2 mt-1">
-                  <p className="text-xs text-racing-red font-semibold tracking-wider">FORMULA 1</p>
+                <div className="flex items-center space-x-2 mt-0.5">
+                  <p className="text-[10px] text-racing-red font-black tracking-widest uppercase">FORMULA 1</p>
                   {apiLoading ? (
-                    <div className="flex items-center space-x-1 text-xs text-blue-400">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-400"></div>
-                      <span>Syncing OpenF1...</span>
+                    <div className="flex items-center space-x-1 text-[10px] text-blue-400">
+                      <div className="animate-spin rounded-full h-2 w-2 border-b border-blue-400"></div>
+                      <span>Syncing...</span>
                     </div>
                   ) : useRealData ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1 text-xs text-green-400">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="font-bold">LIVE OPENF1 FEED</span>
-                      </div>
-                      {isLive && (
-                        <div className="flex items-center space-x-1 text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black animate-pulse">
-                          <span>LIVE</span>
-                        </div>
-                      )}
+                    <div className="flex items-center space-x-1 text-[10px] text-green-400 font-bold uppercase tracking-tighter">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      <span>Live</span>
                     </div>
-                  ) : apiError ? (
-                    <div className="flex items-center space-x-1 text-xs text-yellow-500">
-                      <span className="font-bold">OFFLINE MOCK DATA</span>
-                    </div>
-                  ) : null}
-                  {!apiLoading && (
-                    <div className="flex items-center space-x-1 text-xs">
-                      {useRealData ? (
-                        <>
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-green-400">OpenF1 Live</span>
-
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                          <span className="text-yellow-400">Mock Data</span>
-                          {apiError && <span className="text-red-400 ml-1">(API Error)</span>}
-                        </>
-                      )}
+                  ) : (
+                    <div className="flex items-center space-x-1 text-[10px] text-yellow-500 font-bold uppercase tracking-tighter">
+                      <span>Offline</span>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 w-full md:w-auto">
               <select
                 value={selectedTrack}
                 onChange={(e) => setSelectedTrack(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
+                className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-racing-red w-full md:w-auto"
                 title="Select F1 Track"
               >
                 {tracks.map(track => (
                   <option key={track.id} value={track.id}>
-                    {track.name} - {track.location} {getCountryFlag(track.country)}
+                    {track.name} {getCountryFlag(track.country)}
                   </option>
                 ))}
               </select>
-              {/* F1 Tracks do not typically have multiple races in a weekend like WEC */}
             </div>
           </div>
 
-          {/* Main App Navigation Tabs */}
-          <div className="flex space-x-6 mt-4 border-b border-gray-700/50">
+          {/* Main App Navigation Tabs - Scrollable on mobile */}
+          <div className="flex space-x-6 mt-4 md:mt-6 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
             <button
               onClick={() => setActiveTab('upcoming')}
-              className={`pb-3 flex items-center space-x-2 font-semibold transition-colors ${activeTab === 'upcoming' ? 'text-racing-red border-b-2 border-racing-red' : 'text-gray-400 hover:text-white'}`}
+              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'upcoming' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
             >
-              <Calendar className="w-5 h-5" />
-              <span>Upcoming Races</span>
+              <Calendar className="w-4 h-4" />
+              <span>Calendar</span>
+              {activeTab === 'upcoming' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
             </button>
             <button
               onClick={() => setActiveTab('builder')}
-              className={`pb-3 flex items-center space-x-2 font-semibold transition-colors ${activeTab === 'builder' ? 'text-racing-red border-b-2 border-racing-red' : 'text-gray-400 hover:text-white'}`}
+              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'builder' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
             >
-              <Target className="w-5 h-5" />
-              <span>Prediction Builder</span>
+              <Target className="w-4 h-4" />
+              <span>Strategy</span>
+              {activeTab === 'builder' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`pb-3 flex items-center space-x-2 font-semibold transition-colors ${activeTab === 'analytics' ? 'text-racing-red border-b-2 border-racing-red' : 'text-gray-400 hover:text-white'}`}
+              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'analytics' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
             >
-              <BarChart3 className="w-5 h-5" />
-              <span>Data / Analytics</span>
+              <BarChart3 className="w-4 h-4" />
+              <span>Analytics</span>
+              {activeTab === 'analytics' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
             </button>
             <button
               onClick={() => setActiveTab('ai')}
-              className={`pb-3 flex items-center space-x-2 font-semibold transition-colors ${activeTab === 'ai' ? 'text-racing-red border-b-2 border-racing-red' : 'text-gray-400 hover:text-white'}`}
+              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'ai' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
             >
-              <Brain className="w-5 h-5" />
-              <span>AI Oracle (Alpha)</span>
+              <Brain className="w-4 h-4" />
+              <span>AI Oracle</span>
+              {activeTab === 'ai' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
             </button>
             <button
               onClick={() => setActiveTab('practice')}
-              className={`pb-3 flex items-center space-x-2 font-semibold transition-colors ${activeTab === 'practice' ? 'text-racing-red border-b-2 border-racing-red' : 'text-gray-400 hover:text-white'}`}
+              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'practice' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
             >
-              <Clock className="w-5 h-5" />
-              <span>P&T Analysis</span>
+              <Clock className="w-4 h-4" />
+              <span>P&T Data</span>
+              {activeTab === 'practice' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
             </button>
-
           </div>
         </div>
       </header>
@@ -974,195 +972,192 @@ export default function F1Page() {
         {/* UPCOMING RACES DASHBOARD */}
         {activeTab === 'upcoming' && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Hero Section */}
-            <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-8 border border-gray-700/50 overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-racing-red/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-              <div className="relative z-10 flex flex-col md:flex-row justify-between items-center">
-                <div>
-                  <div className={`inline-block px-3 py-1 ${isLive ? 'bg-green-500/20 border-green-500/30 text-green-400 animate-pulse' : 'bg-racing-red/20 border-racing-red/30 text-racing-red'} border font-semibold text-xs rounded-full uppercase tracking-wider mb-4`}>
+            {/* Hero Section - Responsive */}
+            <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 md:p-8 border border-gray-700/50 overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 w-64 md:w-96 h-64 md:h-96 bg-racing-red/10 rounded-full blur-3xl -mr-12 md:-mr-20 -mt-12 md:-mt-20"></div>
+              <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-8">
+                <div className="text-center lg:text-left">
+                  <div className={`inline-block px-3 py-1 ${isLive ? 'bg-green-500/20 border-green-500/30 text-green-400 animate-pulse' : 'bg-racing-red/20 border-racing-red/30 text-racing-red'} border font-black text-[10px] md:text-xs rounded-full uppercase tracking-widest mb-4`}>
                     {isLive ? 'LIVE NOW' : isSessionDay ? 'SESSION DAY' : 'Next Event'}
                   </div>
-                  <h2 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">
-                    {nextEvent ? `${nextEvent.session_name} - ${nextEvent.location}` : upcomingRacesList[0].name}
+                  <h2 className="text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">
+                    {nextEvent ? `${nextEvent.session_name}` : upcomingRacesList[0].name}
                   </h2>
-                  <p className="text-xl text-gray-400 mb-6 flex items-center">
+                  <p className="text-lg md:text-xl text-gray-400 mb-6 flex items-center justify-center lg:justify-start">
                     <Flag className="w-5 h-5 mr-2 text-gray-500" />
-                    {nextEvent ? `${nextEvent.circuit_short_name} • ${new Date(nextEvent.date_start).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}` : `${upcomingRacesList[0].track} • ${upcomingRacesList[0].date}`}
+                    <span className="truncate">{nextEvent ? `${nextEvent.circuit_short_name}` : `${upcomingRacesList[0].track}`}</span>
                   </p>
 
                   {!isLive ? (
-                    <div className="flex space-x-6">
+                    <div className="flex justify-center lg:justify-start space-x-4 md:space-x-6 mb-2">
                       <div className="flex flex-col">
-                        <span className="text-sm text-gray-500 uppercase font-semibold">Days</span>
-                        <span className="text-3xl font-mono font-bold">{formatTime(timeLeft.days)}</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-black">Days</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold leading-none">{formatTime(timeLeft.days)}</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm text-gray-500 uppercase font-semibold">Hours</span>
-                        <span className="text-3xl font-mono font-bold">{formatTime(timeLeft.hours)}</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-black">Hrs</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold leading-none">{formatTime(timeLeft.hours)}</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm text-gray-500 uppercase font-semibold">Mins</span>
-                        <span className="text-3xl font-mono font-bold">{formatTime(timeLeft.mins)}</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-black">Min</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold leading-none">{formatTime(timeLeft.mins)}</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm text-gray-500 uppercase font-semibold text-racing-red">Secs</span>
-                        <span className="text-3xl font-mono font-bold text-racing-red">{formatTime(timeLeft.secs)}</span>
+                        <span className="text-[10px] text-racing-red uppercase font-black">Sec</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold text-racing-red leading-none">{formatTime(timeLeft.secs)}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center space-x-4 bg-green-500/10 border border-green-500/30 p-4 rounded-xl">
-                      <div className="relative">
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
-                          <Play className="w-6 h-6 text-black fill-current" />
+                    <div className="flex flex-col sm:flex-row items-center gap-4 bg-green-500/10 border border-green-500/30 p-4 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <div className="relative">
+                          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                            <Play className="w-5 h-5 text-black fill-current" />
+                          </div>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-gray-900 rounded-full"></div>
                         </div>
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-gray-900 rounded-full"></div>
-                      </div>
-                      <div>
-                        <span className="text-green-400 font-bold text-xl block leading-tight">SESSION IS LIVE</span>
-                        <span className="text-gray-400 text-sm">Real-time telemetry and analysis available</span>
+                        <div>
+                          <span className="text-green-400 font-bold text-lg block leading-tight">LIVE</span>
+                          <span className="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Real-time Feed Active</span>
+                        </div>
                       </div>
                       <button
                         onClick={() => setActiveTab('analytics')}
-                        className="ml-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg transition-colors text-sm"
+                        className="w-full sm:w-auto px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-black rounded-lg transition-colors text-xs uppercase tracking-wider"
                       >
-                        VIEW LIVE FEED
+                        Launch Live View
                       </button>
                     </div>
                   )}
                 </div>
-                <div className="mt-8 md:mt-0 flex flex-col items-center">
-                  <div className="w-32 h-32 rounded-full border-4 border-gray-700 p-2 mb-4 bg-gray-900 flex items-center justify-center overflow-hidden">
+                <div className="flex flex-col items-center">
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-gray-700/50 p-2 mb-6 bg-black/50 flex items-center justify-center overflow-hidden shadow-inner">
                     {nextEvent ? (
-                      <span className="text-6xl">{getCountryFlag(nextEvent.country_name)}</span>
+                      <span className="text-5xl md:text-6xl">{getCountryFlag(nextEvent.country_name)}</span>
                     ) : (
-                      <span className="text-6xl">🇦🇺</span>
+                      <span className="text-5xl md:text-6xl">🇦🇺</span>
                     )}
                   </div>
                   <button
                     onClick={() => {
-                      if (nextEvent) {
-                        // Logic to select the track based on next event
-                      }
                       setSelectedTrack(nextEvent ? nextEvent.circuit_short_name.toLowerCase() : 'melbourne');
                       setActiveTab('ai');
                     }}
-
-                    className="bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 px-8 py-4 rounded-xl font-bold text-lg shadow-lg shadow-racing-red/20 transform transition hover:scale-105 active:scale-95 flex items-center space-x-2"
+                    className="w-full sm:w-auto bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 px-8 py-4 rounded-xl font-black text-sm md:text-base uppercase tracking-widest shadow-xl shadow-racing-red/20 transform transition hover:scale-105 active:scale-95 flex items-center justify-center space-x-3"
                   >
-                    <Target className="w-6 h-6" />
-                    <span>Predict Now</span>
+                    <Target className="w-5 h-5 md:w-6 md:h-6" />
+                    <span>Generate Forecast</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* AI Top Picks - Monsterbet Style */}
-            <div className="grid md:grid-cols-4 gap-4 mb-8">
-              {[
-                {
-                  label: "Race Winner",
-                  driver: useRealData && apiDrivers.length > 0 ? apiDrivers[0].name : "Max Verstappen",
-                  prob: "74%",
-                  edge: "+5.2%",
-                  color: "border-yellow-500/30",
-                  trend: "up"
-                },
-                {
-                  label: "Podium Lock",
-                  driver: useRealData && apiDrivers.length > 0 ? (apiDrivers[2] ? apiDrivers[2].name : "Charles Leclerc") : "Charles Leclerc",
-                  prob: "62%",
-                  edge: "+3.1%",
-                  color: "border-racing-red/30",
-                  trend: "up"
-                },
-                {
-                  label: "Top 10 Sleeper",
-                  driver: useRealData && apiDrivers.length > 0 ? (apiDrivers.find(d => d.name.toLowerCase().includes('hulk'))?.name || apiDrivers[9]?.name || "Nico Hülkenberg") : "Nico Hülkenberg",
-                  prob: "48%",
-                  edge: "+12.4%",
-                  color: "border-green-500/30",
-                  trend: "up"
-                },
-                {
-                  label: "Fastest Lap",
-                  driver: useRealData && apiDrivers.length > 0 ? (apiDrivers[1] ? apiDrivers[1].name : "Lando Norris") : "Lando Norris",
-                  prob: "35%",
-                  edge: "-1.2%",
-                  color: "border-racing-blue/30",
-                  trend: "down"
-                }
-              ].map((pick, i) => (
-                <div key={i} className={`bg-gray-900 border ${pick.color} rounded-2xl p-5 hover:border-racing-red/50 transition-all cursor-pointer group shadow-xl relative overflow-hidden`} onClick={() => setActiveTab('ai')}>
-                  <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-30 transition-opacity">
-                    <Target className="w-12 h-12" />
-                  </div>
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{pick.label}</span>
-                    <div className="relative group/tooltip">
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full cursor-help ${pick.edge.startsWith('+') ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                        {pick.edge} ALPHA
-                      </span>
-                      <div className="absolute hidden group-hover/tooltip:block bg-black p-2 rounded text-[10px] -top-10 right-0 w-48 text-left text-white z-50 shadow-xl border border-gray-700">
-                        Proprietary algorithmic advantage score based on deep simulation metrics.
+            {/* AI Top Picks - Monsterbet Style - Responsive Grid */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  <span>AI Edge Forecasts</span>
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[
+                  {
+                    label: "Race Winner",
+                    driver: useRealData && apiDrivers.length > 0 ? apiDrivers[0].name : "Max Verstappen",
+                    prob: "74%",
+                    edge: "+5.2%",
+                    color: "border-yellow-500/30",
+                    trend: "up"
+                  },
+                  {
+                    label: "Podium Lock",
+                    driver: useRealData && apiDrivers.length > 0 ? (apiDrivers[2] ? apiDrivers[2].name : "Charles Leclerc") : "Charles Leclerc",
+                    prob: "62%",
+                    edge: "+3.1%",
+                    color: "border-racing-red/30",
+                    trend: "up"
+                  },
+                  {
+                    label: "Top 10 Sleeper",
+                    driver: useRealData && apiDrivers.length > 0 ? (apiDrivers.find(d => d.name.toLowerCase().includes('hulk'))?.name || apiDrivers[9]?.name || "Nico Hülkenberg") : "Nico Hülkenberg",
+                    prob: "48%",
+                    edge: "+12.4%",
+                    color: "border-green-500/30",
+                    trend: "up"
+                  },
+                  {
+                    label: "Fastest Lap",
+                    driver: useRealData && apiDrivers.length > 0 ? (apiDrivers[1] ? apiDrivers[1].name : "Lando Norris") : "Lando Norris",
+                    prob: "35%",
+                    edge: "-1.2%",
+                    color: "border-racing-blue/30",
+                    trend: "down"
+                  }
+                ].map((pick, i) => (
+                  <div key={i} className={`bg-gray-900 border ${pick.color} rounded-2xl p-5 hover:border-racing-red/50 transition-all cursor-pointer group shadow-xl relative overflow-hidden`} onClick={() => setActiveTab('ai')}>
+                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-30 transition-opacity">
+                      <Target className="w-12 h-12" />
+                    </div>
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{pick.label}</span>
+                      <div className="relative group/tooltip">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${pick.edge.startsWith('+') ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                          {pick.edge} ALPHA
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <h4 className="font-bold text-white text-lg group-hover:text-racing-red transition-colors mb-1">{pick.driver}</h4>
-                  <div className="relative group/tooltip w-max mb-4">
-                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-tighter cursor-help border-b border-dashed border-gray-600">Precision Score: 0.94</p>
-                    <div className="absolute hidden group-hover/tooltip:block bg-black p-2 rounded text-[10px] -top-8 left-0 w-40 text-left text-white z-50 shadow-xl border border-gray-700">
-                      Model accuracy confidence rate based on historical replay validation.
+                    <h4 className="font-bold text-white text-lg group-hover:text-racing-red transition-colors mb-4">{pick.driver}</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden mr-3">
+                        <div className="h-full bg-gradient-to-r from-racing-red/50 via-racing-red to-racing-blue shadow-[0_0_10px_rgba(211,47,47,0.5)]" style={{ width: pick.prob }} />
+                      </div>
+                      <span className="text-xs font-mono font-black text-white">{pick.prob}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden mr-3">
-                      <div className="h-full bg-gradient-to-r from-racing-red to-racing-blue shadow-lg" style={{ width: pick.prob }} />
-                    </div>
-                    <span className="text-xs font-mono font-black text-white">{pick.prob}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Upcoming Races Grid */}
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold flex items-center space-x-3">
-                  <Calendar className="w-6 h-6 text-gray-400" />
-                  <span>2026 Calendar</span>
+                <h3 className="text-xl font-bold flex items-center space-x-3">
+                  <Calendar className="w-5 h-5 text-racing-red" />
+                  <span>2026 Season Calendar</span>
                 </h3>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {(apiSessions.length > 0 ? raceList : upcomingRacesList.slice(1)).map((race, i) => {
                   const isCurrentNext = nextEvent && race.name === nextEvent.session_name;
                   return (
                     <div
                       key={race.id || i}
-                      className={`bg-gray-800/80 rounded-xl p-6 border ${isCurrentNext ? 'border-racing-red' : 'border-gray-700'} hover:border-racing-red/50 transition-colors group cursor-pointer relative overflow-hidden`}
+                      className={`bg-gray-800/80 rounded-xl p-5 border ${isCurrentNext ? 'border-racing-red shadow-lg shadow-racing-red/10' : 'border-gray-700'} hover:border-racing-red/50 transition-all group cursor-pointer relative overflow-hidden`}
                       onClick={() => {
                         setSelectedTrack(race.id || 'melbourne');
                         setActiveTab('ai');
                       }}
                     >
                       {isCurrentNext && (
-                        <div className="absolute top-0 right-0 bg-racing-red text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-tighter">
-                          Up Next
+                        <div className="absolute top-0 right-0 bg-racing-red text-white text-[10px] font-black px-3 py-1 rounded-bl-lg uppercase tracking-tighter">
+                          Next
                         </div>
                       )}
                       <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <p className="text-xs font-semibold text-racing-red mb-1 uppercase tracking-wider">{race.date}</p>
-                          <h4 className="font-bold text-lg group-hover:text-racing-red transition-colors">{race.name}</h4>
-                          <p className="text-sm text-gray-400 truncate">{race.track}</p>
+                        <div className="max-w-[80%]">
+                          <p className="text-[10px] font-black text-racing-red mb-1 uppercase tracking-widest">{race.date}</p>
+                          <h4 className="font-bold text-base md:text-lg group-hover:text-racing-red transition-colors leading-tight mb-1">{race.name}</h4>
+                          <p className="text-xs text-gray-400 truncate font-semibold uppercase tracking-tighter">{race.track}</p>
                         </div>
-                        <span className="text-2xl">{getCountryFlag(race.country)}</span>
+                        <span className="text-2xl opacity-80 group-hover:opacity-100 transition-opacity">{getCountryFlag(race.country)}</span>
                       </div>
-                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-700">
-                        <div className="text-sm">
-                          <span className="text-gray-500">{apiSessions.length > 0 ? 'Location: ' : 'Predicted Leader: '}</span>
-                          <span className="font-semibold text-gray-200">{apiSessions.length > 0 ? race.country : race.leader}</span>
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-700/50">
+                        <div className="text-[10px] font-bold uppercase tracking-widest">
+                          <span className="text-gray-500 mr-1">{apiSessions.length > 0 ? 'Loc:' : 'Predict:'}</span>
+                          <span className="text-gray-200">{apiSessions.length > 0 ? race.country : race.leader.split(' ').pop()}</span>
                         </div>
-                        <div className={`text-xs px-2 py-1 ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700 text-gray-300'} rounded font-semibold`}>
+                        <div className={`text-[10px] px-2 py-0.5 ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700/50 text-gray-400'} rounded font-black uppercase tracking-tighter`}>
                           {race.format}
                         </div>
                       </div>
@@ -1171,6 +1166,7 @@ export default function F1Page() {
                 })}
               </div>
             </div>
+
           </div>
         )}
 
@@ -1236,177 +1232,147 @@ export default function F1Page() {
           <div className="animate-in fade-in duration-500">
             {/* F1 Data Input Section */}
             <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-racing-red to-red-700 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">F1</span>
+                  <div className="w-10 h-10 bg-gradient-to-br from-racing-red to-red-700 rounded-xl flex items-center justify-center shadow-lg shadow-racing-red/20 flex-shrink-0">
+                    <span className="text-white font-black text-sm">F1</span>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold tracking-tight">Strategy Forge (Prediction Builder)</h2>
-                    <p className="text-sm text-gray-400">Dynamically simulate 2026 outcomes by modifying variables below. Outcomes are generated via our live LLM/PyTorch inference engine, not statically pre-calculated.</p>
+                    <h2 className="text-xl md:text-2xl font-black tracking-tight">Strategy Forge</h2>
+                    <p className="text-sm text-gray-400 mt-1 max-w-2xl leading-relaxed hidden sm:block">
+                      Simulate 2026 outcomes by modifying variables via our live LLM/PyTorch inference engine.
+                    </p>
                   </div>
-
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={loadMelbourneUndercutScenario}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 rounded-lg transition-colors flex items-center space-x-2 font-semibold shadow-md text-sm"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 rounded-lg transition-all flex items-center justify-center space-x-2 font-bold shadow-lg shadow-blue-900/20 text-xs uppercase tracking-wider"
                   >
-                    <Play className="w-4 h-4" />
-                    <span>Melbourne Scenario</span>
+                    <Play className="w-3.5 h-3.5" />
+                    <span>Melbourne</span>
                   </button>
                   <button
                     onClick={fillRandomF1Data}
-                    className="px-4 py-2 bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 rounded-lg transition-colors flex items-center space-x-2 font-semibold shadow-md text-sm"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-racing-red to-red-700 hover:from-red-600 hover:to-red-500 rounded-lg transition-all flex items-center justify-center space-x-2 font-bold shadow-lg shadow-red-900/20 text-xs uppercase tracking-wider"
                   >
-                    <Zap className="w-4 h-4" />
-                    <span>Random Data</span>
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Random</span>
                   </button>
                   <button
                     onClick={() => setShowF1DataInput(!showF1DataInput)}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-2"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg transition-all flex items-center justify-center space-x-2 font-bold text-xs uppercase tracking-wider"
                   >
-                    <span>{showF1DataInput ? 'Hide' : 'Show'} Input Form</span>
-                    <span className={`transform transition-transform ${showF1DataInput ? 'rotate-180' : ''}`}>▼</span>
+                    <span>{showF1DataInput ? 'Hide' : 'Show'} Form</span>
+                    <span className={`transform transition-transform duration-200 ${showF1DataInput ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                 </div>
               </div>
 
               {showF1DataInput && (
-                <div className="space-y-8">
+                <div className="space-y-8 animate-in slide-in-from-top-4 duration-300">
                   {/* Driver Information */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-racing-blue rounded-full"></span>
-                      <span>Driver Information</span>
+                  <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700/50">
+                    <h3 className="text-base font-black mb-6 flex items-center space-x-3 uppercase tracking-widest text-gray-400">
+                      <span className="w-6 h-0.5 bg-racing-blue rounded-full"></span>
+                      <span>Driver Profile</span>
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Driver Name</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Driver Name</label>
                         <input
                           type="text"
                           value={f1Data.driverName}
                           onChange={(e) => updateF1Data('driverName', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-blue transition-all text-sm font-semibold"
                           placeholder="e.g., Lewis Hamilton"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Driver Number</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Driver #</label>
                         <input
                           type="text"
                           value={f1Data.driverNumber}
                           onChange={(e) => updateF1Data('driverNumber', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-blue transition-all text-sm font-semibold"
                           placeholder="e.g., 44"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Experience (Years)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Exp (Years)</label>
                         <input
                           type="number"
                           value={f1Data.driverExperience}
                           onChange={(e) => updateF1Data('driverExperience', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-blue transition-all text-sm font-semibold"
                           placeholder="e.g., 15"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Team</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Constructor</label>
                         <input
                           type="text"
                           value={f1Data.driverTeam}
                           onChange={(e) => updateF1Data('driverTeam', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-blue"
-                          placeholder="e.g., Mercedes AMG Petronas"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-blue transition-all text-sm font-semibold"
+                          placeholder="e.g., Mercedes AMG"
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Car Specifications (2026 Technical Regulations) */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-racing-red rounded-full"></span>
-                      <span>Car Specifications (2026 Regulations)</span>
+                  <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700/50">
+                    <h3 className="text-base font-black mb-6 flex items-center space-x-3 uppercase tracking-widest text-gray-400">
+                      <span className="w-6 h-0.5 bg-racing-red rounded-full"></span>
+                      <span>2026 Spec Technicals</span>
                     </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Car Model</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Chassis ID</label>
                         <input
                           type="text"
                           value={f1Data.carModel}
                           onChange={(e) => updateF1Data('carModel', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                          placeholder="e.g., RB20"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-red transition-all text-sm font-semibold"
+                          placeholder="e.g., W15"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Power Unit</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Power Unit</label>
                         <select
                           value={f1Data.engineType}
                           onChange={(e) => updateF1Data('engineType', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-red transition-all text-sm font-semibold appearance-none"
                         >
-                          <option value="2026 Standardized Power Unit">2026 Standardized Power Unit</option>
-                          <option value="Legacy V6 Turbo Hybrid">Legacy V6 Turbo Hybrid</option>
+                          <option value="2026 Standardized Power Unit">2026 Std. PU</option>
+                          <option value="Legacy V6 Turbo Hybrid">Legacy Hybrid</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Tire Compound (C1-C5)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Compound</label>
                         <select
                           value={f1Data.tireCompound}
                           onChange={(e) => updateF1Data('tireCompound', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-red transition-all text-sm font-semibold appearance-none"
                         >
-                          <option value="C1">C1 (Soft)</option>
-                          <option value="C2">C2 (Soft-Medium)</option>
-                          <option value="C3">C3 (Medium)</option>
-                          <option value="C4">C4 (Medium-Hard)</option>
-                          <option value="C5">C5 (Hard)</option>
-                          <option value="Intermediate">Intermediate</option>
+                          <option value="C1">C1 (Hard)</option>
+                          <option value="C2">C2</option>
+                          <option value="C3">C3 (Med)</option>
+                          <option value="C4">C4</option>
+                          <option value="C5">C5 (Soft)</option>
+                          <option value="Intermediate">Inter</option>
                           <option value="Wet">Wet</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Fuel Load (kg)</label>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Fuel (kg)</label>
                         <input
                           type="text"
                           value={f1Data.fuelLoad}
                           onChange={(e) => updateF1Data('fuelLoad', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                          placeholder="110kg (standardized)"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Minimum Weight (kg)</label>
-                        <input
-                          type="text"
-                          value={f1Data.carWeight}
-                          onChange={(e) => updateF1Data('carWeight', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                          placeholder="798kg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Aero Package</label>
-                        <select
-                          value={f1Data.aeroPackage}
-                          onChange={(e) => updateF1Data('aeroPackage', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                        >
-                          <option value="2026 Ground Effect">2026 Ground Effect</option>
-                          <option value="Legacy Wing-Based">Legacy Wing-Based</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Energy Recovery (kW)</label>
-                        <input
-                          type="text"
-                          value={f1Data.energyRecovery}
-                          onChange={(e) => updateF1Data('energyRecovery', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-racing-red"
-                          placeholder="800kW"
+                          className="w-full px-4 py-2.5 bg-black/40 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-racing-red transition-all text-sm font-semibold"
+                          placeholder="110kg"
                         />
                       </div>
                     </div>
@@ -2005,6 +1971,59 @@ export default function F1Page() {
               </div>
 
               <div className="space-y-6">
+                {/* Historical DNA - Real Data from local archives */}
+                <div className="bg-gradient-to-br from-indigo-900/40 to-black border border-indigo-500/20 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-2">
+                    <History className="w-12 h-12 text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors" />
+                  </div>
+                  <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center">
+                    <Database className="w-4 h-4 mr-2" />
+                    Historical DNA Archive
+                  </h4>
+
+                  {historyLoading ? (
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-4 bg-white/5 rounded w-3/4"></div>
+                      <div className="h-4 bg-white/5 rounded w-1/2"></div>
+                      <div className="h-4 bg-white/5 rounded w-2/3"></div>
+                    </div>
+                  ) : historicalData.length > 0 ? (
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                      {historicalData.map((yearEntry, idx) => (
+                        <div key={idx} className="space-y-2">
+                          <div className="flex items-center justify-between border-b border-white/5 pb-1">
+                            <span className="text-[10px] font-black text-gray-500">{yearEntry.year} Results</span>
+                            <span className="text-[10px] text-indigo-400 font-bold">ARC-{yearEntry.year}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {yearEntry.results.slice(0, 3).map((res: any, rIdx: number) => (
+                              <div key={rIdx} className="flex justify-between items-center text-xs p-2 bg-white/5 rounded-lg border border-white/5">
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-white">{res.driver}</span>
+                                  <span className="text-[10px] text-gray-500 uppercase">{res.team}</span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-black text-indigo-400">P{res.position}</div>
+                                  <div className="text-[10px] text-gray-500 font-mono">{res.time !== 'N/A' ? res.time : '--'}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Info className="w-8 h-8 text-gray-700 mx-auto mb-2" />
+                      <p className="text-[10px] text-gray-500 uppercase font-black">No Local Archives Found</p>
+                    </div>
+                  )}
+
+                  <div className="mt-6 pt-4 border-t border-white/5 text-[10px] text-gray-500 italic">
+                    Utilized by AI Oracle for 2026 Alpha Simulations
+                  </div>
+                </div>
+
                 {/* Weather Station */}
                 <div className="bg-gradient-to-br from-gray-900 to-black border border-white/5 rounded-2xl p-6 shadow-2xl">
                   <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center">
