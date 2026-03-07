@@ -2776,7 +2776,98 @@ export default function F1Page() {
           </div>
         )}
 
-        {/* LIVE DATA FEED - Link to dedicated section */}
+        {/* PRACTICE & TESTING DASHBOARD */}
+        {activeTab === 'practice' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-black tracking-tight text-white flex items-center">
+                <Clock className="w-8 h-8 mr-3 text-racing-red" />
+                Practice & Testing Analysis
+              </h2>
+              <div className="flex items-center gap-4">
+                {/* Track Selector */}
+                <select
+                  value={selectedTrackForPractice}
+                  onChange={(e) => setSelectedTrackForPractice(e.target.value)}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
+                >
+                  {upcomingRacesList.map(track => (
+                    <option key={track.id} value={track.id}>
+                      {track.name}
+                    </option>
+                  ))}
+                </select>
+                
+                {/* Session Selector */}
+                {practiceSessions.length > 0 && (
+                  <select
+                    className="bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2 font-semibold focus:outline-none focus:border-racing-red"
+                    value={selectedPracticeSession || ''}
+                    onChange={(e) => setSelectedPracticeSession(Number(e.target.value))}
+                  >
+                    {practiceSessions
+                      .filter(s => s.trackInfo.id === selectedTrackForPractice)
+                      .map(s => (
+                        <option key={s.session_key} value={s.session_key}>
+                          {s.session_name} ({new Date(s.date_start).toLocaleDateString()})
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Track Info Header */}
+            <div className="bg-gray-900 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {upcomingRacesList.find(t => t.id === selectedTrackForPractice)?.name || 'Selected Track'}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    Practice & Testing Sessions
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Location</p>
+                  <p className="text-sm font-medium text-gray-300">
+                    {tracks.find(t => t.id === selectedTrackForPractice)?.location || upcomingRacesList.find(t => t.id === selectedTrackForPractice)?.country || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {practiceLoading ? (
+              <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-racing-red mb-4"></div>
+                <p className="text-gray-400 font-bold tracking-widest uppercase">Fetching Telemetry & Lap Data...</p>
+              </div>
+            ) : practiceData.length > 0 ? (
+              <div className="space-y-8">
+                <div className="bg-gray-900 border border-white/5 rounded-2xl p-6 shadow-2xl">
+                  <h3 className="text-lg font-bold text-white mb-4">Practice Session Data</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {practiceData.map((session, i) => (
+                      <div key={i} className="bg-white/5 rounded-lg p-4 border border-white/5">
+                        <h4 className="text-sm font-bold text-gray-500 mb-2">{session.driver}</h4>
+                        <p className="text-lg font-bold text-white">{session.lap_time}</p>
+                        <p className="text-sm text-gray-400">{session.session_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5">
+                <Info className="w-8 h-8 text-gray-700 mx-auto mb-2" />
+                <p className="text-gray-400 font-bold tracking-widest uppercase">No Practice Data Found</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LIVE DATA FEED - Link to dedicated section - Only in analysis sections */}
+        {(activeTab === 'builder' || activeTab === 'analytics' || activeTab === 'practice') && (
         <div className="space-y-8 animate-in fade-in duration-700">
           <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
             <div className="flex items-center justify-between mb-6">
@@ -2848,6 +2939,7 @@ export default function F1Page() {
             </div>
           </div>
         </div>
+        )}
 
         {/* ENHANCED RACE VISUALIZATION */}
         <div className="space-y-8 animate-in fade-in duration-700">
