@@ -13,6 +13,9 @@ const TrackMapViewer = lazy(() => import('../components/TrackMapViewer'))
 const WeatherControls = lazy(() => import('../components/WeatherControls'))
 const F1AIChat = lazy(() => import('../components/F1AIChat'))
 const DecisionPanel = lazy(() => import('../components/DecisionPanel'))
+const RaceVisualization = lazy(() => import('../components/RaceVisualization'))
+const WhatIfSimulator = lazy(() => import('../components/WhatIfSimulator'))
+const LiveDataTicker = lazy(() => import('../components/LiveDataTicker'))
 
 
 // Performance monitoring hook
@@ -776,7 +779,7 @@ export default function F1Page() {
                     sessionName: qualifyingSession.session_name,
                     circuitName: qualifyingSession.circuit_short_name,
                     date: qualifyingSession.date_start,
-                    results: sortedQualifyingLaps.slice(0, 20).map((lap: any, index: number) => {
+                    results: sortedQualifyingLaps.map((lap: any, index: number) => {
                       const driver = sessionDrivers.find((d: any) => d.driver_number === lap.driver_number)
                       return {
                         position: index + 1,
@@ -812,7 +815,7 @@ export default function F1Page() {
                 sessionName: trackRaceSession.session_name,
                 circuitName: trackRaceSession.circuit_short_name,
                 date: trackRaceSession.date_start,
-                results: sortedPositions.slice(0, 20).map((pos: any) => {
+                results: sortedPositions.map((pos: any) => {
                   const driver = sessionDrivers.find((d: any) => d.driver_number === pos.driver_number)
                   const gridPosition = qualifyingGridData.get(pos.driver_number) || pos.position
                   return {
@@ -849,7 +852,7 @@ export default function F1Page() {
                     sessionName: sprintSession.session_name,
                     circuitName: sprintSession.circuit_short_name,
                     date: sprintSession.date_start,
-                    results: sortedSprintPositions.slice(0, 8).map((pos: any) => {
+                    results: sortedSprintPositions.map((pos: any) => {
                       const driver = sprintDrivers.find((d: any) => d.driver_number === pos.driver_number)
                       return {
                         position: pos.position,
@@ -2494,6 +2497,45 @@ export default function F1Page() {
           </div>
         )}
 
+        {/* LIVE DATA FEED - Prominently displayed */}
+        <div className="space-y-8 animate-in fade-in duration-700">
+          <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
+            <LiveDataTicker 
+              trackId={selectedTrack}
+              drivers={apiDrivers.map(d => d.name)}
+            />
+          </Suspense>
+        </div>
+
+        {/* ENHANCED RACE VISUALIZATION */}
+        <div className="space-y-8 animate-in fade-in duration-700">
+          <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+            <div className="flex items-center space-x-3 mb-6">
+              <BarChart3 className="w-6 h-6 text-racing-red" />
+              <h2 className="text-xl font-bold tracking-tight">Advanced Race Visualization</h2>
+            </div>
+          </div>
+          
+          <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
+            <RaceVisualization 
+              trackId={selectedTrack}
+              driverData={apiDrivers}
+              telemetryData={raceData.data}
+              weatherData={simulatedWeather}
+            />
+          </Suspense>
+        </div>
+
+        {/* WHAT-IF SCENARIO SIMULATOR */}
+        <div className="space-y-8 animate-in fade-in duration-700">
+          <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
+            <WhatIfSimulator 
+              trackId={selectedTrack}
+              drivers={apiDrivers.map(d => d.name)}
+            />
+          </Suspense>
+        </div>
+
         {/* AI ORACLE CHAT */}
         {activeTab === 'ai' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -2926,7 +2968,7 @@ export default function F1Page() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-white/5">
-                                {session.results.slice(0, 10).map((result: any, index: number) => (
+                                {session.results.map((result: any, index: number) => (
                                   <tr key={index} className="hover:bg-white/5 transition-colors">
                                     <td className="px-6 py-3 font-mono font-bold text-gray-400">{result.position}</td>
                                     <td className="px-6 py-3 font-bold text-white">{result.driver}</td>
@@ -2977,7 +3019,7 @@ export default function F1Page() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-white/5">
-                                {session.results.slice(0, 10).map((result: any, index: number) => (
+                                {session.results.map((result: any, index: number) => (
                                   <tr key={index} className="hover:bg-white/5 transition-colors">
                                     <td className="px-6 py-3 font-mono font-bold text-gray-400">{result.position}</td>
                                     <td className="px-6 py-3 font-bold text-white">{result.driver}</td>
@@ -3027,7 +3069,7 @@ export default function F1Page() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-white/5">
-                                {session.results.slice(0, 8).map((result: any, index: number) => (
+                                {session.results.map((result: any, index: number) => (
                                   <tr key={index} className="hover:bg-white/5 transition-colors">
                                     <td className="px-6 py-3 font-mono font-bold text-gray-400">{result.position}</td>
                                     <td className="px-6 py-3 font-bold text-white">{result.driver}</td>

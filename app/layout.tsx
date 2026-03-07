@@ -11,8 +11,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'KobayashiAI - Toyota GR Cup Racing Analytics',
-  description: 'AI-powered racing analytics dashboard for Toyota GR Cup with real-time insights and strategy validation',
+  title: 'KobayashiAI - F1 & Motorsports Racing Analytics',
+  description: 'AI-powered racing analytics dashboard for F1 and motorsports with real-time insights, telemetry integration, and strategy validation',
   // Add performance metadata
   robots: 'index, follow',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   // OpenGraph for better social sharing
   openGraph: {
-    title: 'KobayashiAI - Toyota GR Cup Racing Analytics',
-    description: 'AI-powered racing analytics dashboard for Toyota GR Cup with real-time insights and strategy validation',
+    title: 'KobayashiAI - F1 & Motorsports Racing Analytics',
+    description: 'AI-powered racing analytics dashboard for F1 and motorsports with real-time insights, telemetry integration, and strategy validation',
     type: 'website',
     siteName: 'KobayashiAI',
   },

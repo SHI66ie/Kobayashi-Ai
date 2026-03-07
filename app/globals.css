@@ -50,6 +50,145 @@
   }
 }
 
+/* Mobile-specific optimizations for F1 page */
+@layer utilities {
+  /* Custom scrollbar for mobile */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Mobile touch optimizations */
+  @media (max-width: 768px) {
+    /* Increase touch targets */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Better mobile spacing */
+    .mobile-spacing {
+      padding: 1rem;
+    }
+    
+    /* Mobile chart containers */
+    .mobile-chart {
+      height: 250px !important;
+    }
+    
+    /* Mobile table scrolling */
+    .mobile-table {
+      font-size: 0.75rem;
+    }
+    
+    .mobile-table th,
+    .mobile-table td {
+      padding: 0.5rem;
+    }
+    
+    /* Mobile grid adjustments */
+    .mobile-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    /* Mobile card layouts */
+    .mobile-card {
+      padding: 1rem;
+    }
+    
+    /* Mobile text sizing */
+    .mobile-text-sm {
+      font-size: 0.875rem;
+    }
+    
+    .mobile-text-xs {
+      font-size: 0.75rem;
+    }
+    
+    /* Mobile button sizing */
+    .mobile-button {
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+    }
+    
+    /* Mobile navigation */
+    .mobile-nav {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .mobile-nav button {
+      flex: 1;
+      min-width: 80px;
+    }
+  }
+
+  /* Ultra-small mobile optimization */
+  @media (max-width: 480px) {
+    .mobile-chart {
+      height: 200px !important;
+    }
+    
+    .mobile-table {
+      font-size: 0.625rem;
+    }
+    
+    .mobile-card {
+      padding: 0.75rem;
+    }
+    
+    .mobile-text-sm {
+      font-size: 0.8125rem;
+    }
+    
+    .mobile-text-xs {
+      font-size: 0.6875rem;
+    }
+  }
+
+  /* Mobile landscape optimization */
+  @media (max-width: 896px) and (orientation: landscape) {
+    .mobile-landscape {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+  }
+
+  /* Mobile performance optimizations */
+  @media (max-width: 768px) {
+    /* Reduce animations on mobile for better performance */
+    .mobile-no-animation {
+      animation: none !important;
+      transition: none !important;
+    }
+    
+    /* Optimize images for mobile */
+    .mobile-image {
+      width: 100%;
+      height: auto;
+    }
+    
+    /* Reduce shadow effects on mobile */
+    .mobile-shadow {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+  }
+}
+
 /* Mobile-specific utilities */
 @layer utilities {
   /* Mobile-safe tap targets */
