@@ -23,6 +23,8 @@ import { Clock, TrendingUp, Activity, Zap, Target, Gauge } from 'lucide-react'
 
 interface RaceVisualizationProps {
   trackId: string
+  trackName?: string
+  sessionKey?: number
   driverData?: any[]
   telemetryData?: any[]
   weatherData?: any
@@ -61,6 +63,8 @@ interface RacingLineData {
 
 const RaceVisualization: React.FC<RaceVisualizationProps> = ({
   trackId,
+  trackName,
+  sessionKey,
   driverData = [],
   telemetryData = [],
   weatherData,
@@ -69,6 +73,9 @@ const RaceVisualization: React.FC<RaceVisualizationProps> = ({
   const [activeTab, setActiveTab] = useState<'lapTimes' | 'tireDegradation' | 'racingLine' | 'performance'>('lapTimes')
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>(['Max Verstappen', 'Lewis Hamilton', 'Charles Leclerc'])
   const [simulationMode, setSimulationMode] = useState<'historical' | 'predicted' | 'whatif'>('historical')
+  const [performanceData, setPerformanceData] = useState<any>(null)
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false)
+  const [realTimeData, setRealTimeData] = useState(false)
 
   // Generate mock data based on track characteristics
   const generateLapTimeData = (): LapTimeData[] => {
@@ -139,6 +146,34 @@ const RaceVisualization: React.FC<RaceVisualizationProps> = ({
   const [lapTimeData, setLapTimeData] = useState<LapTimeData[]>([])
   const [tireData, setTireData] = useState<TireDegradationData[]>([])
   const [racingLineData, setRacingLineData] = useState<RacingLineData[]>([])
+
+  // Fetch performance analysis data
+  const fetchPerformanceAnalysis = async () => {
+    if (!sessionKey) return
+    
+    setLoadingAnalysis(true)
+    try {
+      const response = await fetch(`/api/f1/performance-analysis?session_key=${sessionKey}&circuit=${trackName || trackId}&session_type=race`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setPerformanceData(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch performance analysis:', error)
+    } finally {
+      setLoadingAnalysis(false)
+    }
+  }
+
+  useEffect(() => {
+    if (sessionKey && realTimeData) {
+      fetchPerformanceAnalysis()
+      // Refresh every 30 seconds for real-time data
+      const interval = setInterval(fetchPerformanceAnalysis, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [sessionKey, realTimeData, trackName])
 
   useEffect(() => {
     setLapTimeData(generateLapTimeData())
@@ -225,42 +260,97 @@ const RaceVisualization: React.FC<RaceVisualizationProps> = ({
           Tire Degradation Analysis
         </h3>
         <div className="flex items-center gap-2">
+          {sessionKey && (
+            <button
+              onClick={() => setRealTimeData(!realTimeData)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                realTimeData 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+            >
+              {realTimeData ? 'Live Data' : 'Mock Data'}
+            </button>
+          )}
           <Activity className="w-4 h-4 text-gray-400" />
-          <span className="text-xs text-gray-400">Live Data</span>
+          <span className="text-xs text-gray-400">
+            {realTimeData ? 'Live Analysis' : 'Simulated Data'}
+          </span>
         </div>
       </div>
       
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={tireData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="lap" stroke="#9CA3AF" />
-          <YAxis stroke="#9CA3AF" />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend />
-          <Area type="monotone" dataKey="soft" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} name="Soft" />
-          <Area type="monotone" dataKey="medium" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name="Medium" />
-          <Area type="monotone" dataKey="hard" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="Hard" />
-        </AreaChart>
-      </ResponsiveContainer>
-      
-      <div className="mt-4 grid grid-cols-4 gap-3">
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-400">Soft Life</p>
-          <p className="text-lg font-bold text-red-500">18 laps</p>
+      {loadingAnalysis ? (
+        <div className="flex items-center justify-center h-[300px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-racing-red"></div>
+          <span className="ml-3 text-gray-400">Analyzing tire data...</span>
         </div>
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-400">Medium Life</p>
-          <p className="text-lg font-bold text-yellow-500">32 laps</p>
-        </div>
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-400">Hard Life</p>
-          <p className="text-lg font-bold text-green-500">50+ laps</p>
-        </div>
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-400">Optimal Stint</p>
-          <p className="text-lg font-bold text-blue-500">2 stops</p>
-        </div>
-      </div>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={realTimeData && performanceData ? 
+              // Use real tire analysis data
+              performanceData.tireAnalysis.map((tire: any, index: number) => ({
+                lap: index + 1,
+                soft: tire.currentCompound === 'soft' ? tire.wearRate * 100 : 0,
+                medium: tire.currentCompound === 'medium' ? tire.wearRate * 100 : 0,
+                hard: tire.currentCompound === 'hard' ? tire.wearRate * 100 : 0,
+                temperature: performanceData.weather?.track_temperature || 28,
+                wear: tire.wearRate * 100
+              })) : tireData
+            }>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="lap" stroke="#9CA3AF" />
+              <YAxis stroke="#9CA3AF" />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Area type="monotone" dataKey="soft" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} name="Soft" />
+              <Area type="monotone" dataKey="medium" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name="Medium" />
+              <Area type="monotone" dataKey="hard" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="Hard" />
+            </AreaChart>
+          </ResponsiveContainer>
+          
+          <div className="mt-4 grid grid-cols-4 gap-3">
+            {realTimeData && performanceData ? (
+              // Show real tire analysis data
+              performanceData.tireAnalysis.slice(0, 4).map((tire: any, index: number) => (
+                <div key={index} className="bg-gray-800 rounded-lg p-3">
+                  <p className="text-xs text-gray-400">Driver #{tire.driverNumber}</p>
+                  <p className="text-lg font-bold capitalize" style={{
+                    color: tire.currentCompound === 'soft' ? '#EF4444' :
+                           tire.currentCompound === 'medium' ? '#F59E0B' :
+                           tire.currentCompound === 'hard' ? '#10B981' : '#6B7280'
+                  }}>
+                    {tire.currentCompound}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {tire.estimatedLapsRemaining} laps left
+                  </p>
+                </div>
+              ))
+            ) : (
+              // Show mock data
+              <>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <p className="text-xs text-gray-400">Soft Life</p>
+                  <p className="text-lg font-bold text-red-500">18 laps</p>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <p className="text-xs text-gray-400">Medium Life</p>
+                  <p className="text-lg font-bold text-yellow-500">32 laps</p>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <p className="text-xs text-gray-400">Hard Life</p>
+                  <p className="text-lg font-bold text-green-500">50+ laps</p>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <p className="text-xs text-gray-400">Optimal Stint</p>
+                  <p className="text-lg font-bold text-blue-500">2 stops</p>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 

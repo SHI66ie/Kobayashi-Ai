@@ -2519,6 +2519,8 @@ export default function F1Page() {
           <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
             <RaceVisualization 
               trackId={selectedTrack}
+              trackName={tracks.find(t => t.id === selectedTrack)?.name}
+              sessionKey={apiSessions[0]?.session_key}
               driverData={apiDrivers}
               telemetryData={raceData.data}
               weatherData={simulatedWeather}

@@ -1,6 +1,8 @@
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
+// Mock implementations removed - real packages now installed
+
 export interface ReportData {
   title: string
   track: string
