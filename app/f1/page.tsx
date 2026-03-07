@@ -2868,7 +2868,7 @@ export default function F1Page() {
 
         {/* LIVE DATA FEED - Link to dedicated section - Only in analysis sections */}
         {(activeTab === 'builder' || activeTab === 'analytics' || activeTab === 'practice') && (
-        <div className="space-y-8 animate-in fade-in duration-700">
+          <div className="space-y-8 animate-in fade-in duration-700">
           <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
@@ -2938,7 +2938,7 @@ export default function F1Page() {
               </Link>
             </div>
           </div>
-        </div>
+          </div>
         )}
 
         {/* ENHANCED RACE VISUALIZATION */}
