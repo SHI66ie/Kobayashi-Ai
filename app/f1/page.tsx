@@ -130,6 +130,7 @@ export default function F1Page() {
   const [selectedPracticeSession, setSelectedPracticeSession] = useState<number | null>(null)
   const [practiceData, setPracticeData] = useState<any[]>([])
   const [practiceLoading, setPracticeLoading] = useState(false)
+  const [selectedTrackForPractice, setSelectedTrackForPractice] = useState<string>(selectedTrack) // Track selector for practice
 
   // Standings State
   const [standingsData, setStandingsData] = useState<{
@@ -181,16 +182,42 @@ export default function F1Page() {
     fetchHistory();
   }, [selectedTrack, upcomingRacesList]);
 
-  // UseEffect to filter practice sessions
+  // UseEffect to organize practice sessions by chronological track order
   useEffect(() => {
     if (apiSessions.length > 0) {
-      const ptSessions = apiSessions.filter(s => s.session_type.includes('Practice') || s.session_type.includes('Testing')).sort((a, b) => new Date(b.date_start).getTime() - new Date(a.date_start).getTime());
-      setPracticeSessions(ptSessions);
-      if (ptSessions.length > 0 && !selectedPracticeSession) {
-        setSelectedPracticeSession(ptSessions[0].session_key);
+      // Get practice sessions organized by chronological track order
+      const organizedPracticeSessions: any[] = [];
+      
+      // Go through tracks in chronological order and find their practice sessions
+      tracks.forEach(track => {
+        const trackPracticeSessions = apiSessions.filter(s => 
+          (s.session_type.includes('Practice') || s.session_type.includes('Testing')) &&
+          (s.circuit_short_name === track.name || 
+           s.location === track.location ||
+           s.country_name === track.country)
+        );
+        
+        // Add sessions for this track in chronological order
+        trackPracticeSessions
+          .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())
+          .forEach(session => {
+            organizedPracticeSessions.push({
+              ...session,
+              trackInfo: track,
+              displayName: `${track.name} - ${session.session_name}`
+            });
+          });
+      });
+      
+      setPracticeSessions(organizedPracticeSessions);
+      
+      // Select the first session or the session for the currently selected track
+      if (organizedPracticeSessions.length > 0 && !selectedPracticeSession) {
+        const currentTrackSession = organizedPracticeSessions.find(s => s.trackInfo.id === selectedTrackForPractice);
+        setSelectedPracticeSession(currentTrackSession ? currentTrackSession.session_key : organizedPracticeSessions[0].session_key);
       }
     }
-  }, [apiSessions]);
+  }, [apiSessions, selectedTrackForPractice]);
 
   // UseEffect to fetch laps
   useEffect(() => {
@@ -2599,19 +2626,57 @@ export default function F1Page() {
                 <Clock className="w-8 h-8 mr-3 text-racing-red" />
                 Practice & Testing Analysis
               </h2>
-              {practiceSessions.length > 0 && (
+              <div className="flex items-center gap-4">
+                {/* Track Selector */}
                 <select
-                  className="bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2 font-semibold focus:outline-none focus:border-racing-red"
-                  value={selectedPracticeSession || ''}
-                  onChange={(e) => setSelectedPracticeSession(Number(e.target.value))}
+                  value={selectedTrackForPractice}
+                  onChange={(e) => setSelectedTrackForPractice(e.target.value)}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
                 >
-                  {practiceSessions.map(s => (
-                    <option key={s.session_key} value={s.session_key}>
-                      {s.session_name} - {s.circuit_short_name} ({new Date(s.date_start).toLocaleDateString()})
+                  {upcomingRacesList.map(track => (
+                    <option key={track.id} value={track.id}>
+                      {track.name}
                     </option>
                   ))}
                 </select>
-              )}
+                
+                {/* Session Selector */}
+                {practiceSessions.length > 0 && (
+                  <select
+                    className="bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2 font-semibold focus:outline-none focus:border-racing-red"
+                    value={selectedPracticeSession || ''}
+                    onChange={(e) => setSelectedPracticeSession(Number(e.target.value))}
+                  >
+                    {practiceSessions
+                      .filter(s => s.trackInfo.id === selectedTrackForPractice)
+                      .map(s => (
+                        <option key={s.session_key} value={s.session_key}>
+                          {s.session_name} ({new Date(s.date_start).toLocaleDateString()})
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Track Info Header */}
+            <div className="bg-gray-900 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {upcomingRacesList.find(t => t.id === selectedTrackForPractice)?.name || 'Selected Track'}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    Practice & Testing Sessions
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Location</p>
+                  <p className="text-sm font-medium text-gray-300">
+                    {tracks.find(t => t.id === selectedTrackForPractice)?.location || upcomingRacesList.find(t => t.id === selectedTrackForPractice)?.country || 'Unknown'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {practiceLoading ? (
