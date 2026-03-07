@@ -3,7 +3,7 @@
 import { useState, useMemo, lazy, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { Car, Trophy, Zap, Target, Brain, Clock } from 'lucide-react'
+import { Car, Trophy, Zap, Target, Brain, Clock, Satellite } from 'lucide-react'
 
 // Lazy load non-critical components
 const LazyFeatureCard = lazy(() => import('./components/FeatureCard'))
@@ -59,6 +59,10 @@ export default function HomePage() {
 
   const handleF1Predictions = () => {
     router.push('/f1')
+  }
+
+  const handleLiveFeed = () => {
+    router.push('/live-feed')
   }
 
   return (
@@ -135,6 +139,12 @@ export default function HomePage() {
               className="bg-racing-blue hover:bg-blue-700 px-4 py-3 sm:px-6 sm:py-3.5 rounded-lg font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-racing-blue/20 text-sm sm:text-base mobile-tap-target"
             >
               F1 Hub
+            </button>
+            <button
+              onClick={handleLiveFeed}
+              className="bg-gradient-to-r from-racing-red to-racing-blue hover:from-red-600 hover:to-blue-700 px-4 py-3 sm:px-6 sm:py-3.5 rounded-lg font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-racing-red/20 text-sm sm:text-base mobile-tap-target"
+            >
+              Live Feed
             </button>
           </div>
         </div>

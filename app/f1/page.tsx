@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
-import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, Calendar, LayoutDashboard, Settings, Info, Cloud, Thermometer, Wind, Droplets, History, Database } from 'lucide-react'
+import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, ArrowRight, Calendar, LayoutDashboard, Settings, Info, Cloud, Thermometer, Wind, Droplets, History, Database, Satellite, Activity } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 import Link from 'next/link'
@@ -2776,14 +2776,77 @@ export default function F1Page() {
           </div>
         )}
 
-        {/* LIVE DATA FEED - Prominently displayed with controls */}
+        {/* LIVE DATA FEED - Link to dedicated section */}
         <div className="space-y-8 animate-in fade-in duration-700">
-          <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
-            <LiveFeedSection 
-              trackId={selectedTrack}
-              drivers={apiDrivers.map(d => d.name)}
-            />
-          </Suspense>
+          <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-racing-red rounded-lg shadow-lg shadow-racing-red/20">
+                  <Satellite className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Live Feed Visualizations</h3>
+                  <p className="text-gray-400">Real-time F1 data stream with performance controls</p>
+                </div>
+              </div>
+              <Link 
+                href="/live-feed"
+                className="flex items-center space-x-2 px-4 py-2 bg-racing-red hover:bg-red-600 rounded-lg transition-all text-white font-medium"
+              >
+                <span>Open Live Feed</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <Activity className="w-5 h-5 text-racing-red" />
+                  <span className="text-xs text-gray-400">Live</span>
+                </div>
+                <p className="text-2xl font-bold text-white">Real-time</p>
+                <p className="text-xs text-gray-500">Event Updates</p>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <Play className="w-5 h-5 text-green-500" />
+                  <span className="text-xs text-gray-400">Control</span>
+                </div>
+                <p className="text-2xl font-bold text-white">Pause/Play</p>
+                <p className="text-xs text-gray-500">Performance Mode</p>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <TrendingUp className="w-5 h-5 text-racing-blue" />
+                  <span className="text-xs text-gray-400">Analytics</span>
+                </div>
+                <p className="text-2xl font-bold text-white">7 Types</p>
+                <p className="text-xs text-gray-500">Event Categories</p>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <Settings className="w-5 h-5 text-orange-500" />
+                  <span className="text-xs text-gray-400">Config</span>
+                </div>
+                <p className="text-2xl font-bold text-white">5-30s</p>
+                <p className="text-xs text-gray-500">Update Frequency</p>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex items-center justify-center">
+              <Link 
+                href="/live-feed"
+                className="inline-flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-racing-red to-racing-blue hover:from-red-600 hover:to-blue-700 rounded-lg transition-all transform hover:scale-105 text-white font-bold"
+              >
+                <Satellite className="w-5 h-5" />
+                <span>Access Dedicated Live Feed</span>
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* ENHANCED RACE VISUALIZATION */}
