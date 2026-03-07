@@ -29,6 +29,81 @@ const qwen = process.env.QWEN_API_KEY ? new OpenAI({
     maxRetries: 1
 }) : null
 
+// Helper function to get tire and track data from context
+function extractTireAndTrackData(context: any) {
+    try {
+        // Extract tire compound information from context
+        const tireData = {
+            availableCompounds: context?.tireCompounds || ['C1', 'C2', 'C3', 'C4', 'C5', 'Intermediate', 'Wet'],
+            currentCompound: context?.selectedTire || 'C3',
+            trackTemp: context?.trackTemp || 35,
+            airTemp: context?.airTemp || 25,
+            humidity: context?.humidity || 50,
+            weatherCondition: context?.trackCondition || 'dry',
+            tireWearFactor: 0,
+            optimalStintLength: 0
+        }
+
+        // Calculate tire wear based on conditions
+        if (tireData.trackTemp > 40) {
+            tireData.tireWearFactor += 0.2 // High track temp increases wear
+        }
+        if (tireData.weatherCondition === 'wet') {
+            tireData.tireWearFactor += 0.1 // Wet conditions increase wear
+        }
+        if (tireData.humidity > 70) {
+            tireData.tireWearFactor += 0.15 // High humidity increases wear
+        }
+
+        // Calculate optimal stint length based on compound
+        const stintLengths: Record<string, number> = {
+            'C1': 35, 'C2': 32, 'C3': 28, 'C4': 25, 'C5': 20,
+            'Intermediate': 30, 'Wet': 40
+        }
+        tireData.optimalStintLength = stintLengths[tireData.currentCompound] || 28
+        tireData.optimalStintLength *= (1 - tireData.tireWearFactor)
+
+        // Extract track characteristics
+        const trackData = {
+            trackName: context?.trackName || 'Unknown Track',
+            trackLength: context?.trackLength || 5.0,
+            corners: context?.corners || 15,
+            straights: context?.straights || 2,
+            abrasiveness: context?.trackAbrasion || 'medium',
+            evolution: context?.trackEvolution || 'medium',
+            gripLevel: context?.gripLevel || 1.0,
+            degradation: context?.tireDegradation || 'medium'
+        }
+
+        // Calculate track-specific insights
+        if (trackData.corners > 15) {
+            trackData.gripLevel *= 1.1 // More corners = higher importance of grip
+        }
+        if (trackData.straights > 2) {
+            trackData.gripLevel *= 0.95 // More straights = less grip importance
+        }
+
+        return {
+            tireData,
+            trackData,
+            insights: {
+                recommendedStrategy: `${tireData.currentCompound} compound for ~${Math.round(tireData.optimalStintLength)} laps`,
+                pitStopWindow: `Laps ${Math.round(tireData.optimalStintLength - 5)}-${Math.round(tireData.optimalStintLength + 5)}`,
+                weatherRisk: tireData.weatherCondition === 'wet' ? 'High' : 'Low',
+                tireManagement: tireData.tireWearFactor > 0.3 ? 'Critical' : 'Normal'
+            }
+        }
+
+    } catch (error) {
+        console.error('Error extracting tire and track data:', error)
+        return {
+            tireData: { currentCompound: 'C3', trackTemp: 35, airTemp: 25, weatherCondition: 'dry' },
+            trackData: { trackName: 'Unknown Track', corners: 15, straights: 2 },
+            insights: { recommendedStrategy: 'Standard C3 compound strategy' }
+        }
+    }
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { message, context }: any = await request.json()
@@ -37,30 +112,44 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 })
         }
 
-        // Build the system prompt with F1 context
+        // Build the system prompt with F1 context and live data
+        const { tireData, trackData, insights } = extractTireAndTrackData(context)
+        
         const systemPrompt = `
 You are KobayashiAI, a world-class Formula 1 data analyst and prediction expert, similar to the most advanced AI betting assistants (like Monsterbet).
 Your goal is to provide users with deep, data-driven insights, outcomes, and reasoning for F1 races.
 
-DATA SOURCE: 
-You are powered by OpenF1, providing high-fidelity telemetry, session data, and driver statistics from 2023-2026.
+LIVE TIRE AND TRACK DATA:
+${JSON.stringify({ tireData, trackData, insights }, null, 2)}
 
 CONTEXT DATA:
 ${JSON.stringify(context, null, 2)}
 
 INSTRUCTIONS:
-1. Combine Live Data and Historical DNA: Your context includes both live OpenF1 standings/telemetry and "historicalArchives". Always combine these to provide a complete picture (e.g., "While live data shows Verstappen in P1, his historical DNA at this track suggests a 15% higher tire degradation rate in the final sector").
-2. Performance Delta Analysis: Compare current session times with the historical archives provided in the context to identify gaps or improvements.
-3. If the user asks for a prediction (e.g., "Who will win the next race?" or "What position will Hulk take?"), provide a specific outcome.
-4. Crucially, provide REASONING based on:
+1. Use the LIVE TIRE AND TRACK DATA to provide specific, data-driven predictions
+2. Analyze tire compound performance based on current conditions (track temp, weather, humidity)
+3. Consider track characteristics (corners, straights, abrasiveness) in your predictions
+4. Provide specific stint length recommendations and pit stop windows
+5. Factor in tire wear calculations based on environmental conditions
+6. Combine Live Data and Historical DNA: Use both current conditions and historical patterns
+7. Performance Delta Analysis: Compare current session conditions with optimal scenarios
+8. If the user asks for a prediction (e.g., "Who will win the next race?" or "What position will Hulk take?"), provide a specific outcome with reasoning.
+9. Crucially, provide REASONING based on:
+   - Current tire compound performance and wear rates
+   - Track conditions and evolution
+   - Weather impact on tire strategy
    - Historical performance at this track (using context).
    - Technical factors (2026 Aero Package, Ground Effect, Power Unit efficiency).
-   - Real-time data points like tire wear and track evolution if mentioned.
-5. Maintain a professional, expert, yet exciting "Monsterbet" style tone. Use motorsport terminology (e.g., "undercut", "dirty air", "DRS train").
-6. Be confident in your picks but acknowledge the "edge" and statistical probability.
-7. If the user asks about "Hulk", you are referring to Nico Hülkenberg. Consider his reputation for consistency and qualifying strength.
+10. Maintain a professional, expert, yet exciting "Monsterbet" style tone. Use motorsport terminology (e.g., "undercut", "dirty air", "DRS train", "tire degradation").
+11. Be confident in your picks but acknowledge the "edge" and statistical probability.
+12. If the user asks about "Hulk", you are referring to Nico Hülkenberg. Consider his reputation for consistency and qualifying strength.
+13. Always reference the specific tire data and track conditions in your analysis.
 
 Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW MGU-K).
+Current Strategy Insight: ${insights.recommendedStrategy}
+Pit Stop Window: ${insights.pitStopWindow}
+Weather Risk: ${insights.weatherRisk}
+Tire Management: ${insights.tireManagement}
 `
 
         if (!qwen && !groq && !gemini && !openai) {
@@ -162,7 +251,14 @@ Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW
         }
 
         console.log(`✅ F1 Chat: Response generated using ${modelUsed}`)
-        return NextResponse.json({ success: true, response: analysis, model: modelUsed })
+        return NextResponse.json({ 
+            success: true, 
+            response: analysis, 
+            model: modelUsed,
+            tireData,
+            trackData,
+            insights
+        })
 
     } catch (error: any) {
         console.error('F1 Chat Error:', error)

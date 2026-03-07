@@ -14,10 +14,11 @@ interface F1AIChatProps {
 
 export default function F1AIChat({ contextData }: F1AIChatProps) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'Hello! I am KobayashiAI, your expert F1 analyst. Ask me anything about upcoming races, driver prospects, or seasonal outcomes. For example: "What position do you think Hulk will take in the next race?"' }
+        { role: 'assistant', content: 'Hello! I am KobayashiAI, your expert F1 analyst with access to live tire and track data. Ask me anything about upcoming races, tire strategies, or driver performance. For example: "What tire compound should be used at Melbourne?" or "How will the current track conditions affect Hulk\'s performance?"' }
     ])
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [liveData, setLiveData] = useState<any>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const scrollToBottom = () => {
@@ -37,12 +38,37 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
         setIsLoading(true)
 
         try {
+            // Enhanced context with live tire and track data
+            const enhancedContext = {
+                ...contextData,
+                // Add tire data
+                tireCompounds: ['C1', 'C2', 'C3', 'C4', 'C5', 'Intermediate', 'Wet'],
+                selectedTire: contextData?.tireCompound || 'C3',
+                trackTemp: contextData?.trackTemp || 35,
+                airTemp: contextData?.airTemp || 25,
+                humidity: contextData?.humidity || 50,
+                trackCondition: contextData?.trackCondition || 'dry',
+                // Add track characteristics
+                trackName: contextData?.trackName || 'Current Track',
+                trackLength: contextData?.trackLength || 5.0,
+                corners: contextData?.corners || 15,
+                straights: contextData?.straights || 2,
+                trackAbrasion: contextData?.trackAbrasion || 'medium',
+                trackEvolution: contextData?.trackEvolution || 'medium',
+                gripLevel: contextData?.gripLevel || 1.0,
+                tireDegradation: contextData?.tireDegradation || 'medium',
+                // Add session info
+                sessionType: contextData?.sessionType || 'Race',
+                currentLap: contextData?.currentLap || 1,
+                totalLaps: contextData?.totalLaps || 57
+            }
+
             const response = await fetch('/api/f1/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: userMessage,
-                    context: contextData
+                    context: enhancedContext
                 })
             })
 
@@ -50,6 +76,14 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
 
             if (data.success) {
                 setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
+                // Update live data if provided
+                if (data.tireData || data.trackData) {
+                    setLiveData({
+                        tireData: data.tireData,
+                        trackData: data.trackData,
+                        insights: data.insights
+                    })
+                }
             } else {
                 setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.message || 'Failed to get analysis. Please check your API keys.'}` }])
             }
@@ -122,15 +156,15 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Suggestions - Mobile Optimized */}
+            {/* Quick Suggestions - Mobile Optimized with Tire/Track Focus */}
             <div className="px-3 sm:px-6 py-2 bg-black/20">
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center sm:justify-start">
                     {[
-                        "Hulk position?",
-                        "Who wins Australian GP?",
-                        "Podium prediction 2026?",
-                        "Melbourne track analysis",
-                        "Tire strategy impact"
+                        "Tire strategy for Melbourne?",
+                        "How track temp affects C3?",
+                        "Hulk position in wet?",
+                        "Pit stop window C2?",
+                        "Weather impact on tires?"
                     ].map((s, i) => (
                         <button
                             key={i}
@@ -144,6 +178,36 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
                 </div>
             </div>
 
+            {/* Live Data Display - Mobile Optimized */}
+            {liveData && (
+                <div className="px-3 sm:px-6 py-2 bg-gradient-to-r from-racing-red/20 to-racing-blue/20 border-t border-white/10">
+                    <div className="flex flex-col space-y-1 sm:space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[9px] sm:text-[10px] text-racing-red font-semibold uppercase tracking-wider">Live Strategy</span>
+                            <span className="text-[9px] sm:text-[10px] text-racing-blue font-semibold">{liveData.insights?.recommendedStrategy || 'Calculating...'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-[8px] sm:text-[9px] text-gray-400">
+                            <div>
+                                <span className="block text-gray-500">Pit Window</span>
+                                <span className="text-white font-semibold">{liveData.insights?.pitStopWindow || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-500">Weather Risk</span>
+                                <span className="text-white font-semibold">{liveData.insights?.weatherRisk || 'Low'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-500">Tire Management</span>
+                                <span className="text-white font-semibold">{liveData.insights?.tireManagement || 'Normal'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-500">Track Temp</span>
+                                <span className="text-white font-semibold">{liveData.tireData?.trackTemp || 35}°C</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Input - Mobile Optimized */}
             <div className="p-3 sm:p-4 bg-black/40 border-t border-white/10">
                 <div className="relative flex items-center">
@@ -152,7 +216,7 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="Ask AI for race outcomes..."
+                        placeholder="Ask about tire strategy, track conditions..."
                         className="w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 pr-12 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-racing-red/50 transition-all placeholder:text-gray-600 text-white mobile-tap-target"
                     />
                     <button
