@@ -15,9 +15,16 @@ export const metadata: Metadata = {
   description: 'AI-powered racing analytics dashboard for Toyota GR Cup with real-time insights and strategy validation',
   // Add performance metadata
   robots: 'index, follow',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
   themeColor: '#d32f2f',
   colorScheme: 'dark',
+  // Mobile optimization
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'KobayashiAI'
+  },
   // Preload critical resources
   icons: {
     icon: '/favicon.ico',

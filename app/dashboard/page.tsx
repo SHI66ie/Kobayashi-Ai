@@ -199,29 +199,34 @@ ${error.message || 'Could not connect to AI service'}`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
-      {/* Header */}
+      {/* Header - Mobile Optimized */}
       <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10">
-        <div className="container mx-auto px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Suspense fallback={<div className="w-10 h-10 bg-gray-700 rounded-full animate-pulse" />}>
-                  <ToyotaGRLogo className="w-10 h-10 text-racing-red" />
-                </Suspense>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-racing-blue rounded-full animate-pulse" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  KobayashiAI
-                </h1>
-                <p className="text-xs text-racing-red font-semibold tracking-wider">TOYOTA GAZOO RACING</p>
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5">
+          <div className="flex flex-col space-y-3 sm:space-y-0">
+            {/* Logo and Title Section */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                <div className="relative">
+                  <Suspense fallback={<div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-700 rounded-full animate-pulse" />}>
+                    <ToyotaGRLogo className="w-8 h-8 sm:w-10 sm:h-10 md:w-10 md:h-10 text-racing-red" />
+                  </Suspense>
+                  <div className="absolute -bottom-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-racing-blue rounded-full animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    KobayashiAI
+                  </h1>
+                  <p className="text-[9px] sm:text-xs text-racing-red font-semibold tracking-wider">TOYOTA GAZOO RACING</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            
+            {/* Controls Section */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-4">
               <select
                 value={selectedTrack}
                 onChange={(e) => setSelectedTrack(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
+                className="bg-gray-800 border border-gray-600 rounded px-2 py-2 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-racing-red w-full sm:w-auto"
                 title="Select Toyota GR Cup Track"
               >
                 {tracks.filter(track => track.category === 'gr-cup').map(track => (
@@ -233,7 +238,7 @@ ${error.message || 'Could not connect to AI service'}`
               <select
                 value={selectedRace}
                 onChange={(e) => setSelectedRace(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm"
+                className="bg-gray-800 border border-gray-600 rounded px-2 py-2 sm:px-3 sm:py-2 text-xs sm:text-sm w-full sm:w-auto"
               >
                 <option value="R1">Race 1</option>
                 <option value="R2">Race 2</option>
@@ -243,14 +248,14 @@ ${error.message || 'Could not connect to AI service'}`
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
-        {/* Control Panel */}
-        <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
-          <div className="flex items-center space-x-3 mb-6">
-            <Flag className="w-5 h-5 text-racing-red" />
-            <h2 className="text-xl font-bold tracking-tight">Race Analysis Controls</h2>
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        {/* Control Panel - Mobile Optimized */}
+        <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+          <div className="flex items-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">
+            <Flag className="w-4 h-4 sm:w-5 sm:h-5 text-racing-red" />
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight">Race Analysis Controls</h2>
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
             <button
               onClick={() => {
                 setIsReplaying(true)
@@ -258,60 +263,60 @@ ${error.message || 'Could not connect to AI service'}`
                 setTimeout(() => setIsReplaying(false), 3000)
               }}
               disabled={isReplaying || dataSourceMode === 'custom'}
-              className="bg-gradient-to-r from-racing-red to-red-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
+              className="bg-gradient-to-r from-racing-red to-red-700 px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base mobile-tap-target"
             >
-              {isReplaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+              {isReplaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5" />}
               <span>{isReplaying ? 'Analyzing...' : 'Start Race Replay'}</span>
             </button>
 
             <button
               onClick={() => loadRaceData()}
               disabled={raceData.loading}
-              className="border-2 border-racing-blue px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
+              className="border-2 border-racing-blue px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base mobile-tap-target"
             >
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>{raceData.loading ? 'Loading...' : 'Load Analytics'}</span>
             </button>
 
             <button
               onClick={exportReport}
               disabled={isGeneratingReport || raceData.data.length === 0}
-              className="bg-gradient-to-r from-racing-blue to-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2"
+              className="bg-gradient-to-r from-racing-blue to-blue-700 px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base mobile-tap-target"
             >
               {isGeneratingReport ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
               ) : (
-                <Download className="w-5 h-5" />
+                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
               <span>Generate AI Report</span>
             </button>
           </div>
         </div>
 
-        {/* Data Loading Status */}
+        {/* Data Loading Status - Mobile Optimized */}
         {raceData.loading && (
-          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6 mb-8">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-racing-blue"></div>
-              <span>Loading race data...</span>
+          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-racing-blue"></div>
+              <span className="text-sm sm:text-base">Loading race data...</span>
             </div>
           </div>
         )}
 
         {raceData.error && (
-          <div className="mb-8">
-            <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6">Loading setup guide...</div>}>
+          <div className="mb-6 sm:mb-8">
+            <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-4 sm:p-6">Loading setup guide...</div>}>
               <SetupGuide />
             </Suspense>
           </div>
         )}
 
-        {/* Success State */}
+        {/* Success State - Mobile Optimized */}
         {raceData.data.length > 0 && (
-          <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-2 border-green-500/30 rounded-xl p-6 mb-8 shadow-lg">
-            <h3 className="font-semibold text-green-400 mb-2">Data Loaded Successfully</h3>
-            <p className="text-green-300 mb-2">Race data loaded and ready for AI analysis.</p>
-            <p className="text-xs text-green-300">
+          <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-2 border-green-500/30 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg">
+            <h3 className="font-semibold text-green-400 mb-2 text-sm sm:text-base">Data Loaded Successfully</h3>
+            <p className="text-green-300 mb-2 text-xs sm:text-sm">Race data loaded and ready for AI analysis.</p>
+            <p className="text-[10px] sm:text-xs text-green-300">
               Source: {raceData.data[0]?.dataSource || 'Data Folder'}
             </p>
           </div>
@@ -360,34 +365,34 @@ ${error.message || 'Could not connect to AI service'}`
           </div>
         )}
 
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-6 rounded-xl border border-racing-red/20">
-            <Brain className="w-8 h-8 text-racing-red mb-4" />
-            <h4 className="text-lg font-semibold mb-2">3-Lap Predictor</h4>
-            <p className="text-gray-400 text-sm">AI forecasts next 3 laps with 89-95% accuracy</p>
-            <div className="mt-4 text-2xl font-bold text-racing-red">92%</div>
+        {/* Feature Cards - Mobile Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-4 sm:p-6 rounded-xl border border-racing-red/20">
+            <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-racing-red mb-3 sm:mb-4" />
+            <h4 className="text-sm sm:text-base md:text-lg font-semibold mb-2">3-Lap Predictor</h4>
+            <p className="text-gray-400 text-xs sm:text-sm">AI forecasts next 3 laps with 89-95% accuracy</p>
+            <div className="mt-3 sm:mt-4 text-xl sm:text-2xl font-bold text-racing-red">92%</div>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-6 rounded-xl border border-racing-blue/20">
-            <Clock className="w-8 h-8 text-racing-blue mb-4" />
-            <h4 className="text-lg font-semibold mb-2">Race Replay</h4>
-            <p className="text-gray-400 text-sm">Interactive timeline with AI alerts</p>
-            <div className="mt-4 text-2xl font-bold text-racing-blue">Real-time</div>
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-4 sm:p-6 rounded-xl border border-racing-blue/20">
+            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-racing-blue mb-3 sm:mb-4" />
+            <h4 className="text-sm sm:text-base md:text-lg font-semibold mb-2">Race Replay</h4>
+            <p className="text-gray-400 text-xs sm:text-sm">Interactive timeline with AI alerts</p>
+            <div className="mt-3 sm:mt-4 text-xl sm:text-2xl font-bold text-racing-blue">Real-time</div>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-6 rounded-xl border border-racing-red/20">
-            <Target className="w-8 h-8 text-racing-red mb-4" />
-            <h4 className="text-lg font-semibold mb-2">Strategy Validator</h4>
-            <p className="text-gray-400 text-sm">Validates pit calls against race outcomes</p>
-            <div className="mt-4 text-2xl font-bold text-racing-red">92%</div>
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-4 sm:p-6 rounded-xl border border-racing-red/20">
+            <Target className="w-6 h-6 sm:w-8 sm:h-8 text-racing-red mb-3 sm:mb-4" />
+            <h4 className="text-sm sm:text-base md:text-lg font-semibold mb-2">Strategy Validator</h4>
+            <p className="text-gray-400 text-xs sm:text-sm">Validates pit calls against race outcomes</p>
+            <div className="mt-3 sm:mt-4 text-xl sm:text-2xl font-bold text-racing-red">92%</div>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-6 rounded-xl border border-racing-blue/20">
-            <Zap className="w-8 h-8 text-racing-blue mb-4" />
-            <h4 className="text-lg font-semibold mb-2">AI Training</h4>
-            <p className="text-gray-400 text-sm">Generates actionable driver insights</p>
-            <div className="mt-4 text-2xl font-bold text-racing-blue">PDF Export</div>
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-4 sm:p-6 rounded-xl border border-racing-blue/20">
+            <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-racing-blue mb-3 sm:mb-4" />
+            <h4 className="text-sm sm:text-base md:text-lg font-semibold mb-2">AI Training</h4>
+            <p className="text-gray-400 text-xs sm:text-sm">Generates actionable driver insights</p>
+            <div className="mt-3 sm:mt-4 text-xl sm:text-2xl font-bold text-racing-blue">PDF Export</div>
           </div>
         </div>
 
