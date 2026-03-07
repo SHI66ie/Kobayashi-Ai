@@ -329,56 +329,95 @@ export default function F1Page() {
   const [predictionResults, setPredictionResults] = useState<any>(null)
   const [isPredicting, setIsPredicting] = useState(false)
 
-  // Countdown Timer Logic
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 })
-  const [isLive, setIsLive] = useState(false)
-  const [isSessionDay, setIsSessionDay] = useState(false)
+  // Enhanced Countdown Timer Logic for Multiple Weekend Sessions
+  const [sessionCountdowns, setSessionCountdowns] = useState({
+    practice1: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
+    practice2: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
+    qualifying: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
+    sprint: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
+    race: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false }
+  })
+  const [currentWeekend, setCurrentWeekend] = useState<any>(null)
+
+  // Enhanced Weekend Schedule Parser
+  const parseWeekendSchedule = (raceDate: string, format: string, track: string) => {
+    // Parse dates like "March 6-8, 2026" into session times
+    const [monthDay, year] = raceDate.split(', ')
+    const [month, days] = monthDay.split(' ')
+    const [startDay, endDay] = days.split('-').map(d => parseInt(d))
+
+    const yearNum = parseInt(year)
+    const monthIndex = new Date(`${month} 1, ${year}`).getMonth()
+
+    // Standard F1 weekend schedule (times are approximate and may vary by track/timezone)
+    const weekend = {
+      practice1: new Date(yearNum, monthIndex, startDay, 11, 30, 0), // Friday 11:30
+      practice2: new Date(yearNum, monthIndex, startDay + 1, 15, 0, 0), // Saturday 15:00
+      qualifying: new Date(yearNum, monthIndex, startDay + 1, 18, 0, 0), // Saturday 18:00
+      sprint: format === 'Sprint' ? new Date(yearNum, monthIndex, startDay + 1, 14, 30, 0) : null, // Saturday 14:30 for sprint weekends
+      race: new Date(yearNum, monthIndex, endDay || startDay + 2, 15, 0, 0) // Sunday 15:00
+    }
+
+    return weekend
+  }
 
   useEffect(() => {
-    const updateCountdown = () => {
+    const updateAllCountdowns = () => {
       const now = new Date()
 
-      // Use nextEvent from API if available, else fallback to hardcoded Practice 1 fallback for Melbourne
-      const targetDateStr = nextEvent ? nextEvent.date_start : '2026-03-06T00:00:00'
-      const endDateStr = nextEvent ? nextEvent.date_end : '2026-03-08T17:00:00'
+      // Find the next upcoming race
+      const nextRace = upcomingRacesList[0]
+      if (!nextRace) return
 
-      const targetDate = new Date(targetDateStr).getTime()
-      const endDate = new Date(endDateStr).getTime()
-      const nowTime = now.getTime()
+      // Parse the weekend schedule
+      const weekendSchedule = parseWeekendSchedule(nextRace.date, nextRace.format, nextRace.track)
+      setCurrentWeekend(weekendSchedule)
 
-      // Check if session is LIVE
-      if (nowTime >= targetDate && nowTime <= endDate) {
-        setIsLive(true)
-        setIsSessionDay(true)
-        setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 })
-        return
+      // Update countdowns for each session
+      const newCountdowns = {
+        practice1: calculateTimeLeft(weekendSchedule.practice1, now),
+        practice2: calculateTimeLeft(weekendSchedule.practice2, now),
+        qualifying: calculateTimeLeft(weekendSchedule.qualifying, now),
+        sprint: weekendSchedule.sprint ? calculateTimeLeft(weekendSchedule.sprint, now) : { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
+        race: calculateTimeLeft(weekendSchedule.race, now)
       }
 
-      setIsLive(false)
+      setSessionCountdowns(newCountdowns)
+    }
 
-      // Check if it's Session Day (but not yet started)
-      const isSameDay = now.toDateString() === new Date(targetDate).toDateString()
-      setIsSessionDay(isSameDay)
+    // Helper function to calculate time left
+    const calculateTimeLeft = (targetDate: Date, now: Date) => {
+      const targetTime = targetDate.getTime()
+      const nowTime = now.getTime()
 
-      const difference = targetDate - nowTime
+      // Check if session is live (within 2 hours of start)
+      const sessionDuration = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
+      const isLive = nowTime >= targetTime && nowTime <= (targetTime + sessionDuration)
+
+      if (isLive) {
+        return { days: 0, hours: 0, mins: 0, secs: 0, isLive: true }
+      }
+
+      const difference = targetTime - nowTime
 
       if (difference > 0) {
-        setTimeLeft({
+        return {
           days: Math.floor(difference / (1000 * 60 * 60 * 24)),
           hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
           mins: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-          secs: Math.floor((difference % (1000 * 60)) / 1000)
-        })
-      } else {
-        setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 })
+          secs: Math.floor((difference % (1000 * 60)) / 1000),
+          isLive: false
+        }
       }
+
+      return { days: 0, hours: 0, mins: 0, secs: 0, isLive: false }
     }
 
-    updateCountdown()
-    const interval = setInterval(updateCountdown, 1000)
+    updateAllCountdowns()
+    const interval = setInterval(updateAllCountdowns, 1000)
 
     return () => clearInterval(interval)
-  }, [nextEvent])
+  }, [upcomingRacesList])
 
   const formatTime = (time: number) => time.toString().padStart(2, '0')
 
@@ -1467,9 +1506,178 @@ export default function F1Page() {
                   </button>
                 </div>
               </div>
-            </div>
+            {/* Weekend Session Countdowns */}
+            <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50 mt-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold flex items-center space-x-3">
+                  <Clock className="w-5 h-5 text-racing-red" />
+                  <span>Weekend Schedule</span>
+                </h3>
+                <div className="text-sm text-gray-400">
+                  {upcomingRacesList[0]?.name} - {upcomingRacesList[0]?.date}
+                </div>
+              </div>
 
-            {/* AI Top Picks - Monsterbet Style - Responsive Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {/* Practice 1 */}
+                <div className={`bg-gray-900/50 rounded-xl p-4 border ${sessionCountdowns.practice1.isLive ? 'border-green-500/50 bg-green-500/10' : 'border-gray-700'}`}>
+                  <div className="text-center">
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Practice 1</div>
+                    <div className="text-sm font-bold text-gray-300 mb-2">Fri {currentWeekend?.practice1.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    {sessionCountdowns.practice1.isLive ? (
+                      <div className="text-green-400 font-bold text-lg animate-pulse">LIVE</div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-1 text-center">
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.practice1.days)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Days</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.practice1.hours)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Hrs</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.practice1.mins)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Min</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-racing-red">{formatTime(sessionCountdowns.practice1.secs)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Sec</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Practice 2 */}
+                <div className={`bg-gray-900/50 rounded-xl p-4 border ${sessionCountdowns.practice2.isLive ? 'border-green-500/50 bg-green-500/10' : 'border-gray-700'}`}>
+                  <div className="text-center">
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Practice 2</div>
+                    <div className="text-sm font-bold text-gray-300 mb-2">Sat {currentWeekend?.practice2.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    {sessionCountdowns.practice2.isLive ? (
+                      <div className="text-green-400 font-bold text-lg animate-pulse">LIVE</div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-1 text-center">
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.practice2.days)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Days</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.practice2.hours)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Hrs</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.practice2.mins)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Min</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-racing-red">{formatTime(sessionCountdowns.practice2.secs)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Sec</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sprint (if applicable) */}
+                {upcomingRacesList[0]?.format === 'Sprint' && (
+                  <div className={`bg-gray-900/50 rounded-xl p-4 border ${sessionCountdowns.sprint.isLive ? 'border-purple-500/50 bg-purple-500/10' : 'border-gray-700'}`}>
+                    <div className="text-center">
+                      <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Sprint</div>
+                      <div className="text-sm font-bold text-gray-300 mb-2">Sat {currentWeekend?.sprint.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                      {sessionCountdowns.sprint.isLive ? (
+                        <div className="text-purple-400 font-bold text-lg animate-pulse">LIVE</div>
+                      ) : (
+                        <div className="grid grid-cols-4 gap-1 text-center">
+                          <div>
+                            <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.sprint.days)}</div>
+                            <div className="text-[10px] text-gray-500 uppercase">Days</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.sprint.hours)}</div>
+                            <div className="text-[10px] text-gray-500 uppercase">Hrs</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.sprint.mins)}</div>
+                            <div className="text-[10px] text-gray-500 uppercase">Min</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-mono font-bold text-purple-400">{formatTime(sessionCountdowns.sprint.secs)}</div>
+                            <div className="text-[10px] text-gray-500 uppercase">Sec</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Qualifying */}
+                <div className={`bg-gray-900/50 rounded-xl p-4 border ${sessionCountdowns.qualifying.isLive ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-700'}`}>
+                  <div className="text-center">
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Qualifying</div>
+                    <div className="text-sm font-bold text-gray-300 mb-2">Sat {currentWeekend?.qualifying.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    {sessionCountdowns.qualifying.isLive ? (
+                      <div className="text-blue-400 font-bold text-lg animate-pulse">LIVE</div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-1 text-center">
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.qualifying.days)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Days</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.qualifying.hours)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Hrs</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.qualifying.mins)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Min</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-blue-400">{formatTime(sessionCountdowns.qualifying.secs)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Sec</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Main Race */}
+                <div className={`bg-gray-900/50 rounded-xl p-4 border ${sessionCountdowns.race.isLive ? 'border-racing-red/50 bg-racing-red/10' : 'border-gray-700'}`}>
+                  <div className="text-center">
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Main Race</div>
+                    <div className="text-sm font-bold text-gray-300 mb-2">Sun {currentWeekend?.race.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    {sessionCountdowns.race.isLive ? (
+                      <div className="text-racing-red font-bold text-lg animate-pulse">LIVE</div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-1 text-center">
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.race.days)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Days</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.race.hours)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Hrs</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-white">{formatTime(sessionCountdowns.race.mins)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Min</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-mono font-bold text-racing-red">{formatTime(sessionCountdowns.race.secs)}</div>
+                          <div className="text-[10px] text-gray-500 uppercase">Sec</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 text-center">
+                <p className="text-xs text-gray-500">
+                  Times shown in local timezone • Sessions typically 1-2 hours duration
+                </p>
+              </div>
+            </div>
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2">
@@ -1536,51 +1744,107 @@ export default function F1Page() {
               </div>
             </div>
 
-            {/* Upcoming Races Grid */}
+            {/* Upcoming Races Timeline - Clean & Minimal */}
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold flex items-center space-x-3">
-                  <Calendar className="w-5 h-5 text-racing-red" />
-                  <span>2026 Season Calendar</span>
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-2xl font-bold flex items-center space-x-3">
+                  <Calendar className="w-6 h-6 text-racing-red" />
+                  <span>Next Races</span>
                 </h3>
+                <div className="text-sm text-gray-500 font-medium">
+                  2026 Season Schedule
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {(apiSessions.length > 0 ? raceList : upcomingRacesList.slice(1)).map((race, i) => {
+
+              {/* Timeline-style calendar */}
+              <div className="space-y-6">
+                {(apiSessions.length > 0 ? raceList.slice(0, 5) : upcomingRacesList.slice(0, 5)).map((race, i) => {
                   const isCurrentNext = nextEvent && race.name === nextEvent.session_name;
+                  const isNextRace = i === 0;
+
                   return (
                     <div
                       key={race.id || i}
-                      className={`bg-gray-800/80 rounded-xl p-5 border ${isCurrentNext ? 'border-racing-red shadow-lg shadow-racing-red/10' : 'border-gray-700'} hover:border-racing-red/50 transition-all group cursor-pointer relative overflow-hidden`}
+                      className={`relative bg-gradient-to-r ${isCurrentNext
+                        ? 'from-racing-red/10 via-red-900/5 to-transparent border-racing-red/30'
+                        : isNextRace
+                        ? 'from-blue-500/5 via-blue-900/5 to-transparent border-blue-500/20'
+                        : 'from-gray-800/50 to-gray-900/30 border-gray-700/50'
+                      } border rounded-2xl p-6 transition-all duration-300 hover:border-racing-red/40 hover:shadow-lg hover:shadow-racing-red/10 group cursor-pointer`}
                       onClick={() => {
                         setSelectedTrack(race.id || 'melbourne');
                         setActiveTab('ai');
                       }}
                     >
-                      {isCurrentNext && (
-                        <div className="absolute top-0 right-0 bg-racing-red text-white text-[10px] font-black px-3 py-1 rounded-bl-lg uppercase tracking-tighter">
-                          Next
+                      {/* Timeline line */}
+                      <div className={`absolute left-8 top-0 bottom-0 w-0.5 ${isCurrentNext ? 'bg-racing-red' : isNextRace ? 'bg-blue-500' : 'bg-gray-600'}`}></div>
+
+                      {/* Timeline dot */}
+                      <div className={`absolute left-6 top-8 w-4 h-4 rounded-full border-4 ${isCurrentNext ? 'bg-racing-red border-gray-900' : isNextRace ? 'bg-blue-500 border-gray-900' : 'bg-gray-600 border-gray-800'}`}></div>
+
+                      <div className="flex items-center justify-between ml-12">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h4 className="text-xl font-bold text-white group-hover:text-racing-red transition-colors">
+                              {race.name}
+                            </h4>
+                            {isCurrentNext && (
+                              <span className="px-3 py-1 bg-racing-red text-white text-xs font-black rounded-full uppercase tracking-wider">
+                                NEXT
+                              </span>
+                            )}
+                            {isNextRace && !isCurrentNext && (
+                              <span className="px-3 py-1 bg-blue-500/20 text-blue-400 text-xs font-black rounded-full uppercase tracking-wider border border-blue-500/30">
+                                UPCOMING
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <div className="flex items-center space-x-2">
+                              <Flag className="w-4 h-4" />
+                              <span className="font-medium">{race.track}</span>
+                            </div>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-lg">{getCountryFlag(race.country)}</span>
+                            <span className="text-gray-600">•</span>
+                            <span className="font-medium">{race.date}</span>
+                          </div>
                         </div>
-                      )}
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="max-w-[80%]">
-                          <p className="text-[10px] font-black text-racing-red mb-1 uppercase tracking-widest">{race.date}</p>
-                          <h4 className="font-bold text-base md:text-lg group-hover:text-racing-red transition-colors leading-tight mb-1">{race.name}</h4>
-                          <p className="text-xs text-gray-400 truncate font-semibold uppercase tracking-tighter">{race.track}</p>
+
+                        <div className="flex items-center space-x-3">
+                          <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-gray-700/50 text-gray-300'}`}>
+                            {race.format}
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-sm text-gray-400 mb-1">
+                              {apiSessions.length > 0 ? 'Circuit' : 'Prediction'}
+                            </div>
+                            <div className="text-sm font-medium text-gray-300">
+                              {apiSessions.length > 0 ? race.country : race.leader.split(' ').pop()}
+                            </div>
+                          </div>
+
+                          <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-racing-red group-hover:translate-x-1 transition-all transform rotate-180" />
                         </div>
-                        <span className="text-2xl opacity-80 group-hover:opacity-100 transition-opacity">{getCountryFlag(race.country)}</span>
                       </div>
-                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-700/50">
-                        <div className="text-[10px] font-bold uppercase tracking-widest">
-                          <span className="text-gray-500 mr-1">{apiSessions.length > 0 ? 'Loc:' : 'Predict:'}</span>
-                          <span className="text-gray-200">{apiSessions.length > 0 ? race.country : race.leader.split(' ').pop()}</span>
-                        </div>
-                        <div className={`text-[10px] px-2 py-0.5 ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700/50 text-gray-400'} rounded font-black uppercase tracking-tighter`}>
-                          {race.format}
-                        </div>
-                      </div>
+
+                      {/* Bottom accent line */}
+                      <div className={`absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl ${isCurrentNext ? 'bg-gradient-to-r from-racing-red to-red-700' : isNextRace ? 'bg-gradient-to-r from-blue-500 to-blue-700' : 'bg-gradient-to-r from-gray-600 to-gray-700'} opacity-80`}></div>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Show more link */}
+              <div className="text-center mt-8">
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className="px-6 py-3 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                >
+                  View Full Schedule →
+                </button>
               </div>
             </div>
 
