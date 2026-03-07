@@ -338,6 +338,12 @@ export default function F1Page() {
     race: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false }
   })
   const [currentWeekend, setCurrentWeekend] = useState<any>(null)
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0, isLive: false })
+  
+  // Live session detection
+  const isLive = nextEvent ? 
+    (sessionCountdowns as any)[nextEvent.session_name.toLowerCase().replace(' ', '')]?.isLive || false : false
+  const isSessionDay = nextEvent ? new Date(nextEvent.date_start).toDateString() === new Date().toDateString() : false
 
   // Enhanced Weekend Schedule Parser
   const parseWeekendSchedule = (raceDate: string, format: string, track: string) => {
@@ -383,6 +389,14 @@ export default function F1Page() {
       }
 
       setSessionCountdowns(newCountdowns)
+      
+      // Update main countdown with next event
+      const nextSession = Object.entries(newCountdowns).find(([_, countdown]: [string, any]) => 
+        countdown.isLive || (countdown.days > 0 || countdown.hours > 0 || countdown.mins > 0 || countdown.secs > 0)
+      )
+      if (nextSession) {
+        setTimeLeft(nextSession[1])
+      }
     }
 
     // Helper function to calculate time left
@@ -1506,6 +1520,7 @@ export default function F1Page() {
                   </button>
                 </div>
               </div>
+            </div>
             {/* Weekend Session Countdowns */}
             <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50 mt-8">
               <div className="flex items-center justify-between mb-6">
