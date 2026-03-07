@@ -15,7 +15,7 @@ const F1AIChat = lazy(() => import('../components/F1AIChat'))
 const DecisionPanel = lazy(() => import('../components/DecisionPanel'))
 const RaceVisualization = lazy(() => import('../components/RaceVisualization'))
 const WhatIfSimulator = lazy(() => import('../components/WhatIfSimulator'))
-const LiveDataTicker = lazy(() => import('../components/LiveDataTicker'))
+const LiveFeedSection = lazy(() => import('../components/LiveFeedSection'))
 
 
 // Performance monitoring hook
@@ -2776,10 +2776,10 @@ export default function F1Page() {
           </div>
         )}
 
-        {/* LIVE DATA FEED - Prominently displayed */}
+        {/* LIVE DATA FEED - Prominently displayed with controls */}
         <div className="space-y-8 animate-in fade-in duration-700">
           <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
-            <LiveDataTicker 
+            <LiveFeedSection 
               trackId={selectedTrack}
               drivers={apiDrivers.map(d => d.name)}
             />
