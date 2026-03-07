@@ -690,7 +690,43 @@ export default function F1Page() {
 
       for (const session of raceSessions.slice(0, 10)) { // Limit to last 10 races
         try {
-          // Get lap data for qualifying simulation
+          // Get qualifying session for this race
+          const qualifyingSession = sessions.find((s: any) => 
+            s.circuit_short_name === session.circuit_short_name && 
+            s.session_type === 'Qualifying'
+          )
+          
+          let qualifyingGridData: Map<number, number> = new Map()
+          
+          // Get qualifying data for grid positions
+          if (qualifyingSession) {
+            try {
+              const qualifyingLapData = await openf1Api.getLaps(qualifyingSession.session_key)
+              if (qualifyingLapData && qualifyingLapData.length > 0) {
+                // Group by driver and find fastest lap in qualifying
+                const driverFastestQualifyingLaps = new Map()
+                qualifyingLapData.forEach((lap: any) => {
+                  if (lap.lap_duration && lap.lap_duration > 0) {
+                    if (!driverFastestQualifyingLaps.has(lap.driver_number) || lap.lap_duration < driverFastestQualifyingLaps.get(lap.driver_number).lap_duration) {
+                      driverFastestQualifyingLaps.set(lap.driver_number, lap)
+                    }
+                  }
+                })
+
+                const sortedQualifyingLaps = Array.from(driverFastestQualifyingLaps.values())
+                  .sort((a: any, b: any) => a.lap_duration - b.lap_duration)
+
+                // Map grid positions
+                sortedQualifyingLaps.forEach((lap: any, index: number) => {
+                  qualifyingGridData.set(lap.driver_number, index + 1)
+                })
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch qualifying data for grid positions:`, error)
+            }
+          }
+
+          // Get lap data for qualifying results display
           const lapData = await openf1Api.getLaps(session.session_key)
           if (lapData && lapData.length > 0) {
             // Group by driver and find fastest lap for each driver
@@ -749,11 +785,12 @@ export default function F1Page() {
               date: session.date_start,
               results: sortedPositions.slice(0, 20).map((pos: any) => {
                 const driver = sessionDrivers.find((d: any) => d.driver_number === pos.driver_number)
+                const gridPosition = qualifyingGridData.get(pos.driver_number) || pos.position // Use qualifying grid, fallback to position
                 return {
                   position: pos.position,
                   driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
                   team: driver ? driver.team_name : 'Unknown',
-                  grid: pos.position, // Use position as grid since we don't have grid data
+                  grid: gridPosition, // Use actual qualifying grid position
                   laps: Math.floor(Math.random() * 70) + 30, // Estimate laps
                   time: `${Math.floor(Math.random() * 3600) + 3600}s`, // Estimate time
                   points: pos.position <= 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][pos.position - 1] || 0 : 0,
