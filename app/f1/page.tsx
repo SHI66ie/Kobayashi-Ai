@@ -124,6 +124,7 @@ export default function F1Page() {
   const [apiRaces, setApiRaces] = useState<any[]>([])
   const [apiStandings, setApiStandings] = useState<any[]>([])
   const [nextEvent, setNextEvent] = useState<any>(null)
+  const [currentRaceIndex, setCurrentRaceIndex] = useState(0) // Track current race in sequence - MOVED UP
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
   const [useRealData, setUseRealData] = useState(false)
@@ -137,7 +138,7 @@ export default function F1Page() {
       setNextEvent({
         session_name: currentRace.name,
         date_start: currentRace.date,
-        circuit: currentRace.track
+        circuit_short_name: currentRace.track
       })
     }
   }, [currentRace])
@@ -353,12 +354,11 @@ export default function F1Page() {
   })
   const [currentWeekend, setCurrentWeekend] = useState<any>(null)
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0, isLive: false })
-  const [currentRaceIndex, setCurrentRaceIndex] = useState(0) // Track current race in sequence
   
   // Live session detection
-  const isLive = currentRace ? 
-    (sessionCountdowns as any)[currentRace.session_name?.toLowerCase().replace(' ', '')]?.isLive || false : false
-  const isSessionDay = currentRace ? new Date(currentRace.date_start || currentRace.date).toDateString() === new Date().toDateString() : false
+  const isLive = nextEvent ? 
+    (sessionCountdowns as any)[nextEvent.session_name?.toLowerCase().replace(' ', '')]?.isLive || false : false
+  const isSessionDay = nextEvent ? new Date(nextEvent.date_start).toDateString() === new Date().toDateString() : false
 
   // Enhanced Weekend Schedule Parser
   const parseWeekendSchedule = (raceDate: string, format: string, track: string) => {
