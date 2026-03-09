@@ -128,6 +128,20 @@ export default function F1Page() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [useRealData, setUseRealData] = useState(false)
 
+  // Get current race based on index
+  const currentRace = upcomingRacesList[currentRaceIndex] || upcomingRacesList[0]
+
+  // Update nextEvent when currentRace changes
+  useEffect(() => {
+    if (currentRace) {
+      setNextEvent({
+        session_name: currentRace.name,
+        date_start: currentRace.date,
+        circuit: currentRace.track
+      })
+    }
+  }, [currentRace])
+
   // Practice/Testing State
   const [practiceSessions, setPracticeSessions] = useState<any[]>([])
   const [selectedPracticeSession, setSelectedPracticeSession] = useState<number | null>(null)
@@ -329,7 +343,7 @@ export default function F1Page() {
   const [predictionResults, setPredictionResults] = useState<any>(null)
   const [isPredicting, setIsPredicting] = useState(false)
 
-  // Enhanced Countdown Timer Logic for Multiple Weekend Sessions
+  // Enhanced Countdown Timer Logic for Multiple Weekend Sessions with Automatic Race Progression
   const [sessionCountdowns, setSessionCountdowns] = useState({
     practice1: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
     practice2: { days: 0, hours: 0, mins: 0, secs: 0, isLive: false },
@@ -339,11 +353,12 @@ export default function F1Page() {
   })
   const [currentWeekend, setCurrentWeekend] = useState<any>(null)
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0, isLive: false })
+  const [currentRaceIndex, setCurrentRaceIndex] = useState(0) // Track current race in sequence
   
   // Live session detection
-  const isLive = nextEvent ? 
-    (sessionCountdowns as any)[nextEvent.session_name.toLowerCase().replace(' ', '')]?.isLive || false : false
-  const isSessionDay = nextEvent ? new Date(nextEvent.date_start).toDateString() === new Date().toDateString() : false
+  const isLive = currentRace ? 
+    (sessionCountdowns as any)[currentRace.session_name?.toLowerCase().replace(' ', '')]?.isLive || false : false
+  const isSessionDay = currentRace ? new Date(currentRace.date_start || currentRace.date).toDateString() === new Date().toDateString() : false
 
   // Enhanced Weekend Schedule Parser
   const parseWeekendSchedule = (raceDate: string, format: string, track: string) => {
@@ -371,12 +386,27 @@ export default function F1Page() {
     const updateAllCountdowns = () => {
       const now = new Date()
 
-      // Find the next upcoming race
-      const nextRace = upcomingRacesList[0]
-      if (!nextRace) return
+      // Find the current or next upcoming race
+      let targetRaceIndex = currentRaceIndex
+      let targetRace = upcomingRacesList[currentRaceIndex]
+      
+      // Check if current race is finished and move to next
+      if (targetRace) {
+        const weekendSchedule = parseWeekendSchedule(targetRace.date, targetRace.format, targetRace.track)
+        const raceEndTime = new Date(weekendSchedule.race.getTime() + (3 * 60 * 60 * 1000)) // Race ends ~3 hours after start
+        
+        // If current race is finished, move to next one
+        if (now > raceEndTime && currentRaceIndex < upcomingRacesList.length - 1) {
+          targetRaceIndex = currentRaceIndex + 1
+          targetRace = upcomingRacesList[targetRaceIndex]
+          setCurrentRaceIndex(targetRaceIndex)
+        }
+      }
+      
+      if (!targetRace) return
 
-      // Parse the weekend schedule
-      const weekendSchedule = parseWeekendSchedule(nextRace.date, nextRace.format, nextRace.track)
+      // Parse the weekend schedule for current/target race
+      const weekendSchedule = parseWeekendSchedule(targetRace.date, targetRace.format, targetRace.track)
       setCurrentWeekend(weekendSchedule)
 
       // Update countdowns for each session
@@ -431,9 +461,22 @@ export default function F1Page() {
     const interval = setInterval(updateAllCountdowns, 1000)
 
     return () => clearInterval(interval)
-  }, [upcomingRacesList])
+  }, [upcomingRacesList, currentRaceIndex])
 
   const formatTime = (time: number) => time.toString().padStart(2, '0')
+
+  // Add race progression controls for testing
+  const handleNextRace = () => {
+    if (currentRaceIndex < upcomingRacesList.length - 1) {
+      setCurrentRaceIndex(currentRaceIndex + 1)
+    }
+  }
+
+  const handlePrevRace = () => {
+    if (currentRaceIndex > 0) {
+      setCurrentRaceIndex(currentRaceIndex - 1)
+    }
+  }
 
   // Helper function to update F1 data
   const updateF1Data = (field: string, value: any) => {
@@ -1451,8 +1494,34 @@ export default function F1Page() {
                     {isLive ? 'LIVE NOW' : isSessionDay ? 'SESSION DAY' : 'Next Event'}
                   </div>
                   <h2 className="text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">
-                    {nextEvent ? `${nextEvent.session_name}` : upcomingRacesList[0].name}
+                    {currentRace ? `${currentRace.name}` : upcomingRacesList[0].name}
                   </h2>
+                  <div className="flex items-center justify-center lg:justify-start space-x-4 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handlePrevRace}
+                        disabled={currentRaceIndex === 0}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4 text-gray-300" />
+                      </button>
+                      <span className="text-sm text-gray-500 font-medium">
+                        Race {currentRaceIndex + 1} of {upcomingRacesList.length}
+                      </span>
+                      <button
+                        onClick={handleNextRace}
+                        disabled={currentRaceIndex === upcomingRacesList.length - 1}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      >
+                        <ArrowRight className="w-4 h-4 text-gray-300" />
+                      </button>
+                    </div>
+                    {currentRaceIndex > 0 && (
+                      <span className="text-xs text-racing-red font-medium animate-pulse">
+                        Auto-progression enabled
+                      </span>
+                    )}
+                  </div>
                   <p className="text-lg md:text-xl text-gray-400 mb-6 flex items-center justify-center lg:justify-start">
                     <Flag className="w-5 h-5 mr-2 text-gray-500" />
                     <span className="truncate">{nextEvent ? `${nextEvent.circuit_short_name}` : `${upcomingRacesList[0].track}`}</span>
