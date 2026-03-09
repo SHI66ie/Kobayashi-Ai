@@ -2628,18 +2628,6 @@ export default function F1Page() {
                     <Target className="w-4 h-4 text-racing-red" />
                     <span>{showPredictions ? 'Hide' : 'Forecast'}</span>
                   </button>
-
-                  <button
-                    onClick={() => setShowWhatIfSimulator(!showWhatIfSimulator)}
-                    className={`flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider transition-colors ${
-                      showWhatIfSimulator 
-                        ? 'bg-racing-red hover:bg-red-600 text-white border border-racing-red' 
-                        : 'bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300'
-                    }`}
-                  >
-                    <Activity className="w-4 h-4" />
-                    <span>{showWhatIfSimulator ? 'Hide Sim' : 'What If'}</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -3046,8 +3034,8 @@ export default function F1Page() {
           </Suspense>
         </div>
 
-        {/* WHAT-IF SCENARIO SIMULATOR - Only in analytics tab with toggle */}
-        {activeTab === 'analytics' && showWhatIfSimulator && (
+        {/* WHAT-IF SCENARIO SIMULATOR - Only in standings tab with toggle */}
+        {activeTab === 'standings' && showWhatIfSimulator && (
           <div className="space-y-8 animate-in fade-in duration-700">
             <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
               <WhatIfSimulator 
@@ -3366,6 +3354,18 @@ export default function F1Page() {
                     className="px-4 py-2 bg-racing-red hover:bg-red-700 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
                   >
                     {standingsLoading ? 'Loading...' : 'Refresh'}
+                  </button>
+
+                  <button
+                    onClick={() => setShowWhatIfSimulator(!showWhatIfSimulator)}
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
+                      showWhatIfSimulator 
+                        ? 'bg-racing-blue hover:bg-blue-700 text-white' 
+                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700'
+                    }`}
+                  >
+                    <Activity className="w-4 h-4 inline mr-2" />
+                    {showWhatIfSimulator ? 'Hide Sim' : 'What If'}
                   </button>
                 </div>
               </div>
