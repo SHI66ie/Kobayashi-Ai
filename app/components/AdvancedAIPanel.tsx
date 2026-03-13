@@ -43,75 +43,136 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
   const runMultimodalAnalysis = async (analysisType: string) => {
     setLoading(true)
     try {
-      const weatherData = simulatedWeather || raceData?.weather || {}
-      
-      // Get AI recommendations based on fused data
-      const recommendations = await dataFusionService.generateRecommendations(selectedDriver, race)
-      
-      // Enhanced analysis payload with historical and live data
-      const analysisPayload = {
-        // Enhanced driver data
-        driverPerformance: enhancedDriverData ? {
-          historical: enhancedDriverData.historicalPerformance,
-          currentForm: enhancedDriverData.liveData,
-          predictions: enhancedDriverData.predictions
-        } : {},
-        
-        // Enhanced race context
-        enhancedRaceContext: enhancedRaceData ? {
-          historical: enhancedRaceData.historicalContext,
-          currentConditions: enhancedRaceData.liveData,
-          analysis: enhancedRaceData.analysis
-        } : {},
-        
-        // Traditional telemetry data
-        telemetryData: raceData?.telemetry || {},
-        
-        // Track and weather
-        trackLayout: {
-          corners: 12,
-          elevation: 'Moderate',
-          surface: 'Asphalt',
-          length: '4.2km'
-        },
-        weatherData,
-        isSimulated: !!simulatedWeather,
-        
-        // AI recommendations
-        recommendations: recommendations,
-        
-        // Driver behavior (could be enhanced with historical patterns)
-        driverBehavior: {
-          brakingStyle: enhancedDriverData ? 
-            getBrakingStyleFromData(enhancedDriverData.historicalPerformance) : 'Aggressive',
-          corneringStyle: 'Late Apex',
-          throttleStyle: 'Progressive',
-          consistency: enhancedDriverData ? 
-            (1 - enhancedDriverData.historicalPerformance.consistency / 100).toString() : 'High'
-        },
-        
-        // Race context
-        raceContext: {
-          position: enhancedDriverData?.liveData.currentPosition || 3,
-          currentLap: 15,
-          totalLaps: 30,
-          gapToLeader: '+2.3s',
-          tireCondition: 'Good',
-          fuelLevel: 65
-        },
-        
-        analysisType
-      }
-      
-      const response = await fetch('/api/ai-multimodal', {
+      const response = await fetch('/api/ai-analytics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(analysisPayload)
+        body: JSON.stringify({
+          analysisType: 'performance',
+          raceData: {
+            ...raceData,
+            trackTemp: simulatedWeather?.trackTemp || 35,
+            airTemp: simulatedWeather?.airTemp || 25,
+            humidity: simulatedWeather?.humidity || 60,
+            windSpeed: simulatedWeather?.windSpeed || 10,
+            lapTimes: raceData?.lapTimes || []
+          },
+          track: track,
+          drivers: [selectedDriver, 'Lewis Hamilton', 'Charles Leclerc']
+        })
       })
+      
       const data = await response.json()
-      setResult(data)
+      
+      if (data.success) {
+        setResult({
+          type: 'performance',
+          analysis: data.analysis,
+          context: data.context,
+          confidence: data.confidence
+        })
+      } else {
+        throw new Error(data.message || 'Analysis failed')
+      }
+      
     } catch (error) {
-      console.error('Multimodal analysis error:', error)
+      console.error('Advanced AI Analysis Error:', error)
+      setResult({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Analysis failed'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const runAutonomousAnalysis = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/ai-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisType: 'telemetry',
+          raceData: {
+            ...raceData,
+            telemetry: raceData?.telemetry || {
+              speed: 280,
+              rpm: 15000,
+              throttle: 85,
+              brake: 15,
+              drs: false
+            },
+            currentDriver: selectedDriver,
+            currentLap: 15,
+            currentSector: 1
+          }
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setResult({
+          type: 'telemetry',
+          analysis: data.analysis,
+          context: data.context,
+          confidence: data.confidence
+        })
+      } else {
+        throw new Error(data.message || 'Telemetry analysis failed')
+      }
+      
+    } catch (error) {
+      console.error('Autonomous AI Analysis Error:', error)
+      setResult({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Telemetry analysis failed'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const runSafetyAnalysis = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/ai-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisType: 'strategy',
+          raceData: {
+            ...raceData,
+            race: race,
+            lapsRemaining: 42,
+            currentTire: 'C3',
+            tireAge: 15,
+            position: 3,
+            gapAhead: 2.5,
+            gapBehind: 1.8
+          }
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setResult({
+          type: 'strategy',
+          analysis: data.analysis,
+          context: data.context,
+          confidence: data.confidence
+        })
+      } else {
+        throw new Error(data.message || 'Strategy analysis failed')
+      }
+      
+    } catch (error) {
+      console.error('Safety AI Analysis Error:', error)
+      setResult({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Strategy analysis failed'
+      })
     } finally {
       setLoading(false)
     }
@@ -232,7 +293,17 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
       </button>
       
       <button
-        onClick={() => runMultimodalAnalysis('strategy')}
+        onClick={() => runMultimodalAnalysis('performance')}
+        disabled={loading}
+        className="p-3 bg-purple-600/20 hover:bg-purple-600/30 rounded-lg border border-purple-500/30 transition-colors"
+      >
+        <Target className="w-5 h-5 text-purple-400 mb-2" />
+        <div className="text-sm font-semibold">Performance</div>
+        <div className="text-xs text-gray-400">Optimize lap times</div>
+      </button>
+      
+      <button
+        onClick={() => runSafetyAnalysis()}
         disabled={loading}
         className="p-3 bg-purple-600/20 hover:bg-purple-600/30 rounded-lg border border-purple-500/30 transition-colors"
       >
@@ -242,13 +313,13 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
       </button>
       
       <button
-        onClick={() => runMultimodalAnalysis('safety')}
+        onClick={() => runAutonomousAnalysis()}
         disabled={loading}
         className="p-3 bg-purple-600/20 hover:bg-purple-600/30 rounded-lg border border-purple-500/30 transition-colors"
       >
         <Shield className="w-5 h-5 text-purple-400 mb-2" />
-        <div className="text-sm font-semibold">Safety</div>
-        <div className="text-xs text-gray-400">Risk analysis</div>
+        <div className="text-sm font-semibold">Telemetry</div>
+        <div className="text-xs text-gray-400">Real-time analysis</div>
       </button>
       
       <button
