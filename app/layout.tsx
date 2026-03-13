@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import DashboardLayout from './components/DashboardLayout'
 
 // Optimize font loading
 const inter = Inter({ 
@@ -72,7 +73,10 @@ export default function RootLayout({
         <div id="loading-indicator" className="fixed top-0 left-0 w-full h-1 bg-gray-800 z-50">
           <div className="h-full bg-racing-red animate-pulse" style={{width: '0%'}}></div>
         </div>
-        {children}
+        
+        <DashboardLayout>
+          {children}
+        </DashboardLayout>
         
         {/* Performance monitoring script */}
         <script dangerouslySetInnerHTML={{
