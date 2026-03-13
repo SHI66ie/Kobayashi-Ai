@@ -7,13 +7,9 @@ import {
   Folder, 
   Zap, 
   RefreshCcw, 
-  Search, 
-  Trash2, 
-  Download, 
   CheckCircle, 
   AlertCircle,
   Activity,
-  HardDrive,
   Cpu,
   Unlink,
   ExternalLink,
@@ -28,7 +24,7 @@ import {
 } from 'lucide-react'
 
 export default function DataCenter() {
-  const [activeTab, setActiveTab] = useState<'sources' | 'cache' | 'hybrid' | 'ingestion'>('sources')
+  const [activeTab, setActiveTab] = useState<'sources' | 'hybrid' | 'ingestion'>('sources')
   const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Ingestion State
@@ -134,7 +130,6 @@ export default function DataCenter() {
           {[
             { id: 'sources', name: 'Input Sources', icon: Database },
             { id: 'ingestion', name: 'AI Data Ingestion', icon: UploadCloud },
-            { id: 'cache', name: 'Cloud & Local Cache', icon: HardDrive },
             { id: 'hybrid', name: 'Fusion Engine', icon: Cpu }
           ].map((tab) => (
             <button
@@ -339,73 +334,6 @@ export default function DataCenter() {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'cache' && (
-            <div className="space-y-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/40 p-6 rounded-2xl border border-white/5">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Search cached telemetry archives..." 
-                    className="w-full bg-gray-800 border-none rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:ring-2 focus:ring-racing-red transition-all"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all">
-                    <Download className="w-3 h-3 text-blue-500" />
-                    Download All
-                  </button>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-racing-red text-xs font-bold rounded-lg transition-all">
-                    <Trash2 className="w-3 h-3" />
-                    Purge Cache
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="text-xs font-black text-gray-500 uppercase tracking-widest">
-                    <tr>
-                      <th className="pb-4 pl-4">Asset Name</th>
-                      <th className="pb-4">Track Context</th>
-                      <th className="pb-4">Size</th>
-                      <th className="pb-4">Last Accessed</th>
-                      <th className="pb-4 pr-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {[
-                      { name: 'circuit-of-the-americas.zip', size: '2.8 GB', lastUsed: '2 mins ago', track: 'COTA' },
-                      { name: 'road-america.zip', size: '1.4 GB', lastUsed: '1 hour ago', track: 'Road America' },
-                      { name: 'sebring.zip', size: '0.9 GB', lastUsed: 'Yesterday', track: 'Sebring' },
-                      { name: '2024_austria_telemetry.json', size: '45 MB', lastUsed: '2 days ago', track: 'Red Bull Ring' }
-                    ].map((file, i) => (
-                      <tr key={i} className="group hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 pl-4">
-                          <div className="flex items-center gap-3">
-                            <Folder className="w-4 h-4 text-orange-500" />
-                            <span className="text-sm font-bold text-white tracking-tight">{file.name}</span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <span className="px-2 py-1 bg-gray-800/80 rounded text-[10px] font-bold text-gray-300 uppercase">{file.track}</span>
-                        </td>
-                        <td className="py-4 text-sm font-mono text-gray-400">{file.size}</td>
-                        <td className="py-4 text-xs text-gray-500 font-medium">{file.lastUsed}</td>
-                        <td className="py-4 pr-4">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white"><ExternalLink className="w-4 h-4" /></button>
-                            <button className="p-2 hover:bg-red-900/20 rounded-lg text-gray-400 hover:text-racing-red"><Trash2 className="w-4 h-4" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           )}
