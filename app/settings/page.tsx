@@ -285,8 +285,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="pt-4 flex gap-4">
-                    <button className="text-xs font-bold text-racing-red hover:underline">Revoke all keys</button>
-                    <button className="text-xs font-bold text-gray-500 hover:underline">Download config.json</button>
+                    <p className="text-[10px] text-gray-500 font-medium">System configuration is managed by the Kobayashi Core Data Integrity Module.</p>
                   </div>
                 </div>
               </div>
