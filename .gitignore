@@ -78,6 +78,7 @@ temp/
 # Large data files should not be in the repo for production builds
 Data/
 !app/data/
+!app/api/data/
 
 # Telemetry files are now tracked via Git LFS (but excluded from builds)
 
