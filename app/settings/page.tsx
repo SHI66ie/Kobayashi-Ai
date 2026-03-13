@@ -5,15 +5,11 @@ import {
   Settings as SettingsIcon, 
   Cpu, 
   Database, 
-  Lock, 
   Bell, 
   Palette, 
   Save, 
   RefreshCcw,
-  Shield,
   Zap,
-  Eye,
-  EyeOff,
   Github,
   Globe
 } from 'lucide-react'
@@ -29,8 +25,7 @@ export default function SettingsPage() {
     aiModel: 'qwen-2.5',
     refreshRate: '10',
     notifications: true,
-    predictiveAccuracy: 'high',
-    apiKey: '••••••••••••••••'
+    predictiveAccuracy: 'high'
   })
 
   useEffect(() => {
@@ -43,8 +38,6 @@ export default function SettingsPage() {
       }
     }
   }, [])
-
-  const [showKey, setShowKey] = useState(false)
 
   const handleSave = () => {
     setSaveStatus('saving')
@@ -59,7 +52,6 @@ export default function SettingsPage() {
     { id: 'general', name: 'General', icon: SettingsIcon },
     { id: 'ai', name: 'AI Engine', icon: Cpu },
     { id: 'data', name: 'Data Feed', icon: Database },
-    { id: 'security', name: 'API Keys', icon: Lock },
     { id: 'notifications', name: 'Alerts', icon: Bell },
   ]
 
@@ -246,46 +238,6 @@ export default function SettingsPage() {
                     <div className="w-12 h-6 bg-racing-red rounded-full relative cursor-pointer opacity-50">
                        <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'security' && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-                <h3 className="font-bold flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-gray-500" />
-                  Environment Secrets
-                </h3>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">QWEN_API_KEY</label>
-                    <div className="relative">
-                      <input 
-                        type={showKey ? 'text' : 'password'}
-                        value={settings.apiKey}
-                        readOnly
-                        className="w-full bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-mono"
-                      />
-                      <button 
-                        onClick={() => setShowKey(!showKey)}
-                        className="absolute right-3 top-2.5 p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white"
-                      >
-                        {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-2 italic flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      Loaded from .env.local - Keys are never exposed in production logs
-                    </p>
-                  </div>
-
-                  <div className="pt-4 flex gap-4">
-                    <p className="text-[10px] text-gray-500 font-medium">System configuration is managed by the Kobayashi Core Data Integrity Module.</p>
                   </div>
                 </div>
               </div>
