@@ -1481,45 +1481,41 @@ export default function F1Page() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
-      {/* Header */}
-      <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10 sticky top-0 z-50">
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-5">
+      {/* Simplified Header */}
+      <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10">
+        <div className="container mx-auto px-4 md:px-6 py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-4 w-full md:w-auto">
-              <Link href="/" className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </Link>
+            <div className="flex items-center space-x-4">
               <div>
-                <h1 className="text-lg md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  KobayashiAI - F1
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  F1 Analytics
                 </h1>
                 <div className="flex items-center space-x-2 mt-0.5">
                   <p className="text-[10px] text-racing-red font-black tracking-widest uppercase">FORMULA 1</p>
                   {apiLoading ? (
-                    <div className="flex items-center space-x-1 text-[10px] text-blue-400">
+                    <div className="flex items-center space-x-1 text-blue-400">
                       <div className="animate-spin rounded-full h-2 w-2 border-b border-blue-400"></div>
-                      <span>Syncing...</span>
+                      <span className="text-xs">Loading...</span>
                     </div>
                   ) : useRealData ? (
-                    <div className="flex items-center space-x-1 text-[10px] text-green-400 font-bold uppercase tracking-tighter">
+                    <div className="flex items-center space-x-1 text-green-400">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                      <span>Live</span>
+                      <span className="text-xs">Live Data</span>
                     </div>
                   ) : (
-                    <div className="flex items-center space-x-1 text-[10px] text-yellow-500 font-bold uppercase tracking-tighter">
-                      <span>Offline</span>
+                    <div className="flex items-center space-x-1 text-yellow-500">
+                      <span className="text-xs">Mock Data</span>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-3 w-full md:w-auto">
+            
+            <div className="flex items-center space-x-3">
               <select
                 value={selectedTrack}
                 onChange={(e) => setSelectedTrack(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-racing-red w-full md:w-auto"
-                title="Select F1 Track"
+                className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
               >
                 {tracks.map(track => (
                   <option key={track.id} value={track.id}>
@@ -1528,58 +1524,6 @@ export default function F1Page() {
                 ))}
               </select>
             </div>
-          </div>
-
-          {/* Main App Navigation Tabs - Scrollable on mobile */}
-          <div className="flex space-x-6 mt-4 md:mt-6 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
-            <button
-              onClick={() => setActiveTab('upcoming')}
-              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'upcoming' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Calendar</span>
-              {activeTab === 'upcoming' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
-            </button>
-            <button
-              onClick={() => setActiveTab('builder')}
-              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'builder' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
-            >
-              <Target className="w-4 h-4" />
-              <span>Strategy</span>
-              {activeTab === 'builder' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'analytics' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Analytics</span>
-              {activeTab === 'analytics' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
-            </button>
-            <button
-              onClick={() => setActiveTab('ai')}
-              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'ai' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
-            >
-              <Brain className="w-4 h-4" />
-              <span>AI Oracle</span>
-              {activeTab === 'ai' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
-            </button>
-            <button
-              onClick={() => setActiveTab('practice')}
-              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'practice' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
-            >
-              <Clock className="w-4 h-4" />
-              <span>P&T Data</span>
-              {activeTab === 'practice' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
-            </button>
-            <button
-              onClick={() => setActiveTab('standings')}
-              className={`pb-3 flex items-center space-x-2 font-bold text-xs md:text-sm transition-colors relative ${activeTab === 'standings' ? 'text-racing-red' : 'text-gray-400 hover:text-white'}`}
-            >
-              <Trophy className="w-4 h-4" />
-              <span>Standings</span>
-              {activeTab === 'standings' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-racing-red rounded-full" />}
-            </button>
           </div>
         </div>
       </header>
