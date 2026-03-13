@@ -15,6 +15,9 @@ const WeatherControls = lazy(() => import('../components/WeatherControls'))
 const ToyotaGRLogo = lazy(() => import('../components/ToyotaGRLogo'))
 const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonPanel'))
 const RaceQASection = lazy(() => import('../components/RaceQASection'))
+const LiveDataTicker = lazy(() => import('../components/LiveDataTicker'))
+const WhatIfSimulator = lazy(() => import('../components/WhatIfSimulator'))
+const RaceVisualization = lazy(() => import('../components/RaceVisualization'))
 
 // Performance monitoring hook
 import { usePerformanceMonitoring } from '../hooks/usePerformanceMonitoring'
@@ -337,6 +340,33 @@ ${error.message || 'Could not connect to AI service'}`
                   race={selectedRace}
                   simulatedWeather={simulatedWeather}
                 />
+              </Suspense>
+            </div>
+
+            {/* Live Data Ticker */}
+            <div className="mb-8">
+              <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6">Loading live data...</div>}>
+                <LiveDataTicker 
+                  trackId={selectedTrack}
+                  drivers={['Max Verstappen', 'Lewis Hamilton', 'Charles Leclerc', 'Lando Norris']}
+                />
+              </Suspense>
+            </div>
+
+            {/* What-If Simulator */}
+            <div className="mb-8">
+              <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6">Loading simulator...</div>}>
+                <WhatIfSimulator 
+                  trackId={selectedTrack}
+                  drivers={['Max Verstappen', 'Lewis Hamilton', 'Charles Leclerc', 'Lando Norris']}
+                />
+              </Suspense>
+            </div>
+
+            {/* Race Visualization */}
+            <div className="mb-8">
+              <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6">Loading visualization...</div>}>
+                <RaceVisualization raceData={raceData.data[0]} />
               </Suspense>
             </div>
           </>
