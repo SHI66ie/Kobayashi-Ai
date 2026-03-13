@@ -33,9 +33,9 @@ interface RaceVisualizationProps {
 
 interface LapTimeData {
   lap: number
-  driver1: string
-  driver2: string
-  driver3: string
+  driver1: number
+  driver2: number
+  driver3: number
   sector1: number
   sector2: number
   sector3: number
