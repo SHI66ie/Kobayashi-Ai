@@ -328,6 +328,12 @@ ${error.message || 'Could not connect to AI service'}`
         {/* Lazy Loaded Components */}
         {raceData.data.length > 0 && (
           <>
+            <div className="mb-8">
+              <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6">Loading track map...</div>}>
+                <TrackMapViewer track={tracks.find(t => t.id === selectedTrack)?.name || selectedTrack} />
+              </Suspense>
+            </div>
+
             <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6 mb-8">Loading components...</div>}>
               <DriverComparisonPanel raceData={raceData.data[0]} />
             </Suspense>
