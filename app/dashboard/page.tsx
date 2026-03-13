@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import Link from 'next/link'
 import Papa from 'papaparse'
-import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft } from 'lucide-react'
+import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, MessageSquare } from 'lucide-react'
 
 // Lazy load heavy components for F1 optimization
 const SetupGuide = lazy(() => import('../components/SetupGuide'))
