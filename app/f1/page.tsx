@@ -367,21 +367,23 @@ export default function F1Page() {
 
   // Enhanced Weekend Schedule Parser
   const parseWeekendSchedule = (raceDate: string, format: string, track: string) => {
-    // Parse dates like "March 6-8, 2026" into session times
+    // Parse dates like "March 6-8, 2026" or "March 15, 2026" into session times
     const [monthDay, year] = raceDate.split(', ')
     const [month, days] = monthDay.split(' ')
-    const [startDay, endDay] = days.split('-').map(d => parseInt(d))
+    const dayParts = days.split('-').map(d => parseInt(d))
+    const startDay = dayParts[0]
+    const endDay = dayParts.length > 1 ? dayParts[1] : startDay
 
     const yearNum = parseInt(year)
     const monthIndex = new Date(`${month} 1, ${year}`).getMonth()
 
     // Standard F1 weekend schedule (times are approximate and may vary by track/timezone)
     const weekend = {
-      practice1: new Date(yearNum, monthIndex, startDay, 11, 30, 0), // Friday 11:30
-      practice2: new Date(yearNum, monthIndex, startDay + 1, 15, 0, 0), // Saturday 15:00
-      qualifying: new Date(yearNum, monthIndex, startDay + 1, 18, 0, 0), // Saturday 18:00
-      sprint: format === 'Sprint' ? new Date(yearNum, monthIndex, startDay + 1, 14, 30, 0) : null, // Saturday 14:30 for sprint weekends
-      race: new Date(yearNum, monthIndex, endDay || startDay + 2, 15, 0, 0) // Sunday 15:00
+      practice1: new Date(yearNum, monthIndex, startDay, 11, 30, 0), // Friday 11:30 (or same day if single day)
+      practice2: new Date(yearNum, monthIndex, endDay > startDay ? startDay + 1 : startDay, 15, 0, 0), // Saturday 15:00
+      qualifying: new Date(yearNum, monthIndex, endDay > startDay ? startDay + 1 : startDay, 18, 0, 0), // Saturday 18:00
+      sprint: format === 'Sprint' ? new Date(yearNum, monthIndex, endDay > startDay ? startDay + 1 : startDay, 14, 30, 0) : null,
+      race: new Date(yearNum, monthIndex, endDay, 15, 0, 0) // Sunday 15:00 (or the exact day if single day)
     }
 
     return weekend
@@ -1658,7 +1660,7 @@ export default function F1Page() {
                   <span>Weekend Schedule</span>
                 </h3>
                 <div className="text-sm text-gray-400">
-                  {upcomingRacesList[0]?.name} - {upcomingRacesList[0]?.date}
+                  {currentRace?.name} - {currentRace?.date}
                 </div>
               </div>
 
@@ -1724,7 +1726,7 @@ export default function F1Page() {
                 </div>
 
                 {/* Sprint (if applicable) */}
-                {upcomingRacesList[0]?.format === 'Sprint' && (
+                {currentRace?.format === 'Sprint' && (
                   <div className={`bg-gray-900/50 rounded-xl p-4 border ${sessionCountdowns.sprint.isLive ? 'border-purple-500/50 bg-purple-500/10' : 'border-gray-700'}`}>
                     <div className="text-center">
                       <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Sprint</div>
@@ -1902,7 +1904,7 @@ export default function F1Page() {
 
               {/* Timeline-style calendar */}
               <div className="space-y-6">
-                {(apiSessions.length > 0 ? raceList.slice(0, 5) : upcomingRacesList.slice(0, 5)).map((race, i) => {
+                {(apiSessions.length > 0 ? raceList.slice(currentRaceIndex, currentRaceIndex + 5) : upcomingRacesList.slice(currentRaceIndex, currentRaceIndex + 5)).map((race, i) => {
                   const isCurrentNext = nextEvent && race.name === nextEvent.session_name;
                   const isNextRace = i === 0;
 
