@@ -350,7 +350,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       )}
                       
                       <button 
-                        onClick={() => window.open('/standings', '_blank')}
+                        onClick={() => window.location.href = '/standings'}
                         className="w-full mt-4 text-center text-sm text-racing-red hover:text-racing-red/80 font-medium cursor-pointer transition-colors"
                       >
                         View Full Standings →
