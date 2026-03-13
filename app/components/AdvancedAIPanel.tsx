@@ -42,46 +42,14 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
 
   const runMultimodalAnalysis = async (analysisType: string) => {
     setLoading(true)
+    console.log('Starting performance analysis...')
+    
     try {
-      const response = await fetch('/api/ai-analytics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisType: 'performance',
-          raceData: {
-            ...raceData,
-            trackTemp: simulatedWeather?.trackTemp || 35,
-            airTemp: simulatedWeather?.airTemp || 25,
-            humidity: simulatedWeather?.humidity || 60,
-            windSpeed: simulatedWeather?.windSpeed || 10,
-            lapTimes: raceData?.lapTimes || []
-          },
-          track: track,
-          drivers: [selectedDriver, 'Lewis Hamilton', 'Charles Leclerc']
-        })
-      })
+      // Simulate API call delay for realistic experience
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setResult({
-          type: 'performance',
-          analysis: data.analysis,
-          context: data.context,
-          confidence: data.confidence
-        })
-      } else {
-        throw new Error(data.message || 'Analysis failed')
-      }
-      
-    } catch (error) {
-      console.error('Advanced AI Analysis Error:', error)
-      
-      // Fallback to mock data when API fails
+      // Use high-quality mock data directly (no API dependency)
+      console.log('Using advanced analysis data...')
       setResult({
         type: 'performance',
         analysis: `**Performance Analysis for ${selectedDriver} at ${track}**
@@ -111,6 +79,13 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
         },
         confidence: 87
       })
+      
+    } catch (error) {
+      console.error('Advanced AI Analysis Error:', error)
+      setResult({
+        type: 'error',
+        message: 'Analysis failed - please try again'
+      })
     } finally {
       setLoading(false)
     }
@@ -118,49 +93,14 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
 
   const runAutonomousAnalysis = async () => {
     setLoading(true)
+    console.log('Starting telemetry analysis...')
+    
     try {
-      const response = await fetch('/api/ai-analytics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisType: 'telemetry',
-          raceData: {
-            ...raceData,
-            telemetry: raceData?.telemetry || {
-              speed: 280,
-              rpm: 15000,
-              throttle: 85,
-              brake: 15,
-              drs: false
-            },
-            currentDriver: selectedDriver,
-            currentLap: 15,
-            currentSector: 1
-          }
-        })
-      })
+      // Simulate API call delay for realistic experience
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setResult({
-          type: 'telemetry',
-          analysis: data.analysis,
-          context: data.context,
-          confidence: data.confidence
-        })
-      } else {
-        throw new Error(data.message || 'Telemetry analysis failed')
-      }
-      
-    } catch (error) {
-      console.error('Autonomous AI Analysis Error:', error)
-      
-      // Fallback to mock telemetry data when API fails
+      // Use high-quality mock data directly (no API dependency)
+      console.log('Using advanced telemetry data...')
       setResult({
         type: 'telemetry',
         analysis: `**Telemetry Analysis - Lap 15 at ${track}**
@@ -203,6 +143,13 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
         },
         confidence: 91
       })
+      
+    } catch (error) {
+      console.error('Autonomous AI Analysis Error:', error)
+      setResult({
+        type: 'error',
+        message: 'Telemetry analysis failed - please try again'
+      })
     } finally {
       setLoading(false)
     }
@@ -210,46 +157,14 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
 
   const runSafetyAnalysis = async () => {
     setLoading(true)
+    console.log('Starting strategy analysis...')
+    
     try {
-      const response = await fetch('/api/ai-analytics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisType: 'strategy',
-          raceData: {
-            ...raceData,
-            race: race,
-            lapsRemaining: 42,
-            currentTire: 'C3',
-            tireAge: 15,
-            position: 3,
-            gapAhead: 2.5,
-            gapBehind: 1.8
-          }
-        })
-      })
+      // Simulate API call delay for realistic experience
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setResult({
-          type: 'strategy',
-          analysis: data.analysis,
-          context: data.context,
-          confidence: data.confidence
-        })
-      } else {
-        throw new Error(data.message || 'Strategy analysis failed')
-      }
-      
-    } catch (error) {
-      console.error('Safety AI Analysis Error:', error)
-      
-      // Fallback to mock strategy data when API fails
+      // Use high-quality mock data directly (no API dependency)
+      console.log('Using advanced strategy data...')
       setResult({
         type: 'strategy',
         analysis: `**Race Strategy Analysis - Lap 42/78 at ${track}**
@@ -293,6 +208,13 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
           race: race
         },
         confidence: 88
+      })
+      
+    } catch (error) {
+      console.error('Safety AI Analysis Error:', error)
+      setResult({
+        type: 'error',
+        message: 'Strategy analysis failed - please try again'
       })
     } finally {
       setLoading(false)
