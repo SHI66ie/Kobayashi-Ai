@@ -2633,6 +2633,81 @@ export default function F1Page() {
         {/* DATA ANALYTICS DASHBOARD - Race Data Display */}
         {activeTab === 'analytics' && (
           <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Full Race Calendar */}
+            <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-5 h-5 text-racing-red" />
+                  <h2 className="text-xl font-bold tracking-tight">2026 F1 Race Calendar</h2>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <span className="text-xs text-gray-400">Sprint Weekend</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                    <span className="text-xs text-gray-400">Standard</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingRacesList.map((race) => (
+                  <div key={race.id} className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 hover:border-racing-red/50 transition-all duration-200 group cursor-pointer">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{getCountryFlag(race.country)}</span>
+                        <div>
+                          <h3 className="font-bold text-white group-hover:text-racing-red transition-colors">{race.name}</h3>
+                          <p className="text-sm text-gray-400">{race.track}</p>
+                        </div>
+                      </div>
+                      <div className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        race.format === 'Sprint' 
+                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                          : 'bg-gray-700/50 text-gray-300'
+                      }`}>
+                        {race.format}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="text-gray-400">
+                        <div className="flex items-center space-x-1 mb-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>{race.date}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Trophy className="w-3 h-3" />
+                          <span>{race.leader}</span>
+                        </div>
+                      </div>
+                      {race.format === 'Sprint' && (
+                        <div className="text-orange-400 text-xs font-medium">
+                          Sprint Race
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-gray-800/30 rounded-lg border border-gray-700">
+                <h4 className="font-bold text-white mb-2">2026 Sprint Weekends</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {upcomingRacesList
+                    .filter(race => race.format === 'Sprint')
+                    .map(race => (
+                      <div key={race.id} className="text-center p-2 bg-orange-500/10 rounded border border-orange-500/20">
+                        <div className="text-lg mb-1">{getCountryFlag(race.country)}</div>
+                        <div className="text-xs text-orange-400 font-medium">{race.name.replace(' GP', '')}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
             {/* Control Panel */}
             <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
