@@ -17,14 +17,15 @@ import {
   Github,
   Globe
 } from 'lucide-react'
+import { useTheme } from '../components/ThemeProvider'
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme()
   const [activeSection, setActiveSection] = useState('general')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   
-  // Settings state (mocking local persistence)
+  // Settings state
   const [settings, setSettings] = useState({
-    theme: 'dark',
     aiModel: 'qwen-2.5',
     refreshRate: '10',
     notifications: true,
@@ -32,10 +33,22 @@ export default function SettingsPage() {
     apiKey: '••••••••••••••••'
   })
 
+  useEffect(() => {
+    const saved = localStorage.getItem('kb-settings')
+    if (saved) {
+      try {
+        setSettings(JSON.parse(saved))
+      } catch (e) {
+        console.error('Failed to load settings', e)
+      }
+    }
+  }, [])
+
   const [showKey, setShowKey] = useState(false)
 
   const handleSave = () => {
     setSaveStatus('saving')
+    localStorage.setItem('kb-settings', JSON.stringify(settings))
     setTimeout(() => {
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
@@ -119,8 +132,8 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Choose your preferred visual appearance</p>
                   </div>
                   <select 
-                    value={settings.theme}
-                    onChange={(e) => setSettings({...settings, theme: e.target.value})}
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value as any)}
                     className="bg-gray-100 dark:bg-gray-700 border-none rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-racing-red"
                   >
                     <option value="dark">F1 Night Mode (Dark)</option>
