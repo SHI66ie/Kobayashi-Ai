@@ -35,9 +35,6 @@ const nextConfig = {
     },
   },
 
-  // Optimize output
-  output: 'standalone',
-
   // Enable powered by header for caching
   poweredByHeader: false,
 }
