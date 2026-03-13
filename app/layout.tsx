@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import DashboardLayout from './components/DashboardLayout'
+import { ThemeProvider } from './components/ThemeProvider'
 
 // Optimize font loading
 const inter = Inter({ 
@@ -74,9 +75,11 @@ export default function RootLayout({
           <div className="h-full bg-racing-red animate-pulse" style={{width: '0%'}}></div>
         </div>
         
-        <DashboardLayout>
-          {children}
-        </DashboardLayout>
+        <ThemeProvider>
+          <DashboardLayout>
+            {children}
+          </DashboardLayout>
+        </ThemeProvider>
         
         {/* Performance monitoring script */}
         <script dangerouslySetInnerHTML={{
