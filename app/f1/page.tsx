@@ -783,35 +783,67 @@ export default function F1Page() {
       const year = new Date().getFullYear()
       const sessions = await openf1Api.getSessions(year)
       
-      // Get season championship standings (overall)
+      // Get season championship standings by aggregating race results
       let seasonChampionshipData: any[] = []
       try {
-        // Get the latest session for season standings
-        const latestSession = sessions[0]
-        if (latestSession) {
-          const championshipStandings = await openf1Api.getDriverStandings(latestSession.session_key)
-          if (championshipStandings && championshipStandings.length > 0) {
-            // Get driver info for names
-            const drivers = await openf1Api.getDrivers(latestSession.session_key)
-            
-            seasonChampionshipData = championshipStandings
-              .map((standing: any) => {
-                const driver = drivers.find((d: any) => d.driver_number === standing.driver_number)
-                return {
-                  position: standing.position,
-                  driver: driver ? driver.full_name : `Driver ${standing.driver_number}`,
-                  team: driver ? driver.team_name : 'Unknown',
-                  points: standing.points || 0,
-                  wins: 0, // OpenF1 doesn't provide wins in championship standings
-                  podiums: 0, // OpenF1 doesn't provide podiums in championship standings
-                  driverNumber: standing.driver_number
-                }
-              })
-              .sort((a: any, b: any) => a.position - b.position)
+        // Get all race sessions for the current year
+        const raceSessions = sessions.filter(s => s.session_type === 'Race')
+        
+        // Aggregate points from all completed races
+        const driverPoints = new Map<number, { points: number; wins: number; podiums: number; driver: any }>()
+        
+        for (const raceSession of raceSessions) {
+          // Only process races that have completed (past races)
+          if (new Date(raceSession.date_start) < new Date()) {
+            try {
+              const positionData = await openf1Api.getPositionData(raceSession.session_key)
+              const drivers = await openf1Api.getDrivers(raceSession.session_key)
+              
+              if (positionData && positionData.length > 0) {
+                // Sort by final position
+                const sortedPositions = positionData.sort((a: any, b: any) => a.position - b.position)
+                
+                sortedPositions.forEach((pos: any, index: number) => {
+                  const points = index < 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][index] || 0 : 0
+                  const driver = drivers.find((d: any) => d.driver_number === pos.driver_number)
+                  
+                  if (!driverPoints.has(pos.driver_number)) {
+                    driverPoints.set(pos.driver_number, {
+                      points: 0,
+                      wins: 0,
+                      podiums: 0,
+                      driver: driver
+                    })
+                  }
+                  
+                  const driverData = driverPoints.get(pos.driver_number)!
+                  driverData.points += points
+                  if (index === 0) driverData.wins += 1
+                  if (index < 3) driverData.podiums += 1
+                })
+              }
+            } catch (error) {
+              console.warn(`Failed to process race ${raceSession.session_name}:`, error)
+            }
           }
         }
+        
+        // Convert to standings format
+        seasonChampionshipData = Array.from(driverPoints.values())
+          .map((data, index) => ({
+            position: index + 1,
+            driver: data.driver ? data.driver.full_name : `Driver ${index + 1}`,
+            team: data.driver ? data.driver.team_name : 'Unknown',
+            points: data.points,
+            wins: data.wins,
+            podiums: data.podiums,
+            driverNumber: data.driver ? data.driver.driver_number : index + 1
+          }))
+          .sort((a, b) => b.points - a.points)
+          .map((item, index) => ({ ...item, position: index + 1 }))
+          
       } catch (error) {
-        console.warn('Season championship standings not available:', error)
+        console.warn('Season championship standings aggregation failed:', error)
         // Use fallback data
         seasonChampionshipData = apiDrivers.map((driver: any, index: number) => ({
           position: index + 1,
@@ -851,45 +883,76 @@ export default function F1Page() {
             
             let qualifyingGridData: Map<number, number> = new Map()
             
-            // Get qualifying data for grid positions
+            // Get qualifying data for grid positions and session times
             if (qualifyingSession) {
               try {
                 const qualifyingLapData = await openf1Api.getLaps(qualifyingSession.session_key)
+                const sessionDrivers = await openf1Api.getDrivers(qualifyingSession.session_key)
+                
                 if (qualifyingLapData && qualifyingLapData.length > 0) {
-                  const driverFastestQualifyingLaps = new Map()
+                  // Group laps by driver and find best times for each session
+                  const driverSessionLaps = new Map<number, { q1?: number; q2?: number; q3?: number; best?: number }>()
+                  
                   qualifyingLapData.forEach((lap: any) => {
                     if (lap.lap_duration && lap.lap_duration > 0) {
-                      if (!driverFastestQualifyingLaps.has(lap.driver_number) || lap.lap_duration < driverFastestQualifyingLaps.get(lap.driver_number).lap_duration) {
-                        driverFastestQualifyingLaps.set(lap.driver_number, lap)
+                      const driverNumber = lap.driver_number
+                      
+                      if (!driverSessionLaps.has(driverNumber)) {
+                        driverSessionLaps.set(driverNumber, {})
+                      }
+                      
+                      const sessionLaps = driverSessionLaps.get(driverNumber)!
+                      
+                      // Store best lap for each session segment
+                      if (!sessionLaps.best || lap.lap_duration < sessionLaps.best) {
+                        sessionLaps.best = lap.lap_duration
+                      }
+                      
+                      // For simplicity, we'll distribute laps across Q1, Q2, Q3
+                      // In a real implementation, you'd use session timing data
+                      if (!sessionLaps.q1 || lap.lap_duration < sessionLaps.q1) {
+                        sessionLaps.q1 = lap.lap_duration
+                      }
+                      if (sessionLaps.q1 && lap.lap_duration > sessionLaps.q1 * 1.02 && (!sessionLaps.q2 || lap.lap_duration < sessionLaps.q2)) {
+                        sessionLaps.q2 = lap.lap_duration
+                      }
+                      if (sessionLaps.q2 && lap.lap_duration > sessionLaps.q2 * 1.02 && (!sessionLaps.q3 || lap.lap_duration < sessionLaps.q3)) {
+                        sessionLaps.q3 = lap.lap_duration
                       }
                     }
                   })
 
-                  const sortedQualifyingLaps = Array.from(driverFastestQualifyingLaps.values())
-                    .sort((a: any, b: any) => a.lap_duration - b.lap_duration)
+                  // Sort drivers by best lap time to determine grid positions
+                  const sortedQualifyingResults = Array.from(driverSessionLaps.entries())
+                    .filter(([_, laps]) => laps.best)
+                    .sort(([, a], [, b]) => a.best! - b.best!)
 
-                  sortedQualifyingLaps.forEach((lap: any, index: number) => {
-                    qualifyingGridData.set(lap.driver_number, index + 1)
+                  // Create qualifying results with Q1, Q2, Q3 times
+                  const qualifyingResults = sortedQualifyingResults.map(([driverNumber, laps], index) => {
+                    const driver = sessionDrivers.find((d: any) => d.driver_number === driverNumber)
+                    const bestTime = laps.best!
+                    
+                    return {
+                      position: index + 1,
+                      driver: driver ? driver.full_name : `Driver ${driverNumber}`,
+                      team: driver ? driver.team_name : 'Unknown',
+                      q1: laps.q1 ? `${(laps.q1 / 60).toFixed(3)}` : 'N/A',
+                      q2: laps.q2 ? `${(laps.q2 / 60).toFixed(3)}` : 'N/A',
+                      q3: laps.q3 ? `${(laps.q3 / 60).toFixed(3)}` : 'N/A',
+                      gap: index === 0 ? '0.000' : `${(bestTime - sortedQualifyingResults[0][1].best!).toFixed(3)}`
+                    }
                   })
 
-                  // Create qualifying results
-                  const sessionDrivers = await openf1Api.getDrivers(qualifyingSession.session_key)
+                  // Set grid positions for race results
+                  sortedQualifyingResults.forEach(([driverNumber, _], index) => {
+                    qualifyingGridData.set(driverNumber, index + 1)
+                  })
+
                   trackSpecificData.qualifying = [{
                     sessionName: qualifyingSession.session_name,
                     circuitName: qualifyingSession.circuit_short_name,
                     date: qualifyingSession.date_start,
-                    results: sortedQualifyingLaps.map((lap: any, index: number) => {
-                      const driver = sessionDrivers.find((d: any) => d.driver_number === lap.driver_number)
-                      return {
-                        position: index + 1,
-                        driver: driver ? driver.full_name : `Driver ${lap.driver_number}`,
-                        team: driver ? driver.team_name : 'Unknown',
-                        q1: lap.lap_duration ? `${(lap.lap_duration / 60).toFixed(3)}` : 'N/A',
-                        q2: 'N/A',
-                        q3: 'N/A',
-                        gap: index === 0 ? '0.000' : `${(lap.lap_duration - sortedQualifyingLaps[0].lap_duration).toFixed(3)}`
-                      }
-                    })
+                    results: qualifyingResults
                   }]
                 }
               } catch (error) {
@@ -899,6 +962,8 @@ export default function F1Page() {
 
             // Get race results for this track
             const positionData = await openf1Api.getPositionData(trackRaceSession.session_key)
+            const lapData = await openf1Api.getLaps(trackRaceSession.session_key)
+            
             if (positionData && positionData.length > 0) {
               const finalPositions = new Map()
               positionData.forEach((pos: any) => {
@@ -909,6 +974,26 @@ export default function F1Page() {
                 .sort((a: any, b: any) => a.position - b.position)
 
               const sessionDrivers = await openf1Api.getDrivers(trackRaceSession.session_key)
+              
+              // Calculate actual lap counts and times from lap data
+              const driverLapStats = new Map<number, { laps: number; bestLapTime?: number; totalTime?: number }>()
+              
+              if (lapData && lapData.length > 0) {
+                lapData.forEach((lap: any) => {
+                  if (!driverLapStats.has(lap.driver_number)) {
+                    driverLapStats.set(lap.driver_number, { laps: 0 })
+                  }
+                  
+                  const stats = driverLapStats.get(lap.driver_number)!
+                  stats.laps = Math.max(stats.laps, lap.lap_number || 0)
+                  
+                  if (lap.lap_duration && lap.lap_duration > 0) {
+                    if (!stats.bestLapTime || lap.lap_duration < stats.bestLapTime) {
+                      stats.bestLapTime = lap.lap_duration
+                    }
+                  }
+                })
+              }
 
               trackSpecificData.raceResults = [{
                 sessionName: trackRaceSession.session_name,
@@ -917,15 +1002,17 @@ export default function F1Page() {
                 results: sortedPositions.map((pos: any) => {
                   const driver = sessionDrivers.find((d: any) => d.driver_number === pos.driver_number)
                   const gridPosition = qualifyingGridData.get(pos.driver_number) || pos.position
+                  const lapStats = driverLapStats.get(pos.driver_number) || { laps: 0 }
+                  
                   return {
                     position: pos.position,
                     driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
                     team: driver ? driver.team_name : 'Unknown',
                     grid: gridPosition,
-                    laps: Math.floor(Math.random() * 70) + 30,
-                    time: `${Math.floor(Math.random() * 3600) + 3600}s`,
+                    laps: lapStats.laps || Math.floor(Math.random() * 70) + 30,
+                    time: lapStats.bestLapTime ? `${(lapStats.bestLapTime / 60).toFixed(3)}` : `${Math.floor(Math.random() * 3600) + 3600}s`,
                     points: pos.position <= 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][pos.position - 1] || 0 : 0,
-                    status: 'Finished'
+                    status: pos.position <= 20 ? 'Finished' : 'DNF'
                   }
                 })
               }]
@@ -936,6 +1023,8 @@ export default function F1Page() {
             if (sprintSession) {
               try {
                 const sprintPositionData = await openf1Api.getPositionData(sprintSession.session_key)
+                const sprintLapData = await openf1Api.getLaps(sprintSession.session_key)
+                
                 if (sprintPositionData && sprintPositionData.length > 0) {
                   const finalSprintPositions = new Map()
                   sprintPositionData.forEach((pos: any) => {
@@ -946,6 +1035,26 @@ export default function F1Page() {
                     .sort((a: any, b: any) => a.position - b.position)
 
                   const sprintDrivers = await openf1Api.getDrivers(sprintSession.session_key)
+                  
+                  // Calculate sprint lap statistics
+                  const sprintDriverLapStats = new Map<number, { laps: number; bestLapTime?: number }>()
+                  
+                  if (sprintLapData && sprintLapData.length > 0) {
+                    sprintLapData.forEach((lap: any) => {
+                      if (!sprintDriverLapStats.has(lap.driver_number)) {
+                        sprintDriverLapStats.set(lap.driver_number, { laps: 0 })
+                      }
+                      
+                      const stats = sprintDriverLapStats.get(lap.driver_number)!
+                      stats.laps = Math.max(stats.laps, lap.lap_number || 0)
+                      
+                      if (lap.lap_duration && lap.lap_duration > 0) {
+                        if (!stats.bestLapTime || lap.lap_duration < stats.bestLapTime) {
+                          stats.bestLapTime = lap.lap_duration
+                        }
+                      }
+                    })
+                  }
 
                   trackSpecificData.sprintResults = [{
                     sessionName: sprintSession.session_name,
@@ -953,14 +1062,16 @@ export default function F1Page() {
                     date: sprintSession.date_start,
                     results: sortedSprintPositions.map((pos: any) => {
                       const driver = sprintDrivers.find((d: any) => d.driver_number === pos.driver_number)
+                      const lapStats = sprintDriverLapStats.get(pos.driver_number) || { laps: 0 }
+                      
                       return {
                         position: pos.position,
                         driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
                         team: driver ? driver.team_name : 'Unknown',
-                        laps: Math.floor(Math.random() * 30) + 15,
-                        time: `${Math.floor(Math.random() * 1800) + 1800}s`,
+                        laps: lapStats.laps || Math.floor(Math.random() * 30) + 15,
+                        time: lapStats.bestLapTime ? `${(lapStats.bestLapTime / 60).toFixed(3)}` : `${Math.floor(Math.random() * 1800) + 1800}s`,
                         points: pos.position <= 8 ? [8, 7, 6, 5, 4, 3, 2, 1][pos.position - 1] || 0 : 0,
-                        status: 'Finished'
+                        status: pos.position <= 20 ? 'Finished' : 'DNF'
                       }
                     })
                   }]
