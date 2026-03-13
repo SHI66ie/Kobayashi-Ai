@@ -366,7 +366,13 @@ ${error.message || 'Could not connect to AI service'}`
             {/* Race Visualization */}
             <div className="mb-8">
               <Suspense fallback={<div className="animate-pulse bg-gray-800 rounded-lg p-6">Loading visualization...</div>}>
-                <RaceVisualization raceData={raceData.data[0]} />
+                <RaceVisualization 
+                  trackId={selectedTrack}
+                  trackName={selectedRace}
+                  driverData={raceData.data[0]?.drivers || []}
+                  telemetryData={raceData.data[0]?.telemetry || []}
+                  weatherData={raceData.data[0]?.weather || {}}
+                />
               </Suspense>
             </div>
           </>
