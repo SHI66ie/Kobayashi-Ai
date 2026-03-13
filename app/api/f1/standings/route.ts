@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     try {
       const raceResultsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/f1/race-results?season=${season}`)
       raceData = await raceResultsResponse.json()
-      
+
       if (!raceData.success) {
         throw new Error('Failed to fetch race results')
       }
@@ -94,16 +94,16 @@ export async function GET(request: NextRequest) {
     }
 
     const completedRaces = raceData.races.filter((race: any) => race.status === 'completed')
-    
+
     // Calculate driver standings based on race results
-    const driverPointsMap = new Map<string, { 
-      driver: string, 
-      team: string, 
-      nationality: string, 
-      countryFlag: string, 
-      points: number, 
-      wins: number, 
-      podiums: number 
+    const driverPointsMap = new Map<string, {
+      driver: string,
+      team: string,
+      nationality: string,
+      countryFlag: string,
+      points: number,
+      wins: number,
+      podiums: number
     }>()
 
     // Initialize all drivers
@@ -159,8 +159,7 @@ export async function GET(request: NextRequest) {
       .map((driver, index) => ({
         ...driver,
         position: index + 1,
-        driverCode: driver.driver.split(' ').map((n: string) => n[0]).join(''),
-        image: `/api/f1/driver-image/${driver.driver.toLowerCase().replace(' ', '-').replace('.', '')}`
+        driverCode: driver.driver.split(' ').map((n: string) => n[0]).join('')
       }))
 
     if (type === 'drivers') {
@@ -247,8 +246,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching F1 standings:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to fetch standings data',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -284,8 +283,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error updating F1 standings:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to update standings',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
