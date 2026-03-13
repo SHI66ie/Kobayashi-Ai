@@ -186,70 +186,6 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
     return 'Conservative'
   }
 
-  const runAutonomousAnalysis = async (mode: string) => {
-    setLoading(true)
-    try {
-      const weatherData = simulatedWeather || raceData?.weather || {}
-      const response = await fetch('/api/ai-autonomous', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          weather: weatherData,
-          isSimulated: !!simulatedWeather,
-          sensorData: {
-            lidar: true,
-            camera: true,
-            radar: true,
-            gps: 'Active',
-            imu: 'Calibrated'
-          },
-          vehicleState: {
-            speed: 180,
-            position: 'Turn 7 approach',
-            heading: 45,
-            acceleration: -0.5,
-            steeringAngle: 15,
-            brakesPressure: 25,
-            throttlePosition: 75
-          },
-          trackMap: {
-            width: 12,
-            racingLine: 'Optimal',
-            upcomingCorners: ['Turn 7: Right, 90°', 'Turn 8: Left, 45°'],
-            trackLimits: 'Enforced',
-            drsZones: ['Main Straight', 'Back Straight']
-          },
-          trafficData: {
-            nearbyVehicles: [
-              { id: 'Car_23', distance: 50, position: 'ahead' },
-              { id: 'Car_17', distance: 30, position: 'behind' }
-            ],
-            overtakingOpportunities: 'Turn 8 exit',
-            safetyGaps: { front: 1.2, rear: 0.8 }
-          },
-          missionGoal: {
-            primary: 'Overtake Car_23',
-            secondary: 'Maintain tire condition',
-            targetPosition: 2,
-            riskTolerance: 'Medium'
-          },
-          safetyConstraints: {
-            maxGForce: 2.5,
-            minFollowingDistance: 1.5,
-            trackLimitsEnforcement: 'Strict'
-          },
-          mode
-        })
-      })
-      const data = await response.json()
-      setResult(data)
-    } catch (error) {
-      console.error('Autonomous analysis error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const aiModes = [
     {
       id: 'multimodal' as const,
@@ -337,7 +273,7 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
   const renderAutonomousControls = () => (
     <div className="grid grid-cols-1 gap-3">
       <button
-        onClick={() => runAutonomousAnalysis('autonomous_racing')}
+        onClick={() => runAutonomousAnalysis()}
         disabled={loading}
         className="p-4 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg border border-blue-500/30 transition-colors"
       >
@@ -351,7 +287,7 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
       </button>
       
       <button
-        onClick={() => runAutonomousAnalysis('pit_crew_ai')}
+        onClick={() => runAutonomousAnalysis()}
         disabled={loading}
         className="p-4 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg border border-blue-500/30 transition-colors"
       >
@@ -365,7 +301,7 @@ export default function AdvancedAIPanel({ raceData, track, race, simulatedWeathe
       </button>
       
       <button
-        onClick={() => runAutonomousAnalysis('race_engineer')}
+        onClick={() => runAutonomousAnalysis()}
         disabled={loading}
         className="p-4 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg border border-blue-500/30 transition-colors"
       >
