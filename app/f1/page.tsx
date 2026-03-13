@@ -582,6 +582,14 @@ export default function F1Page() {
     setActiveTab('builder');
   };
 
+  const handleViewSession = (trackId: string, sessionType: 'qualifying' | 'race' | 'sprint' | 'all') => {
+    setSelectedTrack(trackId);
+    setSelectedRaceForStandings(trackId);
+    setStandingsView('track');
+    setSelectedSessionType(sessionType);
+    setActiveTab('standings');
+  };
+
   // Helper function to get country flag emoji
   const getCountryFlag = (country: string) => {
     const flags: { [key: string]: string } = {
@@ -1958,21 +1966,42 @@ export default function F1Page() {
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-3">
-                          <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-gray-700/50 text-gray-300'}`}>
-                            {race.format}
+                        <div className="flex flex-col items-end space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${race.format === 'Sprint' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-gray-700/50 text-gray-300'}`}>
+                              {race.format}
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5">
+                                {apiSessions.length > 0 ? 'Circuit' : 'Alpha Leader'}
+                              </div>
+                              <div className="text-xs font-black text-gray-300">
+                                {apiSessions.length > 0 ? race.country : race.leader.split(' ').pop()}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="text-right">
-                            <div className="text-sm text-gray-400 mb-1">
-                              {apiSessions.length > 0 ? 'Circuit' : 'Prediction'}
-                            </div>
-                            <div className="text-sm font-medium text-gray-300">
-                              {apiSessions.length > 0 ? race.country : race.leader.split(' ').pop()}
-                            </div>
+                          {/* Session Quick Links */}
+                          <div className="flex items-center gap-1.5">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'qualifying'); }}
+                              className="px-2 py-1 bg-white/5 hover:bg-racing-blue/20 border border-white/10 hover:border-racing-blue/40 rounded text-[10px] font-black text-gray-400 hover:text-white transition-all uppercase"
+                            >
+                              Qualy
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'race'); }}
+                              className="px-2 py-1 bg-white/5 hover:bg-racing-red/20 border border-white/10 hover:border-racing-red/40 rounded text-[10px] font-black text-gray-400 hover:text-white transition-all uppercase"
+                            >
+                              Race
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'all'); }}
+                              className="px-2 py-1 bg-white/5 hover:bg-yellow-500/20 border border-white/10 hover:border-yellow-500/40 rounded text-[10px] font-black text-gray-400 hover:text-white transition-all uppercase"
+                            >
+                              Standings
+                            </button>
                           </div>
-
-                          <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-racing-red group-hover:translate-x-1 transition-all transform rotate-180" />
                         </div>
                       </div>
 
@@ -2687,11 +2716,34 @@ export default function F1Page() {
                           <span>{race.leader}</span>
                         </div>
                       </div>
-                      {race.format === 'Sprint' && (
-                        <div className="text-orange-400 text-xs font-medium">
-                          Sprint Race
+                      
+                      <div className="flex flex-col items-end gap-2">
+                        {race.format === 'Sprint' && (
+                          <div className="text-orange-400 text-[10px] font-black uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                            Sprint Weekend
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'qualifying'); }}
+                            className="p-1.5 bg-gray-900 border border-gray-700 hover:border-racing-blue rounded text-[10px] font-black text-gray-500 hover:text-racing-blue transition-all"
+                          >
+                            Q
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'race'); }}
+                            className="p-1.5 bg-gray-900 border border-gray-700 hover:border-racing-red rounded text-[10px] font-black text-gray-500 hover:text-racing-red transition-all"
+                          >
+                            R
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'all'); }}
+                            className="p-1.5 bg-gray-900 border border-gray-700 hover:border-yellow-500 rounded text-[10px] font-black text-gray-500 hover:text-yellow-500 transition-all"
+                          >
+                            S
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))}
