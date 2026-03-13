@@ -79,22 +79,32 @@ const RaceVisualization: React.FC<RaceVisualizationProps> = ({
 
   // Generate mock data based on track characteristics
   const generateLapTimeData = (): LapTimeData[] => {
-    const baseLapTime = trackId === 'monaco' ? 78 : trackId === 'spa' ? 108 : trackId === 'monza' ? 83 : 95
+    const baseLapTime = trackId === 'monaco' ? 74.5 : trackId === 'spa' ? 104.2 : trackId === 'monza' ? 81.1 : 92.4
     const data: LapTimeData[] = []
     
     for (let lap = 1; lap <= 66; lap++) {
-      const degradation = lap * 0.15
-      const fuelEffect = (66 - lap) * 0.08
-      const randomVariation = (Math.random() - 0.5) * 2
+      // Predictable trends: tires get slower, fuel gets lighter (faster)
+      const degradation = lap * 0.08 
+      const fuelEffect = (66 - lap) * 0.06
+      
+      // Driver specific offsets for variety
+      const d1Offset = 0
+      const d2Offset = 0.4 + (Math.sin(lap * 0.2) * 0.3) // Mercedes slightly inconsistent
+      const d3Offset = 0.2 + (lap > 40 ? 0.8 : 0) // Ferrari tire falloff after lap 40
+      
+      const genTime = (base: number, offset: number) => {
+        const randomNoise = (Math.random() - 0.5) * 0.4
+        return parseFloat((base + degradation - fuelEffect + offset + randomNoise).toFixed(3))
+      }
       
       data.push({
         lap,
-        driver1: (baseLapTime + degradation - fuelEffect + randomVariation + (Math.random() - 0.5) * 3).toFixed(3),
-        driver2: (baseLapTime + degradation - fuelEffect + randomVariation + (Math.random() - 0.5) * 3).toFixed(3),
-        driver3: (baseLapTime + degradation - fuelEffect + randomVariation + (Math.random() - 0.5) * 3).toFixed(3),
-        sector1: Math.floor(Math.random() * 30) + 20,
-        sector2: Math.floor(Math.random() * 35) + 25,
-        sector3: Math.floor(Math.random() * 25) + 15,
+        driver1: genTime(baseLapTime, d1Offset),
+        driver2: genTime(baseLapTime, d2Offset),
+        driver3: genTime(baseLapTime, d3Offset),
+        sector1: parseFloat((25 + (Math.random() - 0.5) * 2).toFixed(2)),
+        sector2: parseFloat((32 + (Math.random() - 0.5) * 3).toFixed(2)),
+        sector3: parseFloat((19 + (Math.random() - 0.5) * 1).toFixed(2)),
         compound: lap <= 25 ? 'Soft' : lap <= 45 ? 'Medium' : 'Hard'
       })
     }
@@ -219,16 +229,48 @@ const RaceVisualization: React.FC<RaceVisualizationProps> = ({
       </div>
       
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={lapTimeData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="lap" stroke="#9CA3AF" />
-          <YAxis stroke="#9CA3AF" domain={['dataMin - 1', 'dataMax + 1']} />
+        <LineChart data={lapTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+          <XAxis 
+            dataKey="lap" 
+            stroke="#9CA3AF" 
+            tick={{fontSize: 10}}
+            label={{ value: 'Lap Number', position: 'insideBottomRight', offset: -5, fill: '#6B7280', fontSize: 10 }}
+          />
+          <YAxis 
+            stroke="#9CA3AF" 
+            domain={['auto', 'auto']} 
+            tick={{fontSize: 10}}
+            tickFormatter={(value) => `${value}s`}
+          />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
-          <Line type="monotone" dataKey="driver1" stroke="#EF4444" strokeWidth={2} dot={false} name="Max Verstappen" />
-          <Line type="monotone" dataKey="driver2" stroke="#3B82F6" strokeWidth={2} dot={false} name="Lewis Hamilton" />
-          <Line type="monotone" dataKey="driver3" stroke="#10B981" strokeWidth={2} dot={false} name="Charles Leclerc" />
-          <ReferenceLine y={95} stroke="#F59E0B" strokeDasharray="5 5" label="Target Lap" />
+          <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+          <Line 
+            type="monotone" 
+            dataKey="driver1" 
+            stroke="#EF4444" 
+            strokeWidth={3} 
+            dot={false} 
+            activeDot={{ r: 6 }}
+            name={selectedDrivers[0] || "Driver 1"} 
+          />
+          <Line 
+            type="monotone" 
+            dataKey="driver2" 
+            stroke="#3B82F6" 
+            strokeWidth={2} 
+            dot={false} 
+            name={selectedDrivers[1] || "Driver 2"} 
+          />
+          <Line 
+            type="monotone" 
+            dataKey="driver3" 
+            stroke="#10B981" 
+            strokeWidth={2} 
+            dot={false} 
+            name={selectedDrivers[2] || "Driver 3"} 
+          />
+          <ReferenceLine y={lapTimeData[0]?.driver1 || 92} stroke="#F59E0B" strokeDasharray="5 5" label={{ value: 'Target', fill: '#F59E0B', fontSize: 10 }} />
         </LineChart>
       </ResponsiveContainer>
       
