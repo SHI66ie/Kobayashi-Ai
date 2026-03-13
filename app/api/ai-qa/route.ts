@@ -62,7 +62,19 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const { raceResults, lapTimes, weather, track, race, question, series = 'Toyota GR Cup' }: any = await request.json()
+    const { 
+      raceResults, 
+      lapTimes, 
+      weather, 
+      track, 
+      race, 
+      question, 
+      series = 'Toyota GR Cup',
+      // F1-specific context data
+      contextData,
+      // Chat mode: 'general' or 'f1' or 'auto'
+      mode = 'auto'
+    }: any = await request.json()
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({
@@ -83,20 +95,109 @@ export async function POST(request: NextRequest) {
     const useGemini = !useGroq && !useDeepSeek && gemini !== null
     const useOpenAI = !useGroq && !useDeepSeek && !useGemini && openai !== null
 
+    // Determine if this is an F1-related question
+    const isF1Question = mode === 'f1' || (
+      mode === 'auto' && (
+        question.toLowerCase().includes('f1') ||
+        question.toLowerCase().includes('formula') ||
+        question.toLowerCase().includes('race') ||
+        question.toLowerCase().includes('qualifying') ||
+        question.toLowerCase().includes('standings') ||
+        question.toLowerCase().includes('tire') ||
+        question.toLowerCase().includes('pit') ||
+        question.toLowerCase().includes('strategy') ||
+        question.toLowerCase().includes('driver') ||
+        question.toLowerCase().includes('team') ||
+        series.toLowerCase().includes('f1')
+      )
+    )
+
+    // Enhanced context for F1 questions
+    let f1Context: {
+      tireCompounds: string[];
+      selectedTire: string;
+      trackTemp: number;
+      airTemp: number;
+      humidity: number;
+      trackCondition: string;
+      currentTrack: string;
+      currentDriver: string;
+      position: number;
+      telemetry: any;
+      sessionType: string;
+      currentLap: number;
+      totalLaps: number;
+    } = {
+      tireCompounds: ['C1', 'C2', 'C3', 'C4', 'C5', 'Intermediate', 'Wet'],
+      selectedTire: 'C3',
+      trackTemp: 35,
+      airTemp: 25,
+      humidity: 50,
+      trackCondition: 'dry',
+      currentTrack: track || 'Unknown',
+      currentDriver: 'Unknown',
+      position: 1,
+      telemetry: {},
+      sessionType: 'Race',
+      currentLap: 1,
+      totalLaps: 57
+    }
+    
+    if (isF1Question && contextData) {
+      f1Context = {
+        tireCompounds: ['C1', 'C2', 'C3', 'C4', 'C5', 'Intermediate', 'Wet'],
+        selectedTire: contextData?.tireCompound || 'C3',
+        trackTemp: contextData?.trackTemp || 35,
+        airTemp: contextData?.airTemp || 25,
+        humidity: contextData?.humidity || 50,
+        trackCondition: contextData?.trackCondition || 'dry',
+        currentTrack: contextData?.track || track || 'Unknown',
+        currentDriver: contextData?.currentDriver || 'Unknown',
+        position: contextData?.position || 1,
+        telemetry: contextData?.telemetry || {},
+        sessionType: contextData?.sessionType || 'Race',
+        currentLap: contextData?.currentLap || 1,
+        totalLaps: contextData?.totalLaps || 57
+      }
+    }
+
     const summary = {
       track,
       race,
       totalDrivers: Array.isArray(raceResults) ? raceResults.length : 0,
       totalLaps: Array.isArray(lapTimes) ? lapTimes.length : 0,
       hasWeather: !!weather,
-      hasTelemetry: !!(raceResults && (raceResults as any).telemetry)
+      hasTelemetry: !!(raceResults && (raceResults as any).telemetry),
+      isF1Context: isF1Question,
+      f1Context
     }
 
     const limitedLapTimes = Array.isArray(lapTimes) ? lapTimes.slice(0, 40) : []
     const limitedResults = Array.isArray(raceResults) ? raceResults.slice(0, 20) : []
 
-    const systemPrompt =
-      `You are RaceMind AI, an expert ${series} racing analyst. Answer questions about this race using ONLY the provided data. Be concise but specific. If data is missing, say what is uncertain.`
+    // Dynamic system prompt based on context
+    let systemPrompt = ""
+    if (isF1Question) {
+      systemPrompt = `You are KobayashiAI, an expert F1 analyst with deep knowledge of Formula 1 racing, strategy, tire compounds, driver performance, and race conditions.
+
+${Object.keys(f1Context).length > 0 ? `
+CURRENT F1 CONTEXT:
+- Track: ${f1Context.currentTrack}
+- Track Temperature: ${f1Context.trackTemp}°C
+- Air Temperature: ${f1Context.airTemp}°C
+- Humidity: ${f1Context.humidity}%
+- Track Condition: ${f1Context.trackCondition}
+- Tire Compound: ${f1Context.selectedTire}
+- Session: ${f1Context.sessionType}
+- Current Driver: ${f1Context.currentDriver}
+- Position: ${f1Context.position}
+- Current Lap: ${f1Context.currentLap}/${f1Context.totalLaps}
+` : ''}
+
+ANALYZE the race data and provide expert F1 insights. Use proper F1 terminology (undercut, overcut, degradation, stint, etc.). Consider tire strategy, pit stop windows, track conditions, and driver performance. Be specific and data-driven when possible, but also engage in natural conversation about F1 topics.`
+    } else {
+      systemPrompt = `You are RaceMind AI, an expert ${series} racing analyst. Answer questions about this race using the provided data. Be concise but specific. If data is missing, say what is uncertain. Engage in natural conversation while maintaining expertise.`
+    }
 
     const userPrompt = `RACE CONTEXT:\n${JSON.stringify(summary, null, 2)}\n\n` +
       `SAMPLE RACE RESULTS (truncated):\n${JSON.stringify(limitedResults, null, 2)}\n\n` +

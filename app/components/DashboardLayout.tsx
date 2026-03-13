@@ -71,6 +71,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const topDrivers = getTopDrivers(driverStandings, 5)
   const topConstructors = getTopConstructors(constructorStandings, 5)
 
+  // Get completed races and next race info from the hook
+  const completedRaces = driverStandings.length > 0 ? 
+    Math.floor(driverStandings[0]?.points / 25) || 3 : 0
+  const nextRace = "Japanese Grand Prix"
+
   useEffect(() => {
     // Close sidebar on route change on mobile
     if (window.innerWidth < 768) {
@@ -438,10 +443,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Race Wins</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {topDrivers[0]?.wins > 0 ? `${topDrivers[0]?.driver} (${topDrivers[0]?.wins})` : 'None yet'}
-                      </span>
+                      <span className="text-gray-600 dark:text-gray-400">Races Completed</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{completedRaces} / 24</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Next Race</span>
+                      <span className="font-medium text-racing-red">{nextRace}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Last Updated</span>

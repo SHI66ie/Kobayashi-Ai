@@ -365,6 +365,69 @@ ${error.message || 'Could not connect to AI service'}`
           </div>
         )}
 
+        {/* AI Dashboard Section */}
+        <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 mb-8 border border-racing-red/20 shadow-xl backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-racing-red to-red-700 rounded-lg flex items-center justify-center">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">KobayashiAI Dashboard</h2>
+                <p className="text-sm text-gray-400">Advanced F1 Analytics & Strategy Assistant</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.open('/ai-coach', '_blank')}
+              className="px-4 py-2 bg-gradient-to-r from-racing-red to-red-700 rounded-lg font-bold text-sm hover:from-racing-red/80 hover:to-red-700/80 transition-all duration-200 flex items-center space-x-2"
+            >
+              <Zap className="w-4 h-4" />
+              <span>Launch AI Dashboard</span>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <MessageSquare className="w-5 h-5 text-blue-400" />
+                <span className="text-xs text-green-400">Online</span>
+              </div>
+              <h4 className="font-semibold text-white mb-1">AI Race Analyst</h4>
+              <p className="text-xs text-gray-400 mb-3">Ask questions about race strategy, tire compounds, and driver performance</p>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full">Real-time</span>
+                <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full">Strategy</span>
+              </div>
+            </div>
+            
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <TrendingUp className="w-5 h-5 text-green-400" />
+                <span className="text-xs text-green-400">Online</span>
+              </div>
+              <h4 className="font-semibold text-white mb-1">AI Prediction Tools</h4>
+              <p className="text-xs text-gray-400 mb-3">Advanced race predictions and performance analysis</p>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">95% Accuracy</span>
+                <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">ML Models</span>
+              </div>
+            </div>
+            
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <Brain className="w-5 h-5 text-red-400" />
+                <span className="text-xs text-green-400">Online</span>
+              </div>
+              <h4 className="font-semibold text-white mb-1">Advanced Analytics</h4>
+              <p className="text-xs text-gray-400 mb-3">Deep insights with machine learning models</p>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded-full">Telemetry</span>
+                <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded-full">Safety</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Feature Cards - Mobile Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 p-4 sm:p-6 rounded-xl border border-racing-red/20">

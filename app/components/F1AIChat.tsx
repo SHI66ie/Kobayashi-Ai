@@ -38,44 +38,39 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
         setIsLoading(true)
 
         try {
-            // Enhanced context with live tire and track data
-            const enhancedContext = {
-                ...contextData,
-                // Add tire data
-                tireCompounds: ['C1', 'C2', 'C3', 'C4', 'C5', 'Intermediate', 'Wet'],
-                selectedTire: contextData?.tireCompound || 'C3',
-                trackTemp: contextData?.trackTemp || 35,
-                airTemp: contextData?.airTemp || 25,
-                humidity: contextData?.humidity || 50,
-                trackCondition: contextData?.trackCondition || 'dry',
-                // Add track characteristics
-                trackName: contextData?.trackName || 'Current Track',
-                trackLength: contextData?.trackLength || 5.0,
-                corners: contextData?.corners || 15,
-                straights: contextData?.straights || 2,
-                trackAbrasion: contextData?.trackAbrasion || 'medium',
-                trackEvolution: contextData?.trackEvolution || 'medium',
-                gripLevel: contextData?.gripLevel || 1.0,
-                tireDegradation: contextData?.tireDegradation || 'medium',
-                // Add session info
-                sessionType: contextData?.sessionType || 'Race',
-                currentLap: contextData?.currentLap || 1,
-                totalLaps: contextData?.totalLaps || 57
-            }
-
-            const response = await fetch('/api/f1/chat', {
+            const response = await fetch('/api/ai-qa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: userMessage,
-                    context: enhancedContext
+                    question: userMessage,
+                    series: 'Formula 1',
+                    mode: 'auto', // Auto-detect F1 vs general questions
+                    contextData: {
+                        tireCompound: contextData?.tireCompound,
+                        trackTemp: contextData?.trackTemp,
+                        airTemp: contextData?.airTemp,
+                        humidity: contextData?.humidity,
+                        trackCondition: contextData?.trackCondition,
+                        track: contextData?.track,
+                        currentDriver: contextData?.currentDriver,
+                        position: contextData?.position,
+                        telemetry: contextData?.telemetry,
+                        sessionType: contextData?.sessionType,
+                        currentLap: contextData?.currentLap,
+                        totalLaps: contextData?.totalLaps
+                    },
+                    raceResults: contextData?.raceResults || [],
+                    lapTimes: contextData?.lapTimes || [],
+                    weather: contextData?.weather,
+                    track: contextData?.track,
+                    race: contextData?.race
                 })
             })
 
             const data = await response.json()
 
-            if (data.success) {
-                setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
+            if (data.answer) {
+                setMessages(prev => [...prev, { role: 'assistant', content: data.answer }])
                 // Update live data if provided
                 if (data.tireData || data.trackData) {
                     setLiveData({
@@ -85,7 +80,7 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
                     })
                 }
             } else {
-                setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.message || 'Failed to get analysis. Please check your API keys.'}` }])
+                setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error || 'Failed to get analysis. Please check your API keys.'}` }])
             }
         } catch (error) {
             setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error connecting to the race brain.' }])
