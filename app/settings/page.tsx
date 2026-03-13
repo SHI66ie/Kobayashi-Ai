@@ -223,7 +223,7 @@ export default function SettingsPage() {
                   <div>
                     <p className="font-bold text-sm text-gray-900 dark:text-white">Active Source: OpenF1 API</p>
                     <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                      Currently streaming live data from Albert Park Circuit, Melbourne. 
+                      Currently streaming live data from Shanghai International Circuit, China. 
                       Connection status: <span className="font-bold uppercase">Optimal</span>
                     </p>
                   </div>

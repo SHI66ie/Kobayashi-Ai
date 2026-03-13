@@ -292,9 +292,9 @@ export default function HomePage() {
         <div className="p-6">
           <div className="space-y-4">
             {[
-              { name: 'Australian Grand Prix', location: 'Melbourne', date: 'Mar 16, 2025', days: '3 days' },
-              { name: 'Chinese Grand Prix', location: 'Shanghai', date: 'Mar 23, 2025', days: '10 days' },
-              { name: 'Japanese Grand Prix', location: 'Suzuka', date: 'Apr 6, 2025', days: '24 days' }
+              { name: 'Chinese Grand Prix', location: 'Shanghai', date: 'Mar 15, 2026', days: '2 days' },
+              { name: 'Japanese Grand Prix', location: 'Suzuka', date: 'Mar 29, 2026', days: '16 days' },
+              { name: 'Bahrain Grand Prix', location: 'Sakhir', date: 'Apr 12, 2026', days: '30 days' }
             ].map((race, index) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex items-center space-x-4">
