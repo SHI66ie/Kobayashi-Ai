@@ -13,6 +13,8 @@ const TrackMapViewer = lazy(() => import('../components/TrackMapViewer'))
 const WeatherControls = lazy(() => import('../components/WeatherControls'))
 const F1AIChat = lazy(() => import('../components/F1AIChat'))
 const DecisionPanel = lazy(() => import('../components/DecisionPanel'))
+const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonPanel'))
+const LiveDataTicker = lazy(() => import('../components/LiveDataTicker'))
 const RaceVisualization = lazy(() => import('../components/RaceVisualization'))
 const WhatIfSimulator = lazy(() => import('../components/WhatIfSimulator'))
 const LiveFeedSection = lazy(() => import('../components/LiveFeedSection'))
@@ -3142,6 +3144,32 @@ export default function F1Page() {
           </div>
           </div>
         )}
+
+        {/* TRACK MAP AND LIVE DATA SECTION */}
+        <div className="space-y-8 animate-in fade-in duration-700">
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
+                <TrackMapViewer track={tracks.find(t => t.id === selectedTrack)?.name || selectedTrack} />
+              </Suspense>
+            </div>
+            <div>
+              <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
+                <LiveDataTicker 
+                  trackId={selectedTrack} 
+                  drivers={apiDrivers.map(d => d.name)} 
+                />
+              </Suspense>
+            </div>
+          </div>
+        </div>
+
+        {/* DRIVER COMPARISON */}
+        <div className="space-y-8 animate-in fade-in duration-700">
+          <Suspense fallback={<div className="h-[400px] bg-gray-800 rounded-xl animate-pulse" />}>
+            <DriverComparisonPanel raceData={raceData.data[0]} />
+          </Suspense>
+        </div>
 
         {/* ENHANCED RACE VISUALIZATION */}
         <div className="space-y-8 animate-in fade-in duration-700">
