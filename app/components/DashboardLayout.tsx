@@ -349,7 +349,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                       )}
                       
-                      <button className="w-full mt-4 text-center text-sm text-racing-red hover:text-racing-red/80 font-medium">
+                      <button 
+                        onClick={() => window.open('/standings', '_blank')}
+                        className="w-full mt-4 text-center text-sm text-racing-red hover:text-racing-red/80 font-medium cursor-pointer transition-colors"
+                      >
                         View Full Standings →
                       </button>
                     </>
