@@ -18,8 +18,10 @@ import {
   Globe,
   Shield,
   Database,
-  Trophy
+  Trophy,
+  RefreshCw
 } from 'lucide-react'
+import { useF1Standings, getTopDrivers, getTopConstructors } from '../../hooks/useF1Standings'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -53,8 +55,21 @@ const navigationItems = [
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['Main', 'Analytics'])
+  const [expandedCategories, setExpandedCategories] = useState(['Main', 'Analytics', 'Tools'])
   const pathname = usePathname()
+
+  // Fetch live F1 standings
+  const { 
+    driverStandings, 
+    constructorStandings, 
+    loading, 
+    error, 
+    lastUpdated, 
+    refetch 
+  } = useF1Standings('2026')
+
+  const topDrivers = getTopDrivers(driverStandings, 5)
+  const topConstructors = getTopConstructors(constructorStandings, 5)
 
   useEffect(() => {
     // Close sidebar on route change on mobile
@@ -241,7 +256,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white">F1 Standings</h2>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">2026 Season</div>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">2026 Season</div>
+                    <button
+                      onClick={() => refetch()}
+                      disabled={loading}
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      title="Refresh standings"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Driver Standings */}
@@ -250,42 +275,80 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <Trophy className="w-4 h-4 mr-2 text-racing-red" />
                     Driver Championship
                   </h3>
-                  <div className="space-y-3">
-                    {[
-                      { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', points: 195, flag: '🇳🇱' },
-                      { position: 2, driver: 'Lando Norris', team: 'McLaren', points: 187, flag: '🇬🇧' },
-                      { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', points: 171, flag: '🇲🇨' },
-                      { position: 4, driver: 'Oscar Piastri', team: 'McLaren', points: 159, flag: '🇦🇺' },
-                      { position: 5, driver: 'Lewis Hamilton', team: 'Ferrari', points: 145, flag: '🇬🇧' },
-                    ].map((standing) => (
-                      <div key={standing.position} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            standing.position === 1 ? 'bg-yellow-500 text-white' :
-                            standing.position === 2 ? 'bg-gray-400 text-white' :
-                            standing.position === 3 ? 'bg-orange-600 text-white' :
-                            'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
-                          }`}>
-                            {standing.position}
-                          </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">{standing.flag}</span>
-                              <p className="font-medium text-gray-900 dark:text-white text-sm">{standing.driver}</p>
+                  
+                  {loading ? (
+                    <div className="space-y-3">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+                            <div className="flex-1">
+                              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24 mb-2 animate-pulse"></div>
+                              <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16 animate-pulse"></div>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{standing.team}</p>
+                          </div>
+                          <div className="w-12 h-4 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : error ? (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <p className="text-sm text-red-600 dark:text-red-400">Failed to load standings</p>
+                      <button 
+                        onClick={() => refetch()}
+                        className="mt-2 text-xs text-red-500 hover:text-red-700 underline"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {topDrivers.map((standing) => (
+                          <div key={standing.position} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                standing.position === 1 ? 'bg-yellow-500 text-white' :
+                                standing.position === 2 ? 'bg-gray-400 text-white' :
+                                standing.position === 3 ? 'bg-orange-600 text-white' :
+                                'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                              }`}>
+                                {standing.position}
+                              </div>
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">{standing.countryFlag}</span>
+                                  <p className="font-medium text-gray-900 dark:text-white text-sm">{standing.driver}</p>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{standing.team}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-gray-900 dark:text-white">{standing.points}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">pts</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Show Verstappen if not in top 5 */}
+                      {!topDrivers.some(d => d.driver.includes('Verstappen')) && (
+                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">M. Verstappen</span>
+                            <span className="text-blue-600 dark:text-blue-400">
+                              {driverStandings.find(d => d.driver.includes('Verstappen'))?.points || 8} pts 
+                              ({driverStandings.find(d => d.driver.includes('Verstappen'))?.position || 6}th)
+                            </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900 dark:text-white">{standing.points}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">pts</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="w-full mt-4 text-center text-sm text-racing-red hover:text-racing-red/80 font-medium">
-                    View Full Standings →
-                  </button>
+                      )}
+                      
+                      <button className="w-full mt-4 text-center text-sm text-racing-red hover:text-racing-red/80 font-medium">
+                        View Full Standings →
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Constructor Standings */}
@@ -294,59 +357,97 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <Globe className="w-4 h-4 mr-2 text-racing-blue" />
                     Constructor Championship
                   </h3>
-                  <div className="space-y-3">
-                    {[
-                      { position: 1, team: 'Red Bull Racing', points: 354, flag: '🇦🇹' },
-                      { position: 2, team: 'McLaren', points: 346, flag: '🇬🇧' },
-                      { position: 3, team: 'Ferrari', points: 316, flag: '🇮🇹' },
-                      { position: 4, team: 'Mercedes', points: 267, flag: '🇩🇪' },
-                      { position: 5, team: 'Aston Martin', points: 189, flag: '🇬🇧' },
-                    ].map((standing) => (
-                      <div key={standing.position} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            standing.position === 1 ? 'bg-yellow-500 text-white' :
-                            standing.position === 2 ? 'bg-gray-400 text-white' :
-                            standing.position === 3 ? 'bg-orange-600 text-white' :
-                            'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
-                          }`}>
-                            {standing.position}
-                          </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">{standing.flag}</span>
-                              <p className="font-medium text-gray-900 dark:text-white text-sm">{standing.team}</p>
+                  
+                  {loading ? (
+                    <div className="space-y-3">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+                            <div className="flex-1">
+                              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 animate-pulse"></div>
                             </div>
                           </div>
+                          <div className="w-12 h-4 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900 dark:text-white">{standing.points}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">pts</p>
+                      ))}
+                    </div>
+                  ) : error ? (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <p className="text-sm text-red-600 dark:text-red-400">Failed to load standings</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {topConstructors.map((standing) => (
+                          <div key={standing.position} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                standing.position === 1 ? 'bg-yellow-500 text-white' :
+                                standing.position === 2 ? 'bg-gray-400 text-white' :
+                                standing.position === 3 ? 'bg-orange-600 text-white' :
+                                'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                              }`}>
+                                {standing.position}
+                              </div>
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">{standing.countryFlag}</span>
+                                  <p className="font-medium text-gray-900 dark:text-white text-sm">{standing.team}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-gray-900 dark:text-white">{standing.points}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">pts</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                          <div className="flex justify-between">
+                            <span>New Teams:</span>
+                            <span>Audi, Cadillac</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>RB:</span>
+                            <span>{constructorStandings.find(c => c.team === 'RB')?.points || 4} pts (6th)</span>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Quick Stats */}
                 <div className="bg-gradient-to-br from-racing-red/10 to-racing-blue/10 rounded-lg p-4 border border-racing-red/20">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Season Stats</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">2026 Season Stats</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Races Completed</span>
-                      <span className="font-medium text-gray-900 dark:text-white">8 / 24</span>
+                      <span className="text-gray-600 dark:text-gray-400">Current Leader</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {topDrivers[0]?.driver || 'Loading...'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Next Race</span>
-                      <span className="font-medium text-racing-red">Canadian GP</span>
+                      <span className="text-gray-600 dark:text-gray-400">Constructor Leader</span>
+                      <span className="font-medium text-racing-red">
+                        {topConstructors[0]?.team || 'Loading...'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Sprint Races</span>
-                      <span className="font-medium text-gray-900 dark:text-white">6</span>
+                      <span className="text-gray-600 dark:text-gray-400">Race Wins</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {topDrivers[0]?.wins > 0 ? `${topDrivers[0]?.driver} (${topDrivers[0]?.wins})` : 'None yet'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Season Leader</span>
-                      <span className="font-medium text-gray-900 dark:text-white"> Verstappen</span>
+                      <span className="text-gray-600 dark:text-gray-400">Last Updated</span>
+                      <span className="font-medium text-gray-900 dark:text-white text-xs">
+                        {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Never'}
+                      </span>
                     </div>
                   </div>
                 </div>
