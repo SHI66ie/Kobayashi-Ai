@@ -1498,44 +1498,6 @@ export default function F1Page() {
     { id: 'yas-marina', name: 'Yas Marina Circuit', location: 'Abu Dhabi', available: true, category: 'f1', country: 'UAE' }
   ], [])
 
-  // Function to record current session snapshot for future analysis
-  const recordSessionData = async () => {
-    if (!raceData.data[0]) {
-      setRecordStatus("No data available to record");
-      return;
-    }
-
-    setIsRecording(true);
-    setRecordStatus("Recording snapshot...");
-
-    try {
-      const currentData = raceData.data[0];
-      const response = await fetch('/api/f1/record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          track: tracks.find(t => t.id === selectedTrack)?.name || selectedTrack,
-          race: selectedRace,
-          data: currentData,
-          timestamp: new Date().toISOString()
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setRecordStatus(`Success: Saved to ${result.filename}`);
-        setTimeout(() => setRecordStatus(null), 5000);
-      } else {
-        throw new Error(result.error || "Failed to save record");
-      }
-    } catch (err: any) {
-      console.error("Recording error:", err);
-      setRecordStatus(`Error: ${err.message}`);
-      setTimeout(() => setRecordStatus(null), 5000);
-    } finally {
-      setIsRecording(false);
-    }
-  };
 
   // Memoize loadRaceData function to prevent unnecessary re-renders
   const loadRaceData = useCallback(async () => {
@@ -3250,7 +3212,7 @@ export default function F1Page() {
                   </button>
 
                   <button
-                    onClick={recordSessionData}
+                    onClick={() => recordSessionData('race_snapshot', raceData.data[0])}
                     disabled={isRecording || raceData.data.length === 0}
                     className={`flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider transition-all shadow-lg ${isRecording ? 'bg-orange-600' : 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600'} shadow-green-900/20`}
                     title="Record this session data for later analysis"
