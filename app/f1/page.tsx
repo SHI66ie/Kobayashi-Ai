@@ -185,6 +185,10 @@ export default function F1Page() {
   // Calendar Past Races State
   const [showPastRaces, setShowPastRaces] = useState(false);
 
+  // Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordStatus, setRecordStatus] = useState<string | null>(null);
+
   // New Historical Data States
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -596,6 +600,40 @@ export default function F1Page() {
     setStandingsView('track');
     setSelectedSessionType(sessionType);
     setActiveTab('standings');
+  };
+
+
+  const recordSessionData = async (dataType: string, content: any) => {
+    if (!content || (Array.isArray(content) && content.length === 0)) return;
+    
+    setIsRecording(true);
+    setRecordStatus("Recording...");
+    
+    try {
+      const response = await fetch('/api/f1/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_key: nextEvent?.session_key || 'unknown',
+          session_name: nextEvent?.session_name || 'session',
+          data_type: dataType,
+          content: content
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setRecordStatus(`Saved: ${result.file}`);
+        setTimeout(() => setRecordStatus(null), 5000);
+      } else {
+        setRecordStatus("Record Failed");
+      }
+    } catch (err) {
+      console.error("Recording error:", err);
+      setRecordStatus("Record Error");
+    } finally {
+      setIsRecording(false);
+    }
   };
 
   const fetchCalendarRaceStandings = async (raceId: string) => {
@@ -1437,9 +1475,68 @@ export default function F1Page() {
         return
       }
 
-      // Instead of failing over to GR Cup API which returns null for F1 tracks,
-      // We will generate intelligent mock telemetry/race data based on the Ergast standings and F1 Data Form parameters.
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate analysis delay
+      // 2026 Season - Attempt to fetch real session data if available
+      if (useRealData && apiSessions.length > 0) {
+        const currentSession = apiSessions.find(s => 
+          s.circuit_short_name?.toLowerCase() === selectedTrack.toLowerCase() || 
+          s.location?.toLowerCase().includes(selectedTrack.toLowerCase())
+        );
+
+        if (currentSession) {
+          try {
+            const [laps, weather, drivers] = await Promise.all([
+              openf1Api.getLaps(currentSession.session_key),
+              openf1Api.getWeatherData(currentSession.session_key),
+              openf1Api.getDrivers(currentSession.session_key)
+            ]);
+
+            if (laps && laps.length > 0) {
+              // Transform real data
+              const transformedLaps = transformOpenF1Data.lapData(laps).slice(0, 50);
+              const transformedWeather = transformOpenF1Data.weatherData(weather)[0] || {};
+              
+              // Calculate results based on best laps for now if standings not available
+              const resultsMap = new Map();
+              laps.forEach(lap => {
+                if (!resultsMap.has(lap.driver_number) || lap.lap_duration < resultsMap.get(lap.driver_number).time) {
+                  resultsMap.set(lap.driver_number, { 
+                    driver: drivers.find(d => d.driver_number === lap.driver_number)?.full_name || `Driver ${lap.driver_number}`,
+                    time: lap.lap_duration
+                  });
+                }
+              });
+
+              const transformedResults = Array.from(resultsMap.values())
+                .sort((a, b) => a.time - b.time)
+                .map((r, i) => ({
+                  driver: r.driver,
+                  time: i === 0 ? `${(r.time / 60).toFixed(0)}:${(r.time % 60).toFixed(3)}` : `+${(r.time - Array.from(resultsMap.values())[0].time).toFixed(3)}s`,
+                  points: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][i] || 0
+                }));
+
+              setRaceData({
+                loading: false,
+                error: null,
+                data: [{
+                  track: selectedTrack,
+                  race: selectedRace,
+                  raceResults: transformedResults,
+                  lapTimes: transformedLaps,
+                  weather: transformedWeather,
+                  telemetry: { available: true, type: 'live' },
+                  dataSource: `OpenF1 Live Session: ${currentSession.session_name}`
+                }]
+              });
+              return;
+            }
+          } catch (apiErr) {
+            console.warn("Real race data fetch failed, falling back to simulation:", apiErr);
+          }
+        }
+      }
+
+      // Falling back to AI Simulated data
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
 
       const realDrivers = useRealData && apiDrivers.length > 0
         ? apiDrivers.map(driver => driver.name)
@@ -1578,19 +1675,38 @@ export default function F1Page() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <select
-                value={selectedTrack}
-                onChange={(e) => setSelectedTrack(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
-              >
-                {tracks.map(track => (
-                  <option key={track.id} value={track.id}>
-                    {track.name} {getCountryFlag(track.country)}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="flex items-center space-x-3">
+                {useRealData && (
+                  <button 
+                    onClick={() => recordSessionData('dashboard_snapshot', { 
+                      drivers: apiDrivers, 
+                      teams: apiTeams, 
+                      standings: apiStandings,
+                      timestamp: Date.now()
+                    })}
+                    disabled={isRecording}
+                    className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${
+                      isRecording ? 'bg-gray-800 border-gray-700 text-gray-500' : 
+                      recordStatus?.startsWith('Saved') ? 'bg-green-500/20 border-green-500/30 text-green-400' :
+                      'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-gray-600 animate-pulse' : 'bg-red-500'}`}></div>
+                    <span>{recordStatus || 'Record Snapshot'}</span>
+                  </button>
+                )}
+                <select
+                  value={selectedTrack}
+                  onChange={(e) => setSelectedTrack(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
+                >
+                  {tracks.map(track => (
+                    <option key={track.id} value={track.id}>
+                      {track.name} {getCountryFlag(track.country)}
+                    </option>
+                  ))}
+                </select>
+              </div>
           </div>
         </div>
       </header>
