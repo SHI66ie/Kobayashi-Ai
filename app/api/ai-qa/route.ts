@@ -70,11 +70,17 @@ export async function POST(request: NextRequest) {
       race, 
       question, 
       series = 'Toyota GR Cup',
-      // F1-specific context data
+      // F1-specific data
       contextData,
+      standings,
+      drivers,
+      teams,
+      nextRaces,
+      historicalArchives,
       // Chat mode: 'general' or 'f1' or 'auto'
       mode = 'auto'
     }: any = await request.json()
+
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({
@@ -164,13 +170,15 @@ export async function POST(request: NextRequest) {
     const summary = {
       track,
       race,
-      totalDrivers: Array.isArray(raceResults) ? raceResults.length : 0,
-      totalLaps: Array.isArray(lapTimes) ? lapTimes.length : 0,
-      hasWeather: !!weather,
-      hasTelemetry: !!(raceResults && (raceResults as any).telemetry),
+      totalDrivers: Array.isArray(drivers) ? drivers.length : 0,
+      totalTeams: Array.isArray(teams) ? teams.length : 0,
+      hasStandings: !!standings,
+      hasNextRaces: !!nextRaces,
+      hasHistoricalArchives: !!historicalArchives,
       isF1Context: isF1Question,
       f1Context
     }
+
 
     const limitedLapTimes = Array.isArray(lapTimes) ? lapTimes.slice(0, 40) : []
     const limitedResults = Array.isArray(raceResults) ? raceResults.slice(0, 20) : []
@@ -194,17 +202,24 @@ CURRENT F1 CONTEXT:
 - Current Lap: ${f1Context.currentLap}/${f1Context.totalLaps}
 ` : ''}
 
-ANALYZE the race data and provide expert F1 insights. Use proper F1 terminology (undercut, overcut, degradation, stint, etc.). Consider tire strategy, pit stop windows, track conditions, and driver performance. Be specific and data-driven when possible, but also engage in natural conversation about F1 topics.`
+ANALYZE the race data and provide expert F1 insights using the provided grid data. You have access to information about ALL 20 drivers and 10 teams (including Alpine, Red Bull, Haas, etc.). Use proper F1 terminology (undercut, overcut, degradation, stint, etc.). Consider tire strategy, pit stop windows, track conditions, and driver performance for any part of the field. Be specific and data-driven when possible, but also engage in natural conversation about F1 topics.`
+
     } else {
       systemPrompt = `You are RaceMind AI, an expert ${series} racing analyst. Answer questions about this race using the provided data. Be concise but specific. If data is missing, say what is uncertain. Engage in natural conversation while maintaining expertise.`
     }
 
     const userPrompt = `RACE CONTEXT:\n${JSON.stringify(summary, null, 2)}\n\n` +
+      `F1 DRIVERS & TEAMS:\n${JSON.stringify(drivers ? drivers.slice(0, 20) : [], null, 2)}\n\n` +
+      `F1 STANDINGS (truncated):\n${JSON.stringify(standings ? standings.slice(0, 10) : [], null, 2)}\n\n` +
+      `ACTIVE TEAMS:\n${JSON.stringify(teams ? teams.slice(0, 10) : [], null, 2)}\n\n` +
+      `UPCOMING RACES:\n${JSON.stringify(nextRaces ? nextRaces.slice(0, 5) : [], null, 2)}\n\n` +
+      `HISTORICAL CONTEXT (past race stats):\n${JSON.stringify(historicalArchives ? historicalArchives.slice(0, 2) : [], null, 2)}\n\n` +
       `SAMPLE RACE RESULTS (truncated):\n${JSON.stringify(limitedResults, null, 2)}\n\n` +
       `SAMPLE LAP TIMES (truncated):\n${JSON.stringify(limitedLapTimes, null, 2)}\n\n` +
       `WEATHER (if any):\n${JSON.stringify(weather ?? null, null, 2)}\n\n` +
       `USER QUESTION: ${question}\n\n` +
-      'Now provide a direct answer for the driver/engineer, in plain text, with short sections or bullets as needed.'
+      'Now provide a direct answer for the driver/engineer, in plain text, with short sections or bullets as needed. Utilize the provided data to give accurate answers about any driver or team requested (including Alpine, Red Bull, Ferrari, etc.).'
+
 
     let answer = ''
     let modelUsed = ''

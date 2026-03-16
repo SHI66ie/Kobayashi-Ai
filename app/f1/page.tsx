@@ -119,9 +119,42 @@ export default function F1Page() {
     { id: 'yas-marina', name: 'Abu Dhabi GP', date: 'December 5-7, 2026', track: 'Yas Marina Circuit', country: 'UAE', leader: 'Max Verstappen', format: 'Standard' }
   ], [])
 
-  // API Data State
-  const [apiTeams, setApiTeams] = useState<any[]>([])
-  const [apiDrivers, setApiDrivers] = useState<any[]>([])
+  // API Data State - Initialized with 2026 grid data
+  const [apiTeams, setApiTeams] = useState<any[]>([
+    { id: 'redbull', name: 'Red Bull Racing', color: '#1e40af' },
+    { id: 'mercedes', name: 'Mercedes AMG', color: '#00d2be' },
+    { id: 'ferrari', name: 'Scuderia Ferrari', color: '#ef4444' },
+    { id: 'mclaren', name: 'McLaren F1', color: '#ff8000' },
+    { id: 'aston', name: 'Aston Martin', color: '#006f62' },
+    { id: 'alpine', name: 'Alpine F1', color: '#0090ff' },
+    { id: 'williams', name: 'Williams Racing', color: '#005aff' },
+    { id: 'rb', name: 'Visa Cash App RB', color: '#6692ff' },
+    { id: 'sauber', name: 'Audi/Sauber', color: '#000000' },
+    { id: 'haas', name: 'Haas F1 Team', color: '#ffffff' }
+  ])
+  const [apiDrivers, setApiDrivers] = useState<any[]>([
+    { id: '1', name: 'Max Verstappen', number: '1', team: 'Red Bull Racing', code: 'VER' },
+    { id: '11', name: 'Sergio Perez', number: '11', team: 'Red Bull Racing', code: 'PER' },
+    { id: '44', name: 'Lewis Hamilton', number: '44', team: 'Ferrari', code: 'HAM' },
+    { id: '16', name: 'Charles Leclerc', number: '16', team: 'Ferrari', code: 'LEC' },
+    { id: '4', name: 'Lando Norris', number: '4', team: 'McLaren', code: 'NOR' },
+    { id: '81', name: 'Oscar Piastri', number: '81', team: 'McLaren', code: 'PIA' },
+    { id: '63', name: 'George Russell', number: '63', team: 'Mercedes AMG', code: 'RUS' },
+    { id: '47', name: 'Andrea Kimi Antonelli', number: '47', team: 'Mercedes AMG', code: 'ANT' },
+    { id: '14', name: 'Fernando Alonso', number: '14', team: 'Aston Martin', code: 'ALO' },
+    { id: '18', name: 'Lance Stroll', number: '18', team: 'Aston Martin', code: 'STR' },
+    { id: '10', name: 'Pierre Gasly', number: '10', team: 'Alpine F1', code: 'GAS' },
+    { id: '31', name: 'Esteban Ocon', number: '31', team: 'Haas F1 Team', code: 'OCO' },
+    { id: '23', name: 'Alexander Albon', number: '23', team: 'Williams Racing', code: 'ALB' },
+    { id: '55', name: 'Carlos Sainz', number: '55', team: 'Williams', code: 'SAI' },
+    { id: '22', name: 'Yuki Tsunoda', number: '22', team: 'Visa Cash App RB', code: 'TSU' },
+    { id: 'Liam', name: 'Liam Lawson', number: '30', team: 'Visa Cash App RB', code: 'LAW' },
+    { id: '27', name: 'Nico Hulkenberg', number: '27', team: 'Audi/Sauber', code: 'HUL' },
+    { id: '12', name: 'Jack Doohan', number: '12', team: 'Alpine F1', code: 'DOO' },
+    { id: 'Bearman', name: 'Oliver Bearman', number: '87', team: 'Haas F1 Team', code: 'BEA' },
+    { id: '24', name: 'Zhou Guanyu', number: '24', team: 'Audi/Sauber', code: 'ZHO' }
+  ])
+
   const [apiSessions, setApiSessions] = useState<any[]>([])
   const [apiRaces, setApiRaces] = useState<any[]>([])
   const [apiStandings, setApiStandings] = useState<any[]>([])
@@ -1465,6 +1498,45 @@ export default function F1Page() {
     { id: 'yas-marina', name: 'Yas Marina Circuit', location: 'Abu Dhabi', available: true, category: 'f1', country: 'UAE' }
   ], [])
 
+  // Function to record current session snapshot for future analysis
+  const recordSessionData = async () => {
+    if (!raceData.data[0]) {
+      setRecordStatus("No data available to record");
+      return;
+    }
+
+    setIsRecording(true);
+    setRecordStatus("Recording snapshot...");
+
+    try {
+      const currentData = raceData.data[0];
+      const response = await fetch('/api/f1/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track: tracks.find(t => t.id === selectedTrack)?.name || selectedTrack,
+          race: selectedRace,
+          data: currentData,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setRecordStatus(`Success: Saved to ${result.filename}`);
+        setTimeout(() => setRecordStatus(null), 5000);
+      } else {
+        throw new Error(result.error || "Failed to save record");
+      }
+    } catch (err: any) {
+      console.error("Recording error:", err);
+      setRecordStatus(`Error: ${err.message}`);
+      setTimeout(() => setRecordStatus(null), 5000);
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
   // Memoize loadRaceData function to prevent unnecessary re-renders
   const loadRaceData = useCallback(async () => {
     setRaceData({ loading: true, error: null, data: [] })
@@ -1583,6 +1655,7 @@ export default function F1Page() {
       })
     }
   }, [selectedTrack, selectedRace, dataSourceMode, useRealData, apiDrivers, f1Data])
+
 
   // Simple export function
   const exportReport = async () => {
@@ -3166,7 +3239,7 @@ export default function F1Page() {
                   <button
                     onClick={exportReport}
                     disabled={isGeneratingReport || raceData.data.length === 0}
-                    className="flex-1 sm:flex-none bg-gradient-to-r from-racing-blue to-blue-700 px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider shadow-lg shadow-blue-900/20"
+                    className="flex-1 sm:flex-none border-2 border-racing-red px-4 py-2 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
                   >
                     {isGeneratingReport ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -3177,6 +3250,21 @@ export default function F1Page() {
                   </button>
 
                   <button
+                    onClick={recordSessionData}
+                    disabled={isRecording || raceData.data.length === 0}
+                    className={`flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider transition-all shadow-lg ${isRecording ? 'bg-orange-600' : 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600'} shadow-green-900/20`}
+                    title="Record this session data for later analysis"
+                  >
+                    {isRecording ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Database className="w-4 h-4" />
+                    )}
+                    <span>{isRecording ? 'Recording...' : 'Record Snapshot'}</span>
+                  </button>
+
+
+                  <button
                     onClick={() => setShowPredictions(!showPredictions)}
                     className="flex-1 sm:flex-none bg-gray-800 hover:bg-gray-700 border border-gray-700 px-4 py-2.5 rounded-lg font-bold flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
                   >
@@ -3185,7 +3273,16 @@ export default function F1Page() {
                   </button>
                 </div>
               </div>
+              
+              {recordStatus && (
+                <div className="mt-4 p-2 bg-racing-blue/10 border border-racing-blue/30 rounded-lg text-center animate-in fade-in slide-in-from-top-2">
+                  <span className={`text-xs font-bold ${recordStatus.includes('Error') ? 'text-racing-red' : 'text-racing-blue'}`}>
+                    {recordStatus}
+                  </span>
+                </div>
+              )}
             </div>
+
             {/* Analytics Header Section */}
             <div className="grid lg:grid-cols-4 gap-6">
               {[

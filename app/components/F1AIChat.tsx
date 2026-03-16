@@ -46,24 +46,24 @@ export default function F1AIChat({ contextData }: F1AIChatProps) {
                     series: 'Formula 1',
                     mode: 'auto', // Auto-detect F1 vs general questions
                     contextData: {
-                        tireCompound: contextData?.tireCompound,
+                        ...contextData,
+                        tireCompound: contextData?.tireCompound, // Keep legacy if needed
                         trackTemp: contextData?.trackTemp,
                         airTemp: contextData?.airTemp,
                         humidity: contextData?.humidity,
                         trackCondition: contextData?.trackCondition,
-                        track: contextData?.track,
-                        currentDriver: contextData?.currentDriver,
-                        position: contextData?.position,
-                        telemetry: contextData?.telemetry,
-                        sessionType: contextData?.sessionType,
-                        currentLap: contextData?.currentLap,
-                        totalLaps: contextData?.totalLaps
                     },
                     raceResults: contextData?.raceResults || [],
                     lapTimes: contextData?.lapTimes || [],
                     weather: contextData?.weather,
-                    track: contextData?.track,
-                    race: contextData?.race
+                    track: contextData?.currentTrack?.name || contextData?.track,
+                    race: contextData?.race || contextData?.nextRaces?.[0]?.name,
+                    standings: contextData?.standings || [],
+                    drivers: contextData?.drivers || [],
+                    teams: contextData?.teams || [],
+                    nextRaces: contextData?.nextRaces || [],
+                    historicalArchives: contextData?.historicalArchives || []
+
                 })
             })
 
