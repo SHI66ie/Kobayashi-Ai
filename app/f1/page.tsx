@@ -182,6 +182,9 @@ export default function F1Page() {
   const [loadingCalendarStandings, setLoadingCalendarStandings] = useState<Set<string>>(new Set());
   const [expandedRaceId, setExpandedRaceId] = useState<string | null>(null);
 
+  // Calendar Past Races State
+  const [showPastRaces, setShowPastRaces] = useState(false);
+
   // New Historical Data States
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -1955,15 +1958,135 @@ export default function F1Page() {
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-2xl font-bold flex items-center space-x-3">
                   <Calendar className="w-6 h-6 text-racing-red" />
-                  <span>Next Races</span>
+                  <span>Race Calendar</span>
                 </h3>
-                <div className="text-sm text-gray-500 font-medium">
-                  2026 Season Schedule
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setShowPastRaces(!showPastRaces)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-700"
+                  >
+                    <History className={`w-3 h-3 ${showPastRaces ? 'text-racing-red' : 'text-gray-500'}`} />
+                    <span>{showPastRaces ? 'Hide Results' : 'Past Results'}</span>
+                  </button>
+                  <div className="text-sm text-gray-500 font-medium hidden sm:block">
+                    2026 Season Schedule
+                  </div>
                 </div>
               </div>
 
               {/* Timeline-style calendar */}
               <div className="space-y-6">
+                {/* Past Races Section */}
+                {showPastRaces && currentRaceIndex > 0 && (
+                  <div className="space-y-6 mb-8 pb-8 border-b border-white/5 animate-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-2 mb-4">
+                      <History className="w-4 h-4 text-gray-500" />
+                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Completed Events</span>
+                    </div>
+                    {(apiSessions.length > 0 ? raceList.slice(0, currentRaceIndex) : upcomingRacesList.slice(0, currentRaceIndex)).map((race, i) => {
+                      return (
+                        <div
+                          key={`past-${race.id || i}`}
+                          className="relative bg-black/40 border border-gray-800/50 rounded-2xl p-6 transition-all duration-300 hover:border-gray-500/40 opacity-70 hover:opacity-100 group cursor-pointer"
+                        >
+                          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-700/50"></div>
+                          <div className="absolute left-6 top-8 w-4 h-4 rounded-full border-4 bg-gray-800 border-gray-900"></div>
+
+                          <div className="flex items-center justify-between ml-12">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h4 className="text-xl font-bold text-gray-400 group-hover:text-white transition-colors">
+                                  {race.name}
+                                </h4>
+                                <span className="px-3 py-1 bg-gray-800 text-gray-500 text-xs font-black rounded-full uppercase tracking-wider border border-white/5">
+                                  COMPLETED
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                <div className="flex items-center space-x-2">
+                                  <Flag className="w-4 h-4" />
+                                  <span>{race.track}</span>
+                                </div>
+                                <span className="text-gray-700">•</span>
+                                <span className="text-lg">{getCountryFlag(race.country)}</span>
+                                <span className="text-gray-700">•</span>
+                                <span>{race.date}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-end space-y-3">
+                              <div className="flex items-center gap-1.5">
+                                <button 
+                                  onClick={(e) => toggleRaceStandingsExpansion(e, race.id)}
+                                  className={`px-2 py-1 ${expandedRaceId === race.id ? 'bg-yellow-500 text-black' : 'bg-white/5 text-gray-400 hover:text-white'} border border-white/10 rounded text-[10px] font-black transition-all uppercase flex items-center gap-1`}
+                                >
+                                  <Trophy className="w-3 h-3" />
+                                  <span>Results</span>
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'all'); }}
+                                  className="px-2 py-1 bg-white/5 hover:bg-gray-500/20 border border-white/10 rounded text-[10px] font-black text-gray-400 hover:text-white transition-all uppercase"
+                                >
+                                  Details
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expandable Standings Section (Reuse same logic) */}
+                          {expandedRaceId === race.id && (
+                            <div className="mt-6 pt-6 border-t border-white/5 animate-in slide-in-from-top-4 duration-300">
+                              <div className="flex items-center justify-between mb-4">
+                                <h5 className="text-xs font-black uppercase tracking-widest text-yellow-500 flex items-center gap-2">
+                                  <Trophy className="w-3 h-3" />
+                                  <span>Race-Specific Standings: {race.name}</span>
+                                </h5>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'all'); }}
+                                  className="text-[10px] font-black text-racing-blue uppercase hover:underline"
+                                >
+                                  Full Matrix →
+                                </button>
+                              </div>
+                              
+                              {loadingCalendarStandings.has(race.id) ? (
+                                <div className="flex items-center justify-center py-8">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-500"></div>
+                                </div>
+                              ) : (
+                                <div className="overflow-hidden rounded-xl border border-white/5 bg-black/40">
+                                  <table className="w-full text-left text-[11px]">
+                                    <thead>
+                                      <tr className="text-gray-500 border-b border-white/5 uppercase font-black bg-white/5">
+                                        <th className="px-4 py-2">Pos</th>
+                                        <th className="px-4 py-2">Driver</th>
+                                        <th className="px-4 py-2">Team</th>
+                                        <th className="px-4 py-2 text-right">Time/Gap</th>
+                                        <th className="px-4 py-2 text-right text-racing-red">Pts</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                      {(calendarStandings[race.id] || []).map((runner, idx) => (
+                                        <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                          <td className="px-4 py-2 font-mono font-bold text-gray-400">{runner.position}</td>
+                                          <td className="px-4 py-2 font-bold text-white">{runner.driver}</td>
+                                          <td className="px-4 py-2 text-gray-500">{runner.team}</td>
+                                          <td className="px-4 py-2 text-right font-mono text-gray-400">{runner.time}</td>
+                                          <td className="px-4 py-2 text-right font-black text-racing-red">{runner.points}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
                 {(apiSessions.length > 0 ? raceList.slice(currentRaceIndex, currentRaceIndex + 5) : upcomingRacesList.slice(currentRaceIndex, currentRaceIndex + 5)).map((race, i) => {
                   const isCurrentNext = nextEvent && race.name === nextEvent.session_name;
                   const isNextRace = i === 0;
