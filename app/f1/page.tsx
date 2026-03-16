@@ -89,7 +89,7 @@ export default function F1Page() {
   const [customTrackMapUrl, setCustomTrackMapUrl] = useState<string | null>(null)
 
   // Top-level Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'builder' | 'analytics' | 'ai' | 'practice' | 'standings'>('upcoming')
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'builder' | 'analytics' | 'ai' | 'practice' | 'standings' | 'archives'>('upcoming')
 
 
   // Mock upcoming races 2026 - Chronological Calendar Order
@@ -225,6 +225,8 @@ export default function F1Page() {
   // New Historical Data States
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [archivesData, setArchivesData] = useState<any[]>([])
+  const [archivesLoading, setArchivesLoading] = useState(false)
 
   // UseEffect to fetch historical data
   useEffect(() => {
@@ -246,6 +248,28 @@ export default function F1Page() {
     };
     fetchHistory();
   }, [selectedTrack, upcomingRacesList]);
+
+  // UseEffect to fetch archives
+  const fetchArchives = useCallback(async () => {
+    setArchivesLoading(true);
+    try {
+      const res = await fetch('/api/f1/archives');
+      const data = await res.json();
+      if (data.success) {
+        setArchivesData(data.archives);
+      }
+    } catch (err) {
+      console.error("Archives fetch error:", err);
+    } finally {
+      setArchivesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'archives') {
+      fetchArchives();
+    }
+  }, [activeTab, fetchArchives]);
 
   // UseEffect to organize practice sessions by chronological track order
   useEffect(() => {
@@ -1758,6 +1782,32 @@ export default function F1Page() {
       )}
 
       <div className="container mx-auto px-6 py-8">
+        {/* TOP NAVIGATION BAR */}
+        <div className="flex flex-wrap items-center gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-sm sticky top-4 z-40">
+          {[
+            { id: 'upcoming', label: 'Schedule', icon: Calendar },
+            { id: 'standings', label: 'Standings', icon: Trophy },
+            { id: 'builder', label: 'Forge', icon: Brain },
+            { id: 'analytics', label: 'Live Data', icon: BarChart3 },
+            { id: 'practice', label: 'Practice', icon: Clock },
+            { id: 'ai', label: 'AI Oracle', icon: Zap },
+            { id: 'archives', label: 'Archives', icon: History }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-bold transition-all duration-300 ${
+                activeTab === tab.id 
+                  ? 'bg-racing-red text-white shadow-lg shadow-racing-red/20 scale-105' 
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'animate-pulse' : ''}`} />
+              <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* UPCOMING RACES DASHBOARD */}
         {activeTab === 'upcoming' && (
           <div className="space-y-8 animate-in fade-in duration-500">
@@ -3996,6 +4046,23 @@ export default function F1Page() {
                     {standingsLoading ? 'Loading...' : 'Refresh'}
                   </button>
 
+                  <button 
+                    onClick={() => recordSessionData('standings_snapshot', { 
+                      standings: standingsData,
+                      track: selectedRaceForStandings,
+                      timestamp: Date.now()
+                    })}
+                    disabled={isRecording}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border flex items-center gap-2 ${
+                      isRecording ? 'bg-gray-800 border-gray-700 text-gray-500' : 
+                      recordStatus?.startsWith('Saved') ? 'bg-green-500/20 border-green-500/30 text-green-400' :
+                      'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-gray-600 animate-pulse' : 'bg-red-500'}`}></div>
+                    <span>{recordStatus || 'Record Snapshot'}</span>
+                  </button>
+
                   <button
                     onClick={() => setShowWhatIfSimulator(!showWhatIfSimulator)}
                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
@@ -4282,6 +4349,101 @@ export default function F1Page() {
                     ? 'Season championship data will appear here when races are completed.'
                     : 'Track-specific data will appear here when races are completed at this circuit.'
                   }
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ARCHIVES SECTION */}
+        {activeTab === 'archives' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-3xl font-black tracking-tight text-white flex items-center">
+                  <Database className="w-8 h-8 mr-3 text-racing-red" />
+                  Historical Archives
+                </h2>
+                <p className="text-gray-400 mt-1">Recorded snapshots and historical session data</p>
+              </div>
+              <button 
+                onClick={fetchArchives}
+                disabled={archivesLoading}
+                className="px-6 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2"
+              >
+                <Activity className={`w-4 h-4 ${archivesLoading ? 'animate-spin' : ''}`} />
+                {archivesLoading ? 'Scanning Storage...' : 'Refresh Local Files'}
+              </button>
+            </div>
+
+            {archivesLoading ? (
+              <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-3xl border border-white/5">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-racing-red mb-4"></div>
+                <p className="text-gray-400 font-bold tracking-widest uppercase text-sm">Scanning file system for snapshots...</p>
+              </div>
+            ) : archivesData.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {archivesData.map((archive, i) => (
+                  <div key={i} className="bg-gradient-to-br from-gray-900 to-black border border-white/5 hover:border-racing-red/40 rounded-3xl p-6 transition-all duration-300 group shadow-2xl relative overflow-hidden flex flex-col">
+                    <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <Database className="w-20 h-20" />
+                    </div>
+                    
+                    <div className="flex items-start justify-between mb-4 relative z-10">
+                      <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                        archive.dataType?.includes('snapshot') ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      }`}>
+                        {archive.dataType || 'Session Data'}
+                      </div>
+                      <span className="text-[10px] text-gray-500 font-mono">{(archive.size / 1024).toFixed(0)} KB</span>
+                    </div>
+
+                    <h3 className="text-lg font-bold text-white mb-1 truncate">{archive.sessionName || 'Recorded Session'}</h3>
+                    <p className="text-xs text-gray-400 mb-6 flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {new Date(archive.recordedAt).toLocaleString()}
+                    </p>
+
+                    <div className="mt-auto pt-6 border-t border-white/5 space-y-3">
+                      <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest">
+                        <span className="text-gray-500">File Reference</span>
+                        <span className="text-racing-red">{archive.fileName.split('_').pop()?.split('.')[0] || 'REF'}</span>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          if (archive.dataType?.includes('snapshot')) {
+                             setStandingsLoading(true);
+                             try {
+                               const res = await fetch(`/api/f1/history?file=${archive.fileName}`);
+                               const data = await res.json();
+                               if (data.history && data.history.results) {
+                                 setApiStandings(data.history.results);
+                                 setActiveTab('standings');
+                                 setStandingsView('season');
+                                 alert(`Snapshot for ${archive.sessionName} loaded into memory. Check Standings tab.`);
+                               }
+                             } catch (e) {
+                               alert("Failed to load archive detail.");
+                             } finally {
+                               setStandingsLoading(false);
+                             }
+                          }
+                        }}
+                        className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all flex items-center justify-center space-x-2 text-xs font-bold"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        <span>View Results</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-gray-900/50 rounded-3xl border border-white/5 border-dashed">
+                <History className="w-20 h-20 text-gray-800 mx-auto mb-6 opacity-50" />
+                <h3 className="text-2xl font-bold text-gray-300 mb-3">No Snapshots Recorded</h3>
+                <p className="text-gray-500 max-w-md mx-auto text-lg">
+                  Use the <span className="text-racing-red font-black underline uppercase">Record Snapshot</span> button in the header while viewing live data to document session standings for posterity.
                 </p>
               </div>
             )}
