@@ -3,14 +3,23 @@ import html2canvas from 'html2canvas'
 
 // Mock implementations removed - real packages now installed
 
+export interface ReportSection {
+  title: string
+  type: 'text' | 'chart' | 'table' | 'stats'
+  content: any
+  metadata?: {
+    chartImage?: string
+    tableData?: any[]
+    stats?: any
+  }
+}
+
 export interface ReportData {
   title: string
   track: string
   date: string
   drivers: string[]
   sections: ReportSection[]
-}ts ?: Record<string, any>
-  }
 }
 
 class F1ReportExporter {
@@ -26,35 +35,27 @@ class F1ReportExporter {
     this.margin = 20
   }
 
-export interface ReportSection {
-  title: string
-  type: 'text' | 'chart' | 'table' | 'stats'
-  content: any
-  metadata?: {
-    chartImage?: string
-    tableData?: any[]
-    sta
+  async generateReport(data: ReportData): Promise<Blob> {
+    // Add title page
+    this.addTitlePage(data)
 
-    async generateReport(data: ReportData): Promise<Blob> {
-  // Add title page
-  this.addTitlePage(data)
+    // Add sections
+    for (const section of data.sections) {
+      await this.addSection(section)
+    }
 
-  // Add sections
-  for (const section of data.sections) {
-    await this.addSection(section)
+    // Add footer
+    this.addFooter()
+
+    return new Blob([this.pdf.output('blob')], { type: 'application/pdf' })
   }
 
-  // Add footer
-  this.addFooter()
-
-  return new Blob([this.pdf.output('blob')], { type: 'application/pdf' })
-}
-
   private addTitlePage(data: ReportData) {
-  // Title
-  this.pdf.setFontSize(24)
-  this.pdf.setFont('helvetica', 'bold')
-  this.pdf.text(data.title, this.margin, this.currentY)
+    // Title
+    this.pdf.setFontSize(24)
+    this.pdf.setFont('helvetica', 'bold')
+    this.pdf.text(data.title, this.margin, this.currentY)
+
 
   // Subtitle
   this.currentY += 15
