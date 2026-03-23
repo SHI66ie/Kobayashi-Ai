@@ -34,10 +34,68 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
   const [maxEvents, setMaxEvents] = useState(20)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Performance optimization: throttle updates
-  const updateThrottleRef = useRef<NodeJS.Timeout | null>(null)
+  const [isRealTime, setIsRealTime] = useState(false)
+  const [sessionKey, setSessionKey] = useState<number | null>(null)
 
-  const generateLiveData = (): LiveDataItem[] => {
+  // Fetch real data from OpenF1
+  const fetchRealOpenF1Data = async () => {
+    try {
+      const { openf1Api, transformOpenF1Data } = await import('../lib/openf1-api')
+      
+      // 1. Get latest session if we don't have one
+      let currentSessionKey = sessionKey
+      if (!currentSessionKey) {
+        const latestSessions = await openf1Api.getSessions()
+        const latest = latestSessions.length > 0 ? latestSessions[latestSessions.length - 1] : null
+        if (latest) {
+          currentSessionKey = latest.session_key
+          setSessionKey(currentSessionKey)
+        }
+      }
+
+      if (!currentSessionKey) return []
+
+      // 2. Fetch Race Control Messages
+      const raceControlData = await openf1Api.getRaceControlData(currentSessionKey)
+      
+      // 3. Transform to LiveDataItem format
+      const realEvents: LiveDataItem[] = raceControlData.slice(-10).map((msg: any, i: number) => ({
+        id: `rc-${msg.date}-${i}`,
+        type: msg.category === 'Flag' ? 'flag' : 'pit',
+        timestamp: new Date(msg.date),
+        driver: msg.driver_number ? `Driver #${msg.driver_number}` : undefined,
+        message: msg.message,
+        urgency: msg.flag === 'RED' ? 'high' : msg.flag === 'YELLOW' ? 'medium' : 'low'
+      }))
+
+      // 4. Fetch Weather for track info
+      const weather = await openf1Api.getWeatherData(currentSessionKey)
+      if (weather.length > 0) {
+        const latestWeather = weather[weather.length - 1]
+        realEvents.push({
+          id: `wth-${latestWeather.date}`,
+          type: 'weather',
+          timestamp: new Date(latestWeather.date),
+          message: `Track Temp: ${latestWeather.track_temperature}°C / Air: ${latestWeather.air_temperature}°C`,
+          urgency: 'low'
+        })
+      }
+
+      setIsRealTime(true)
+      return realEvents.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    } catch (error) {
+      console.error('Error fetching real OpenF1 data:', error)
+      setIsRealTime(false)
+      return []
+    }
+  }
+
+  const generateLiveData = async (): Promise<LiveDataItem[]> => {
+    // Attempt real data first
+    const realData = await fetchRealOpenF1Data()
+    if (realData.length > 0) return realData
+
+    // Fallback to mock data generator if real data is empty/fails
     const events: LiveDataItem[] = []
     const timestamp = new Date()
     
@@ -45,8 +103,8 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
       {
         type: 'position' as const,
         messages: [
-          `${drivers[0]} gains position on ${drivers[1]}`,
-          `${drivers[2]} defending from ${drivers[3]}`,
+          `${drivers[0] || 'Verstappen'} gains position on ${drivers[1] || 'Leclerc'}`,
+          `${drivers[2] || 'Norris'} defending from ${drivers[3] || 'Hamilton'}`,
           'Close battle for P4',
           'Overtaking attempt in Sector 2'
         ],
@@ -55,9 +113,9 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
       {
         type: 'lap_time' as const,
         messages: [
-          `New fastest lap: ${drivers[0]} - 1:23.456`,
-          'Purple sector by Verstappen',
-          'Personal best for Hamilton',
+          `New fastest lap: ${drivers[0] || 'Verstappen'} - 1:23.456`,
+          'Purple sector by leader',
+          'Personal best for middle field',
           'Improving pace in Sector 3'
         ],
         urgency: 'low' as const
@@ -95,7 +153,7 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
       {
         type: 'pit' as const,
         messages: [
-          `${drivers[1]} entering pits for Mediums`,
+          `${drivers[1] || 'Ferrari'} entering pits for Mediums`,
           'Quick pit stop 2.3s',
           'Double stack strategy initiated',
           'Pit window opening'
@@ -136,19 +194,20 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
   }
 
   // Start live data feed
-  const startLiveData = () => {
-    if (intervalRef.current) return // Prevent multiple intervals
+  const startLiveData = async () => {
+    if (intervalRef.current) return 
 
     // Initial data
-    setLiveData(generateLiveData())
+    const initialData = await generateLiveData()
+    setLiveData(initialData)
     setIsConnected(true)
 
     // Set up interval for updates
-    intervalRef.current = setInterval(() => {
+    intervalRef.current = setInterval(async () => {
       if (!isPaused) {
-        const newEvent = generateLiveData()[0]
+        const generated = await generateLiveData()
+        const newEvent = generated[0]
         
-        // Throttle updates to prevent performance issues
         if (updateThrottleRef.current) {
           clearTimeout(updateThrottleRef.current)
         }
@@ -159,10 +218,11 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
             setLastUpdate(new Date())
             return updated
           })
-        }, 100) // 100ms throttle
+        }, 100) 
       }
     }, updateFrequency)
   }
+
 
   // Stop live data feed
   const stopLiveData = () => {
@@ -247,13 +307,13 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
-                <Satellite className="w-6 h-6 text-racing-red" />
+                <Satellite className={`w-6 h-6 ${isRealTime ? 'text-green-500' : 'text-racing-red'}`} />
                 <h3 className="text-xl font-bold text-white">Live Feed Visualizations</h3>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                 <span className="text-sm text-gray-300">
-                  {isConnected ? (isPaused ? 'Paused' : 'Live') : 'Disconnected'}
+                  {isConnected ? (isPaused ? 'Paused' : (isRealTime ? 'Real-Time (OpenF1)' : 'Simulated')) : 'Disconnected'}
                 </span>
               </div>
             </div>

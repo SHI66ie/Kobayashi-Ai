@@ -30,124 +30,92 @@ const LiveDataTicker: React.FC<LiveDataTickerProps> = ({
   const [isConnected, setIsConnected] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
+  const [isRealTime, setIsRealTime] = useState(false)
+
   // Simulate live data feed
   useEffect(() => {
-    const generateLiveData = (): LiveDataItem[] => {
+    const fetchRealData = async () => {
+      try {
+        const { openf1Api } = await import('../lib/openf1-api')
+        const sessions = await openf1Api.getSessions()
+        const latest = sessions.length > 0 ? sessions[sessions.length - 1] : null
+        
+        if (!latest) return null
+
+        const [rc, weather] = await Promise.all([
+          openf1Api.getRaceControlData(latest.session_key),
+          openf1Api.getWeatherData(latest.session_key)
+        ])
+
+        const events: LiveDataItem[] = rc.slice(-8).map((msg: any, i: number) => ({
+          id: `rc-tick-${msg.date}-${i}`,
+          type: msg.category === 'Flag' ? 'flag' : 'pit',
+          timestamp: new Date(msg.date),
+          message: msg.message,
+          urgency: msg.flag === 'RED' ? 'high' : msg.flag === 'YELLOW' ? 'medium' : 'low'
+        }))
+
+        if (weather.length > 0) {
+          const w = weather[weather.length - 1]
+          events.push({
+            id: `wth-tick-${w.date}`,
+            type: 'weather',
+            timestamp: new Date(w.date),
+            message: `Track: ${w.track_temperature}°C | Air: ${w.air_temperature}°C`,
+            urgency: 'low'
+          })
+        }
+
+        return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      } catch (e) {
+        console.error('Ticker real-time error:', e)
+        return null
+      }
+    }
+
+    const generateMockData = (): LiveDataItem[] => {
       const events: LiveDataItem[] = []
       const timestamp = new Date()
       
-      // Generate random live events
       const eventTypes = [
-        {
-          type: 'position' as const,
-          messages: [
-            `${drivers[0]} gains position on ${drivers[1]}`,
-            `${drivers[2]} defending from ${drivers[3]}`,
-            'Close battle for P4',
-            'Overtaking attempt in Sector 2'
-          ],
-          urgency: 'medium' as const
-        },
-        {
-          type: 'lap_time' as const,
-          messages: [
-            `New fastest lap: ${drivers[0]} - 1:23.456`,
-            'Purple sector by Verstappen',
-            'Personal best for Hamilton',
-            'Improving pace in Sector 3'
-          ],
-          urgency: 'low' as const
-        },
-        {
-          type: 'tire' as const,
-          messages: [
-            'High tire wear detected - Medium compound',
-            'Optimal tire temperature reached',
-            'Graining issues reported',
-            'Tire strategy working well'
-          ],
-          urgency: 'medium' as const
-        },
-        {
-          type: 'weather' as const,
-          messages: [
-            'Track temperature rising to 32°C',
-            'Wind speed increasing to 15 km/h',
-            'Humidity dropping to 45%',
-            'Clear conditions expected'
-          ],
-          urgency: 'low' as const
-        },
-        {
-          type: 'drs' as const,
-          messages: [
-            'DRS enabled on main straight',
-            'DRS train forming',
-            'Successful DRS overtake',
-            'DRS not within 1 second'
-          ],
-          urgency: 'medium' as const
-        },
-        {
-          type: 'pit' as const,
-          messages: [
-            `${drivers[1]} entering pits for Mediums`,
-            'Quick pit stop 2.3s',
-            'Double stack strategy initiated',
-            'Pit window opening'
-          ],
-          urgency: 'high' as const
-        },
-        {
-          type: 'flag' as const,
-          messages: [
-            'Yellow flag Sector 3 - debris',
-            'Virtual Safety Car deployed',
-            'Green flag - track clear',
-            'Safety car ending this lap'
-          ],
-          urgency: 'high' as const
-        }
+        { type: 'position' as const, messages: [`${drivers[0] || 'Leader'} increases gap`, 'Battle for P10 heating up'], urgency: 'medium' as const },
+        { type: 'lap_time' as const, messages: ['Green sector for top 5', 'Pace improving'], urgency: 'low' as const },
+        { type: 'tire' as const, messages: ['Checking tire degradation', 'Switching to Plan B'], urgency: 'medium' as const },
+        { type: 'flag' as const, messages: ['Track conditions optimal', 'Sector 1 yellow cleared'], urgency: 'low' as const }
       ]
 
-      // Generate 3-6 random events
-      const numEvents = Math.floor(Math.random() * 4) + 3
-      for (let i = 0; i < numEvents; i++) {
-        const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)]
-        const message = eventType.messages[Math.floor(Math.random() * eventType.messages.length)]
-        
+      for (let i = 0; i < 4; i++) {
+        const et = eventTypes[i % eventTypes.length]
         events.push({
-          id: `${timestamp.getTime()}-${i}`,
-          type: eventType.type,
-          timestamp: new Date(timestamp.getTime() - i * 30000), // Stagger timestamps
-          driver: drivers[Math.floor(Math.random() * drivers.length)],
-          team: ['Red Bull', 'Mercedes', 'Ferrari', 'McLaren', ' Aston Martin'][Math.floor(Math.random() * 5)],
-          message,
-          value: Math.random() * 100,
-          change: ['up', 'down', 'neutral'][Math.floor(Math.random() * 3)] as any,
-          urgency: eventType.urgency
+          id: `mock-tick-${timestamp.getTime()}-${i}`,
+          type: et.type,
+          timestamp: new Date(timestamp.getTime() - i * 60000),
+          message: et.messages[Math.floor(Math.random() * et.messages.length)],
+          urgency: et.urgency
         })
       }
-      
-      return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      return events
     }
 
-    // Initial data
-    setLiveData(generateLiveData())
-    setIsConnected(true)
+    const refreshData = async () => {
+      const real = await fetchRealData()
+      if (real && real.length > 0) {
+        setLiveData(real)
+        setIsRealTime(true)
+      } else {
+        setLiveData(generateMockData())
+        setIsRealTime(false)
+      }
+      setIsConnected(true)
+      setLastUpdate(new Date())
+    }
 
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      const newEvent = generateLiveData()[0] // Take the latest
-      setLiveData(prev => {
-        const updated = [newEvent, ...prev.slice(0, 11)] // Keep max 12 items
-        setLastUpdate(new Date())
-        return updated
-      })
-    }, 8000 + Math.random() * 4000) // Random interval between 8-12 seconds
+    refreshData()
+    const interval = setInterval(refreshData, 15000)
 
     return () => clearInterval(interval)
   }, [drivers, trackId])
+
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -193,10 +161,10 @@ const LiveDataTicker: React.FC<LiveDataTickerProps> = ({
               <h3 className="text-lg font-bold text-white">Live Data Feed</h3>
             </div>
             <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-              <span className="text-xs text-gray-400">
-                {isConnected ? 'Connected' : 'Disconnected'}
-              </span>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? (isRealTime ? 'bg-green-500 animate-pulse' : 'bg-blue-500') : 'bg-red-500'}`}></div>
+            <span className="text-xs text-gray-400">
+              {isConnected ? (isRealTime ? 'Real-Time' : 'Simulated') : 'Disconnected'}
+            </span>
             </div>
           </div>
           <div className="text-right">
