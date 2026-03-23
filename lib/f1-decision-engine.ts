@@ -6,6 +6,9 @@ import { telemetryService } from './telemetry-data'
 import { getRecentContext, addMemoryEntry } from './memory'
 import { getAICompletion } from './ai-service'
 import { openf1Api, transformOpenF1Data } from './openf1-api'
+import { F1PerformanceAnalyzer } from './performance-analyzer'
+import { findProfileByName, TRACK_PROFILES as TRACK_DNA_PROFILES, TrackProfile, findSimilarProfiles } from './track-dna'
+import { physicsEngine, SimulationParams, StintParams } from './physics-engine'
 
 export interface DecisionContext {
   driver: string
@@ -70,6 +73,7 @@ export interface DecisionAnalysis {
 
 export class F1DecisionEngine {
   private static instance: F1DecisionEngine
+  private performanceAnalyzer = new F1PerformanceAnalyzer()
 
   static getInstance(): F1DecisionEngine {
     if (!F1DecisionEngine.instance) {
@@ -253,6 +257,123 @@ export class F1DecisionEngine {
     return Math.floor(Math.random() * 5) + 2 // Mock calculation
   }
 
+  private async getSisterRaceContext(driver: string, currentProfile: TrackProfile): Promise<string> {
+    try {
+      const similarProfiles = findSimilarProfiles(currentProfile).slice(0, 3);
+      if (similarProfiles.length === 0) return "";
+
+      let contextStr = "HISTORICAL PERFORMANCE AT SIMILAR TRACKS:\n";
+      
+      for (const profile of similarProfiles) {
+        // Try to get data from most recent 3 years
+        for (const year of [2024, 2023, 2022]) {
+          const history = await telemetryService.getDriverPerformanceHistory(year, driver);
+          const raceMatch = history.races.find(r => r.race.toLowerCase().includes(profile.id));
+          
+          if (raceMatch) {
+            contextStr += `- ${profile.name} (${year}): Finished ${raceMatch.position}, Points: ${raceMatch.points}\n`;
+            break; // Found recent data for this track
+          }
+        }
+      }
+      return contextStr;
+    } catch (e) {
+      return "Sister race context unavailable";
+    }
+  }
+
+  private calculateHistoricalBias(finalDriverData: any, predictedPosition: number): string {
+    const historicalAvg = finalDriverData.historicalPerformance.averageRacePosition || 10;
+    const delta = historicalAvg - predictedPosition;
+    const isOptimistic = delta > 0; // Positive delta means prediction is better than avg
+
+    let biasLevel = "Neutral";
+    if (Math.abs(delta) > 5) biasLevel = "Extreme " + (isOptimistic ? "Optimism" : "Pessimism");
+    else if (Math.abs(delta) > 2) biasLevel = (isOptimistic ? "Slight Optimism" : "Slight Pessimism");
+
+    return `
+BIAS & SELF-LEARNING REPORT:
+- 3-Year Historical Finish Avg: P${historicalAvg.toFixed(1)}
+- Current Heuristic Prediction: P${predictedPosition}
+- Bias Delta: ${delta > 0 ? '+' : ''}${delta.toFixed(1)} positions vs. History
+- Bias Category: ${biasLevel.toUpperCase()}
+- Reliability Note: ${finalDriverData.historicalPerformance.consistency > 0.8 ? 'Consistency is low (high variance), expect volatile outcomes.' : 'Stable driver footprint.'}
+    `.trim();
+  }
+
+  private runStrategyStressTest(context: DecisionContext, strategy: RaceStrategy, profile: TrackProfile | null): string {
+    try {
+      const isHot = context.currentConditions?.trackTemperature ? context.currentConditions.trackTemperature > 40 : false;
+      
+      const sims: StintParams[] = [
+        { compound: strategy.tireStrategy.startCompound as any, laps: strategy.tireStrategy.stint1.laps, ...physicsEngine.getDegradationProfile(strategy.tireStrategy.startCompound as any, isHot) },
+        { compound: strategy.tireStrategy.stint2.compound as any, laps: strategy.tireStrategy.stint2.laps, ...physicsEngine.getDegradationProfile(strategy.tireStrategy.stint2.compound as any, isHot) }
+      ];
+
+      if (strategy.tireStrategy.stint3) {
+        sims.push({ compound: strategy.tireStrategy.stint3.compound as any, laps: strategy.tireStrategy.stint3.laps, ...physicsEngine.getDegradationProfile(strategy.tireStrategy.stint3.compound as any, isHot) });
+      }
+
+      const params: SimulationParams = {
+        laps: 57, 
+        initialFuelKg: 100,
+        fuelBurnPerLap: 1.7,
+        fuelPenaltyPerKg: 0.035, 
+        trackLengthKm: 5.4,
+        baseLapTime: 90
+      };
+
+      const result = physicsEngine.simulateRace(params, sims, 22.5);
+      
+      return `
+PHYSICS-BASED STRATEGY STRESS TEST (DETERMINISTIC):
+- Estimated Total Race Time: ${Math.floor(result.totalTime / 60)}h ${Math.floor(result.totalTime % 60)}m ${Math.floor((result.totalTime * 60) % 60)}s
+- Average Lap Pace: ${result.averageLapTime.toFixed(3)}s
+- Strategy Efficiency: ${((1 - (result.averageLapTime / params.baseLapTime)) * 100).toFixed(1)}% vs. Qualy Pace
+- Projected Tire Wear at Stint Ends: ${result.laps.map(l => l.tireWear.toFixed(2)).slice(-1)[0]}s loss per lap
+      `.trim();
+    } catch (e) {
+      return "Strategy stress test failed math validation.";
+    }
+  }
+
+  private async getTechnicalTelemetryContext(context: DecisionContext): Promise<string> {
+    try {
+      const sessions = await openf1Api.getSessions(context.year)
+      const latestSession = sessions.find(s => 
+        s.location.toLowerCase().includes(context.race.toLowerCase())
+      ) || sessions[0]
+
+      if (!latestSession) return "Telemetry Unavailable"
+
+      const drivers = await openf1Api.getDrivers(latestSession.session_key)
+      const targetDriver = drivers.find(d => d.full_name.toLowerCase().includes(context.driver.toLowerCase()))
+
+      if (!targetDriver) return "Driver Telemetry Unavailable"
+
+      const [carData, lapData] = await Promise.all([
+        openf1Api.getCarData(latestSession.session_key, targetDriver.driver_number),
+        openf1Api.getLaps(latestSession.session_key, targetDriver.driver_number)
+      ])
+
+      const profile = await this.performanceAnalyzer.carAnalyzer.analyzeDriverPerformance(
+        targetDriver.driver_number,
+        carData,
+        lapData
+      )
+
+      return `
+- Driving Style: ${profile.drivingStyle.toUpperCase()}
+- Top Speed: ${profile.topSpeed.toFixed(1)} km/h
+- Sector Strengths (0-1): S1: ${profile.sectorStrengths.sector1.toFixed(2)}, S2: ${profile.sectorStrengths.sector2.toFixed(2)}, S3: ${profile.sectorStrengths.sector3.toFixed(2)}
+- Controls: Throttle Consistency (${(profile.throttleConsistency * 100).toFixed(0)}%), Braking Aggression (${(profile.brakingAggression * 100).toFixed(0)}%)
+- Efficiency: Gear Change Efficiency (${(profile.gearChangeEfficiency * 100).toFixed(0)}%)
+      `.trim()
+    } catch (e) {
+      return "Telemetry context generation failed"
+    }
+  }
+
   // Generate comprehensive race strategy and decisions
   async generateRaceDecision(context: DecisionContext): Promise<DecisionAnalysis> {
     try {
@@ -352,23 +473,51 @@ export class F1DecisionEngine {
         historicalPatterns
       )
 
-      // AI Reasoning Step
+      // Preliminary Predict Performance (Self-Learning Phase)
+      const prelimPrediction = await this.predictPerformance(
+        finalDriverData,
+        finalRaceData,
+        context,
+        overallStrategy
+      )
+
+      const biasReport = this.calculateHistoricalBias(finalDriverData, prelimPrediction.racePosition)
+
+      // AI Reasoning Step (Enhanced with Bias Awareness)
+      const telemetryContext = await this.getTechnicalTelemetryContext(context)
+      const profile = findProfileByName(context.race)
+      const trackDNA = profile ? profile.dna : "Standard GP Profile"
+      const sisterRaceContext = profile ? await this.getSisterRaceContext(context.driver, profile) : ""
+      const stressTestResult = this.runStrategyStressTest(context, overallStrategy, profile)
+
       const aiPrompt = `
-Analyze the F1 Race Context.
+Analyze the F1 Race Context with HIGH-FIDELITY TELEMETRY and PHYSICS VALIDATION.
 Driver: ${context.driver}
 Race: ${context.race} (${context.year})
+Track DNA: ${trackDNA}
 Current Conditions: ${JSON.stringify(context.currentConditions)}
-Strategy: ${JSON.stringify(overallStrategy)}
 
-PAST PREDICTIONS:
+${sisterRaceContext}
+
+${biasReport}
+
+${stressTestResult}
+
+STRATEGY PROPOSAL (DETAILED):
+${JSON.stringify(overallStrategy)}
+
+TECHNICAL PERFORMANCE PROFILE (Real-Time):
+${telemetryContext}
+
+PAST PREDICTIONS/OUTCOMES:
 ${pastContext}
 
-TASK: Provide a logical critique and refinement. Respond in one paragraph.
+TASK: Provide a deep technical critique and refinement. Analyze if the technical telemetry profile (braking, throttle consistency) supports the proposed strategy. Respond in 2-3 technical paragraphs.
 `;
 
       let aiInsights = "";
       try {
-        const response = await getAICompletion(aiPrompt, "You are a senior F1 Race Strategist.");
+        const response = await getAICompletion(aiPrompt, "You are a senior F1 Race Strategist and Performance Engineer.");
         aiInsights = response.content;
       } catch (e) {
         console.error("AI reasoning step failed", e);
