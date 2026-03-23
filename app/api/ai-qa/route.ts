@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { fetchLiveF1Data, getF1StatisticsSummary } from '@/lib/f1-data-loader'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -119,6 +120,24 @@ export async function POST(request: NextRequest) {
     )
 
     // Enhanced context for F1 questions
+    let f1LiveData: any = null
+    let f1HistoricalContext: any = null
+
+    if (isF1Question) {
+      console.log('📊 AI QA: Fetching F1 data for context...')
+      try {
+        const [live, hist] = await Promise.all([
+          fetchLiveF1Data(),
+          getF1StatisticsSummary()
+        ])
+        f1LiveData = live
+        f1HistoricalContext = hist
+      } catch (e) {
+        console.error('Error fetching F1 data for QA:', e)
+      }
+    }
+
+    // Enhanced context for F1 questions
     let f1Context: {
       tireCompounds: string[];
       selectedTire: string;
@@ -186,10 +205,19 @@ export async function POST(request: NextRequest) {
     // Dynamic system prompt based on context
     let systemPrompt = ""
     if (isF1Question) {
-      systemPrompt = `You are KobayashiAI, an expert F1 analyst with deep knowledge of Formula 1 racing, strategy, tire compounds, driver performance, and race conditions.
+      systemPrompt = `You are KobayashiAI, an expert F1 analyst with deep knowledge of Formula 1 racing, strategy, tire compounds, driver performance, and race conditions. 
+You are analyzing a HYBRID data environment:
+1. LIVE REAL-WORLD DATA: Real-time telemetry, standings, and weather from the OpenF1 API (for the 2024/2025 seasons).
+2. 2026 SIMULATION DATA: A mock/simulated environment for the 2026 season featuring updated regulations (Kimi Antonelli at Mercedes, Lewis Hamilton at Ferrari, Audi F1 Team, etc.).
+
+LIVE REAL-WORLD F1 DATA (OpenF1):
+${JSON.stringify(f1LiveData, null, 2)}
+
+HISTORICAL F1 CONTEXT:
+${JSON.stringify(f1HistoricalContext, null, 2)}
 
 ${Object.keys(f1Context).length > 0 ? `
-CURRENT F1 CONTEXT:
+CURRENT SESSION SIMULATION (2026):
 - Track: ${f1Context.currentTrack}
 - Track Temperature: ${f1Context.trackTemp}°C
 - Air Temperature: ${f1Context.airTemp}°C
@@ -202,7 +230,12 @@ CURRENT F1 CONTEXT:
 - Current Lap: ${f1Context.currentLap}/${f1Context.totalLaps}
 ` : ''}
 
-ANALYZE the race data and provide expert F1 insights using the provided grid data. You have access to information about ALL 20 drivers and 10 teams (including Alpine, Red Bull, Haas, etc.). Use proper F1 terminology (undercut, overcut, degradation, stint, etc.). Consider tire strategy, pit stop windows, track conditions, and driver performance for any part of the field. Be specific and data-driven when possible, but also engage in natural conversation about F1 topics.`
+INSTRUCTIONS:
+- If asked about "Live" or "Current" real-world races, refer to the OpenF1 data provided above.
+- If asked about the "2026 season" or "Simulation", refer to the 2026 context provided (drivers like Antonelli, Bearman, etc.).
+- Use proper F1 terminology (undercut, overcut, degradation, stint, etc.).
+- Be specific and data-driven. Reference both historical trends and current telemetry where relevant.`
+
 
     } else {
       systemPrompt = `You are RaceMind AI, an expert ${series} racing analyst. Answer questions about this race using the provided data. Be concise but specific. If data is missing, say what is uncertain. Engage in natural conversation while maintaining expertise.`

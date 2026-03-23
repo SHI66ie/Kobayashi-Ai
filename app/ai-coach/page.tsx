@@ -12,38 +12,40 @@ export default function AICoachPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate loading race data
-    const mockRaceData = {
-      lapTimes: Array.from({ length: 50 }, (_, i) => ({
-        lap: i + 1,
-        time: 95 + Math.random() * 5,
-        driver: 'Max Verstappen',
-        position: Math.floor(Math.random() * 10) + 1
-      })),
-      weather: {
-        temperature: 25,
-        humidity: 60,
-        windSpeed: 10,
-        trackTemp: 35,
-        condition: 'dry'
-      },
-      track: 'Monaco',
-      race: 'Monaco Grand Prix',
-      tireCompound: 'C3',
-      trackCondition: 'dry',
-      telemetry: {
-        speed: 280,
-        rpm: 15000,
-        throttle: 85,
-        brake: 15,
-        drs: false
+    async function fetchData() {
+      try {
+        const [standingsRes, resultsRes] = await Promise.all([
+          fetch('/api/f1/standings?season=2026'),
+          fetch('/api/f1/race-results?season=2026')
+        ])
+
+        const standings = await standingsRes.json()
+        const results = await resultsRes.json()
+
+        const nextRace = results.success ? results.nextRace : null
+        const recentRace = results.success ? results.races.filter((r: any) => r.status === 'completed').pop() : null
+
+        setRaceData({
+          standings: standings.success ? standings.standings : [],
+          nextRace,
+          recentRace,
+          track: nextRace?.circuit || 'Unknown Circuit',
+          race: nextRace?.name || 'Upcoming Race',
+          trackTemp: 35, // Default/Placeholder
+          weather: {
+            temperature: 25,
+            humidity: 60,
+            trackTemp: 35,
+            condition: 'dry'
+          }
+        })
+      } catch (error) {
+        console.error('Error fetching live race data:', error)
+      } finally {
+        setLoading(false)
       }
     }
-
-    setTimeout(() => {
-      setRaceData(mockRaceData)
-      setLoading(false)
-    }, 1000)
+    fetchData()
   }, [])
 
   const aiFeatures = [
