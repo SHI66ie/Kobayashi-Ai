@@ -91,11 +91,11 @@ export class F1PhysicsEngine {
   }
 
   // Get degradation profile for compounds
-  getDegradationProfile(compound: 'soft' | 'medium' | 'hard', isHotTrack: boolean = false): { rate: number, exponent: number } {
+  getDegradationProfile(compound: 'soft' | 'medium' | 'hard', isHotTrack: boolean = false): { degradationRate: number, degradationExponent: number } {
     const profiles = {
-      soft: { rate: 0.15, exponent: 1.2 },
-      medium: { rate: 0.08, exponent: 1.1 },
-      hard: { rate: 0.04, exponent: 1.05 }
+      soft: { degradationRate: 0.15, degradationExponent: 1.2 },
+      medium: { degradationRate: 0.08, degradationExponent: 1.1 },
+      hard: { degradationRate: 0.04, degradationExponent: 1.05 }
     };
 
     const profile = profiles[compound];
@@ -103,8 +103,8 @@ export class F1PhysicsEngine {
     // Increase degradation if track is hot
     if (isHotTrack) {
       return {
-        rate: profile.rate * 1.4,
-        exponent: profile.exponent * 1.1
+        degradationRate: profile.degradationRate * 1.4,
+        degradationExponent: profile.degradationExponent * 1.1
       };
     }
 
