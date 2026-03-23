@@ -596,9 +596,9 @@ export class CarPerformanceAnalyzer {
 
 // Main analyzer class that combines all analyses
 export class F1PerformanceAnalyzer {
-  private tireAnalyzer = new TirePerformanceAnalyzer()
-  private trackAnalyzer = new TrackAnalyzer()
-  private carAnalyzer = new CarPerformanceAnalyzer()
+  public tireAnalyzer = new TirePerformanceAnalyzer()
+  public trackAnalyzer = new TrackAnalyzer()
+  public carAnalyzer = new CarPerformanceAnalyzer()
   
   async analyzeSession(
     sessionKey: number,
