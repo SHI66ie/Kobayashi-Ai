@@ -112,6 +112,7 @@ function extractTireAndTrackData(context: any) {
 export async function POST(request: NextRequest) {
     try {
         const { message, context }: any = await request.json()
+        const { tireData, trackData, insights } = extractTireAndTrackData(context)
 
         if (!message) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 })
