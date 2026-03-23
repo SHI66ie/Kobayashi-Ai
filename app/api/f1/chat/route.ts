@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { fetchLiveF1Data, getF1StatisticsSummary } from '@/lib/f1-data-loader'
+import { F1DecisionEngine } from '@/lib/f1-decision-engine'
+import { findProfileByName } from '@/lib/track-dna'
+import { physicsEngine } from '@/lib/physics-engine'
+import { F1PerformanceAnalyzer } from '@/lib/performance-analyzer'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -113,6 +117,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 })
         }
 
+        // --- NEW: KOBAYASHI BRAIN INTEGRATION ---
+        let brainInsights = ""
+        let physicsReport = ""
+        try {
+            const engine = F1DecisionEngine.getInstance()
+            const analyzer = new F1PerformanceAnalyzer()
+            const profile = findProfileByName(context?.trackName || "")
+            
+            if (profile) {
+                const sisterContext = await (engine as any).getSisterRaceContext(context?.driverName || "Max Verstappen", profile)
+                brainInsights = `TRACK DNA: ${profile.dna}\n${sisterContext}`
+                
+                // Run a quick physics stress test for the chat context
+                const isHot = context?.trackTemp > 40
+                const compound = context?.selectedTire || 'medium'
+                const degProfile = physicsEngine.getDegradationProfile(compound.toLowerCase() as any, isHot)
+                
+                physicsReport = `
+PHYSICS SIMULATION (Determininstic):
+- Base Compound: ${compound.toUpperCase()}
+- Calculated Wear Rate: ${degProfile.rate.toFixed(3)}s/lap
+- Thermal Sensitivity: ${isHot ? 'High (Accelerated Deg)' : 'Stable'}
+- Predicted Stint Limit: ${Math.round(30 / degProfile.rate)} laps
+                `.trim()
+            }
+        } catch (brainErr) {
+            console.warn("Brain integration failed for chat:", brainErr)
+        }
+
         // Fetch Live F1 Data and Historical Context
         console.log('📊 F1 Chat: Fetching live and historical data...')
         const [liveData, historicalContext] = await Promise.all([
@@ -121,28 +154,29 @@ export async function POST(request: NextRequest) {
         ])
 
         // Build the system prompt with F1 context and live data
-        const { tireData, trackData, insights } = extractTireAndTrackData(context)
         
         const systemPrompt = `
-You are KobayashiAI, a world-class Formula 1 data analyst and prediction expert, similar to the most advanced AI betting assistants (like Monsterbet).
-Your goal is to provide users with deep, data-driven insights, outcomes, and reasoning for F1 races.
+127: You are KobayashiAI, the most advanced Formula 1 Neural Intelligence.
+128: Your responses are backed by a deterministic Physics Engine and a Historical DNA Matcher.
+
+KOBAYASHI NEURAL CORE INSIGHTS:
+${brainInsights}
+
+PHYSICS STRESS TEST:
+${physicsReport}
 
 LIVE F1 2026 DATA:
 ${JSON.stringify(liveData, null, 2)}
 
-HISTORICAL F1 CONTEXT (2024-2025):
+HISTORICAL F1 CONTEXT:
 ${JSON.stringify(historicalContext, null, 2)}
 
-LIVE TIRE AND TRACK DATA (Contextual from UI):
-${JSON.stringify({ tireData, trackData, insights }, null, 2)}
-
-EXTENDED CONTEXT:
+EXTENDED UI CONTEXT:
 ${JSON.stringify(context, null, 2)}
 
 INSTRUCTIONS:
 1. Use the LIVE F1 2026 DATA for the most up-to-date standings and results.
 2. Reference the HISTORICAL F1 CONTEXT for long-term trends and statistics.
-3. Use the LIVE TIRE AND TRACK DATA to provide specific, data-driven strategy predictions.
 4. Analyze tire compound performance based on current conditions (track temp, weather, humidity).
 5. Consider track characteristics (corners, straights, abrasiveness) in your predictions.
 6. Provide specific stint length recommendations and pit stop windows.
