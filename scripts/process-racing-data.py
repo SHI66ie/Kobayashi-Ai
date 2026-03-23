@@ -21,17 +21,23 @@ if sys.platform == 'win32':
 # Configuration
 PROCESS_ALL_TRACKS = True
 
+# Detect project root (parent folder of scripts)
+SCRIPT_DIR = Path(__file__).parent.absolute()
+PROJECT_ROOT = SCRIPT_DIR.parent
+DATA_DIR = PROJECT_ROOT / "Data"
+
+# Track ZIP files expected in the Data directory
 ZIP_FILES = [
-    r"C:\Users\DELL\Documents\toyotahcak\Data\indianapolis.zip",
-    r"C:\Users\DELL\Documents\toyotahcak\Data\road-america.zip",
-    r"C:\Users\DELL\Documents\toyotahcak\Data\sebring.zip",
-    r"C:\Users\DELL\Documents\toyotahcak\Data\sonoma.zip",
-    r"C:\Users\DELL\Documents\toyotahcak\Data\virginia-international-raceway.zip",
-    r"C:\Users\DELL\Documents\toyotahcak\Data\barber-motorsports-park.zip",
-    r"C:\Users\DELL\Documents\toyotahcak\Data\circuit-of-the-americas.zip"
+    DATA_DIR / "barber-motorsports-park.zip",
+    DATA_DIR / "circuit-of-the-americas.zip",
+    DATA_DIR / "indianapolis.zip",
+    DATA_DIR / "road-america.zip",
+    DATA_DIR / "sebring.zip",
+    DATA_DIR / "sonoma.zip",
+    DATA_DIR / "virginia-international-raceway.zip"
 ]
 
-OUTPUT_DIR = r"C:\Users\DELL\Documents\GitHub\DriftKing-Ai\Data"
+OUTPUT_DIR = DATA_DIR
 CHUNK_SIZE = 10000  # Process in chunks to avoid memory issues
 TELEMETRY_DOWNSAMPLE_RATE = 10  # Keep every 10th row for telemetry (adjust as needed)
 

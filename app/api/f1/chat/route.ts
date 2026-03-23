@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { fetchLiveF1Data, getF1StatisticsSummary } from '@/lib/f1-data-loader'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -112,6 +113,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 })
         }
 
+        // Fetch Live F1 Data and Historical Context
+        console.log('📊 F1 Chat: Fetching live and historical data...')
+        const [liveData, historicalContext] = await Promise.all([
+            fetchLiveF1Data(),
+            getF1StatisticsSummary()
+        ])
+
         // Build the system prompt with F1 context and live data
         const { tireData, trackData, insights } = extractTireAndTrackData(context)
         
@@ -119,34 +127,41 @@ export async function POST(request: NextRequest) {
 You are KobayashiAI, a world-class Formula 1 data analyst and prediction expert, similar to the most advanced AI betting assistants (like Monsterbet).
 Your goal is to provide users with deep, data-driven insights, outcomes, and reasoning for F1 races.
 
-LIVE TIRE AND TRACK DATA:
+LIVE F1 2026 DATA:
+${JSON.stringify(liveData, null, 2)}
+
+HISTORICAL F1 CONTEXT (2024-2025):
+${JSON.stringify(historicalContext, null, 2)}
+
+LIVE TIRE AND TRACK DATA (Contextual from UI):
 ${JSON.stringify({ tireData, trackData, insights }, null, 2)}
 
-CONTEXT DATA:
+EXTENDED CONTEXT:
 ${JSON.stringify(context, null, 2)}
 
 INSTRUCTIONS:
-1. Use the LIVE TIRE AND TRACK DATA to provide specific, data-driven predictions
-2. Analyze tire compound performance based on current conditions (track temp, weather, humidity)
-3. Consider track characteristics (corners, straights, abrasiveness) in your predictions
-4. Provide specific stint length recommendations and pit stop windows
-5. Factor in tire wear calculations based on environmental conditions
-6. Combine Live Data and Historical DNA: Use both current conditions and historical patterns
-7. Performance Delta Analysis: Compare current session conditions with optimal scenarios
-8. If the user asks for a prediction (e.g., "Who will win the next race?" or "What position will Hulk take?"), provide a specific outcome with reasoning.
-9. Crucially, provide REASONING based on:
-   - Current tire compound performance and wear rates
-   - Track conditions and evolution
-   - Weather impact on tire strategy
+1. Use the LIVE F1 2026 DATA for the most up-to-date standings and results.
+2. Reference the HISTORICAL F1 CONTEXT for long-term trends and statistics.
+3. Use the LIVE TIRE AND TRACK DATA to provide specific, data-driven strategy predictions.
+4. Analyze tire compound performance based on current conditions (track temp, weather, humidity).
+5. Consider track characteristics (corners, straights, abrasiveness) in your predictions.
+6. Provide specific stint length recommendations and pit stop windows.
+7. Combine Live Data and Historical DNA: Use both current conditions and historical patterns.
+8. Performance Delta Analysis: Compare current session conditions with optimal scenarios.
+9. If the user asks for a prediction (e.g., "Who will win the next race?" or "What position will Hulk take?"), provide a specific outcome with reasoning.
+10. Crucially, provide REASONING based on:
+   - Current driver standings and team momentum.
+   - Recent race results and performance trends.
    - Historical performance at this track (using context).
+   - Tire compound performance and wear rate.
    - Technical factors (2026 Aero Package, Ground Effect, Power Unit efficiency).
-10. Maintain a professional, expert, yet exciting "Monsterbet" style tone. Use motorsport terminology (e.g., "undercut", "dirty air", "DRS train", "tire degradation").
-11. Be confident in your picks but acknowledge the "edge" and statistical probability.
-12. If the user asks about "Hulk", you are referring to Nico Hülkenberg. Consider his reputation for consistency and qualifying strength.
-13. Always reference the specific tire data and track conditions in your analysis.
+11. Maintain a professional, expert, yet exciting "Monsterbet" style tone. Use motorsport terminology (e.g., "undercut", "dirty air", "DRS train", "tire degradation").
+12. Be confident in your picks but acknowledge the "edge" and statistical probability.
+13. If the user asks about "Hulk", you are referring to Nico Hülkenberg. Consider his reputation for consistency and qualifying strength.
+14. Always reference the specific tire data, track conditions, and current standings in your analysis.
 
 Regime: 2026 Technical Regulations (Active aero, standardized power units, 800kW MGU-K).
-Current Strategy Insight: ${insights.recommendedStrategy}
+Current Strategy Recommendation: ${insights.recommendedStrategy}
 Pit Stop Window: ${insights.pitStopWindow}
 Weather Risk: ${insights.weatherRisk}
 Tire Management: ${insights.tireManagement}
@@ -257,7 +272,12 @@ Tire Management: ${insights.tireManagement}
             model: modelUsed,
             tireData,
             trackData,
-            insights
+            insights,
+            liveDataSnapshot: {
+                standingsCount: liveData.standings?.length || 0,
+                recentRacesCount: liveData.recentRaces?.length || 0,
+                historicalSummary: historicalContext.historicalContext ? Object.keys(historicalContext.historicalContext) : []
+            }
         })
 
     } catch (error: any) {
