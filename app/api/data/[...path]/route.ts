@@ -87,7 +87,7 @@ async function getFileFromZip(track: string, filePath: string): Promise<string |
 async function getLocalF1Data(track: string, filePath: string): Promise<string | null> {
   try {
     // Try OpenF1 API first for real data
-    const { openf1Api } = await import('../../../../lib/openf1-api')
+    const { openf1Api } = await import('@/lib/openf1-api')
     
     console.log(`Attempting to fetch real OpenF1 data for ${track}`)
     
@@ -147,7 +147,7 @@ async function getLocalF1Data(track: string, filePath: string): Promise<string |
     }
     
     // Fallback to local telemetry service
-    const { telemetryService } = await import('../../../../lib/telemetry-data')
+    const { telemetryService } = await import('@/lib/telemetry-data')
     
     // Map track names to F1 circuits (approximation)
     const trackToF1Mapping: Record<string, string> = {

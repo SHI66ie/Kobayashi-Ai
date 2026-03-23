@@ -33,6 +33,7 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
   const [updateFrequency, setUpdateFrequency] = useState(10000) // 10 seconds default
   const [maxEvents, setMaxEvents] = useState(20)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const updateThrottleRef = useRef<NodeJS.Timeout | null>(null)
 
   const [isRealTime, setIsRealTime] = useState(false)
   const [sessionKey, setSessionKey] = useState<number | null>(null)
@@ -40,7 +41,7 @@ const LiveFeedSection: React.FC<LiveFeedSectionProps> = ({
   // Fetch real data from OpenF1
   const fetchRealOpenF1Data = async () => {
     try {
-      const { openf1Api, transformOpenF1Data } = await import('../lib/openf1-api')
+      const { openf1Api, transformOpenF1Data } = await import('@/lib/openf1-api')
       
       // 1. Get latest session if we don't have one
       let currentSessionKey = sessionKey

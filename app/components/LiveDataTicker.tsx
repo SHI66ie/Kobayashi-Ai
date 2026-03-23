@@ -36,7 +36,7 @@ const LiveDataTicker: React.FC<LiveDataTickerProps> = ({
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        const { openf1Api } = await import('../lib/openf1-api')
+        const { openf1Api } = await import('@/lib/openf1-api')
         const sessions = await openf1Api.getSessions()
         const latest = sessions.length > 0 ? sessions[sessions.length - 1] : null
         
