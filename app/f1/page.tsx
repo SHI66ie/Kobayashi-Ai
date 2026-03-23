@@ -1342,20 +1342,22 @@ export default function F1Page() {
           outcomes: [
             { label: (realDrivers[0] || 'Max Verstappen') + ' Pole Position', probability: '94%' },
             { label: (realDrivers[1] || 'Lewis Hamilton') + ' Front Row', probability: '82%' },
-            { label: (realDrivers[2] || 'Charles Leclerc') + ' Top 3', probability: '76%' }
+            { label: (realDrivers[2] || 'Charles Leclerc') + ' Top 3', probability: '76%' },
+            { label: 'Constructor Battle: Red Bull vs Ferrari', probability: '68%' },
+            { label: 'Mid-field Q3 Contention', probability: '54%' }
           ],
-          predictions: [
-            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', time: '1:09.543', confidence: 0.94 },
-            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', time: '1:09.678', confidence: 0.89 },
-            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', time: '1:09.892', confidence: 0.86 },
-            { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', time: '1:10.034', confidence: 0.83 },
-            { position: 5, driver: realDrivers[4] || 'George Russell', team: 'Mercedes AMG', time: '1:10.156', confidence: 0.80 }
-          ],
-          analysis: "Qualifying simulation indicates extreme aero efficiency requirements. The 2026 ground effect profile favors low-rake setups at this circuit. Track evolution will be critical in Q3.",
+          predictions: realDrivers.slice(0, 8).map((d, i) => ({
+            position: i + 1,
+            driver: d,
+            team: apiDrivers.find(dr => dr.name === d)?.team || 'Constructor TBD',
+            time: `1:${(10 + i * 0.2).toFixed(3)}`,
+            confidence: (0.95 - i * 0.05).toFixed(2)
+          })),
+          analysis: `Field-wide qualifying simulation indicates extreme aero efficiency requirements at ${track?.name}. Constructor performance deltas show a tight battle between the leading pack. The 2026 ground effect profile favors low-rake setups.`,
           accuracy: Math.round(baseAccuracy * 100),
-          factors: ['2026 Aero Package Efficiency', 'Power Unit Performance', 'Driver Skill', 'Track-Specific Setup', 'Tire Strategy'],
-          rules: '2026 Technical Regulations: New aero philosophy, standardized power units, enhanced sustainability',
-          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+          factors: ['2026 Aero Package Efficiency', 'Power Unit Performance', 'Driver Skill', 'Track Evolution', 'Field Traffic Management'],
+          rules: '2026 Technical Regulations: New aero philosophy, enhanced sustainability',
+          dataSource: useRealData ? 'Live Data (Fallback Engine)' : 'Mock Engine'
         }
 
       case 'race':
@@ -1365,23 +1367,22 @@ export default function F1Page() {
           outcomes: [
             { label: (realDrivers[0] || 'Max Verstappen') + ' Win', probability: '88%' },
             { label: (realDrivers[2] || 'Charles Leclerc') + ' Podium', probability: '72%' },
-            { label: 'Safety Car Probability', probability: '35%' }
+            { label: 'Team Battle: Mercedes Pit Strategy', probability: '61%' },
+            { label: 'Lap 1 Incident Probability', probability: '24%' },
+            { label: 'Safety Car Deployment', probability: '35%' }
           ],
-          predictions: [
-            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.91, points: 26 },
-            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.78, points: 19 },
-            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.73, points: 16 },
-            { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', confidence: 0.69, points: 13 },
-            { position: 5, driver: realDrivers[4] || 'Carlos Sainz', team: 'Ferrari', confidence: 0.66, points: 11 },
-            { position: 6, driver: realDrivers[5] || 'George Russell', team: 'Mercedes AMG', confidence: 0.63, points: 9 },
-            { position: 7, driver: realDrivers[6] || 'Oscar Piastri', team: 'McLaren', confidence: 0.59, points: 7 },
-            { position: 8, driver: realDrivers[7] || 'Fernando Alonso', team: 'Aston Martin', confidence: 0.56, points: 5 }
-          ],
-          analysis: "Race simulation predicts high tire degradation on the soft compound. Strategy will likely pivot to a 2-stop medium-hard-hard sequence. Active aero management will be the deciding factor.",
+          predictions: realDrivers.slice(0, 8).map((d, i) => ({
+            position: i + 1,
+            driver: d,
+            team: apiDrivers.find(dr => dr.name === d)?.team || 'Constructor TBD',
+            confidence: (0.92 - i * 0.04).toFixed(2),
+            points: [26, 19, 16, 13, 11, 9, 7, 5][i] || 0
+          })),
+          analysis: `Simulation of the entire grid predicts high tire degradation on the soft compound. The whole field strategy will likely pivot to a 2-stop sequence. Constructor battles will be decided by active aero management.`,
           accuracy: Math.round(baseAccuracy * 100),
-          factors: ['Starting Position', '2026 Tire Degradation Model', 'DRS Strategy', 'Pit Window Timing', '2026 Power Unit Efficiency'],
-          rules: '2026 Points System: 26-19-16-13-11-9-7-5-3-1 + 1 for fastest lap',
-          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+          factors: ['Grid Positions', '2026 Tire Model', 'DRS Strategy', 'Pit Efficiency', 'Energy Recovery Systems'],
+          rules: '2026 Points System: 26-19-16-13-11-9-7-5-3-1',
+          dataSource: useRealData ? 'Live Data (Fallback Engine)' : 'Mock Engine'
         }
 
       case 'podium':
@@ -1390,19 +1391,22 @@ export default function F1Page() {
           track: track?.name,
           outcomes: [
             { label: (realDrivers[0] || 'Max Verstappen') + ' Podium', probability: '92%' },
-            { label: (realDrivers[3] || 'Lando Norris') + ' Podium', probability: '64%' },
-            { label: (realDrivers[5] || 'Carlos Sainz') + ' Podium', probability: '58%' }
+            { label: (realDrivers[1] || 'Lewis Hamilton') + ' Podium', probability: '78%' },
+            { label: (realDrivers[2] || 'Charles Leclerc') + ' Podium', probability: '74%' },
+            { label: 'Constructor Lockout Prob.', probability: '15%' },
+            { label: 'Sleeper Podium Chance', probability: '12%' }
           ],
-          predictions: [
-            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.87, odds: '1.35' },
-            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', confidence: 0.75, odds: '3.10' },
-            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.70, odds: '4.20' }
-          ],
-          analysis: "High probability for a Red Bull/Ferrari podium split. McLaren showing strong long-run pace in current simulation variables. Ferrari reliability remains the primary risk factor.",
+          predictions: realDrivers.slice(0, 3).map((d, i) => ({
+            position: i + 1,
+            driver: d,
+            team: apiDrivers.find(dr => dr.name === d)?.team || 'Constructor TBD',
+            confidence: (0.88 - i * 0.05).toFixed(2),
+            odds: (1.3 + i * 1.5).toFixed(2)
+          })),
+          analysis: "Field-wide analysis shows a high probability for a lead group split. McLaren and Mercedes showing strong long-run pace in simulated variables across the grid.",
           accuracy: Math.round(baseAccuracy * 100),
-          factors: ['2026 Championship Standings', 'Recent Performance', '2026 Technical Package', 'Team Strategy'],
-          rules: '2026 Sprint Points: 8-7-6-5-4-3-2-1 for sprint races (Austria, USA, Qatar, Brazil, China, Qatar)',
-          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+          factors: ['2026 Championship Momentum', 'Historical Track Alpha', 'Team Cohesion', 'Aero Package Stability'],
+          dataSource: useRealData ? 'Live Data (Fallback Engine)' : 'Mock Engine'
         }
 
       case 'pit-strategy': {
@@ -1411,20 +1415,23 @@ export default function F1Page() {
         return {
           type: 'Pit Strategy Predictions (2026 Regulations)',
           track: track?.name,
-          predictions: [
-            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', confidence: 0.94 },
-            { position: 2, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', confidence: 0.88 },
-            { position: 3, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', confidence: 0.82 }
-          ],
           outcomes: [
             { label: (isSprintWeekend ? 'Sprint ' : 'Optimal ') + 'Stop Window', probability: (100 * trackFactor.tireWear).toFixed(0) + '%' },
-            { label: 'Fuel Load Management', probability: '92%' }
+            { label: 'Field Pit Traffic Congestion', probability: '42%' },
+            { label: 'Undercut Efficacy Level', probability: '88%' },
+            { label: 'Fuel Load Management Delta', probability: '92%' },
+            { label: 'Double-stack Probability', probability: '28%' }
           ],
-          analysis: `Simulation suggests a ${isSprintWeekend ? '1-stop' : '2-stop'} strategy. 2026 regs favor an early MGU-K energy dump to undercut rivals.`,
+          predictions: realDrivers.slice(0, 5).map((d, i) => ({
+            position: i + 1,
+            driver: d,
+            team: apiDrivers.find(dr => dr.name === d)?.team || 'Constructor TBD',
+            confidence: (0.94 - i * 0.06).toFixed(2)
+          })),
+          analysis: `Simulation for the full grid suggests a ${isSprintWeekend ? '1-stop' : '2-stop'} strategy. 2026 regs favor early MGU-K energy dump to undercut rivals across the entire field.`,
           accuracy: Math.round(baseAccuracy * 100),
-          factors: ['2026 Tire Compound Characteristics', 'Track-Specific Degradation', '2026 Aero Impact', 'Power Unit Fuel Efficiency'],
-          rules: '2026 Tire Rules: 5 compounds (C1-C5), mandatory sets reduced, enhanced sustainability',
-          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+          factors: ['Tire Compound Life', 'Track Degradation', 'Aero Impact', 'Pit Lane Timing'],
+          dataSource: useRealData ? 'Live Data (Fallback Engine)' : 'Mock Engine'
         }
       }
 
@@ -1432,22 +1439,24 @@ export default function F1Page() {
         const overtakeTrackFactor = trackFactors[track?.id?.toLowerCase() as keyof typeof trackFactors] || { aero: 0.85, power: 0.90, handling: 0.88, tireWear: 0.80 }
 
         return {
-          type: 'Overtaking Opportunities (2026 Technical Rules)',
+          type: 'Overtaking Opportunities (2026 Rules)',
           track: track?.name,
-          predictions: [
-            { position: 1, driver: 'DRS Zone 1', team: 'Main Straight', confidence: 0.82 },
-            { position: 2, driver: 'DRS Zone 2', team: 'Back Straight', confidence: 0.68 },
-            { position: 3, driver: 'Corner Complex', team: 'Infield', confidence: 0.75 }
-          ],
           outcomes: [
-            { label: 'Success Rate (Zone 1)', probability: '82%' },
-            { label: 'Success Rate (Zone 2)', probability: '68%' }
+            { label: 'Overtaking Success Rate', probability: '74%' },
+            { label: 'DRS Train Probability', probability: '51%' },
+            { label: 'Lead Group Battle Prob.', probability: '82%' },
+            { label: 'Sector 3 Pass Difficulty', probability: '68%' },
+            { label: 'Aero Wake Impact', probability: '35%' }
           ],
-          analysis: "Overtaking delta analysis shows significant benefit from the 2026 active aero straights mode. Success depends on MGU-K harvest rates in previous sectors.",
+          predictions: [
+            { position: 1, driver: 'DRS Zone 1', team: 'Main Straight', confidence: '0.82' },
+            { position: 2, driver: 'DRS Zone 2', team: 'Back Straight', confidence: '0.68' },
+            { position: 3, driver: 'Corner Complex', team: 'Infield', confidence: '0.75' }
+          ],
+          analysis: "Field mechanics analysis shows significant benefit from the 2026 active aero straights mode. Grid-wide success depends on MGU-K harvest rates.",
           accuracy: Math.round(baseAccuracy * 100),
-          factors: ['2026 DRS Zone Optimization', 'Corner Speed Differentials', '2026 Aero Wake Effects', 'Tire Grip Levels'],
-          rules: '2026 DRS Rules: Maintained from 2023, enhanced activation zones, improved detection',
-          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+          factors: ['DRS Optimization', 'Corner Deltas', 'Aero Wake', 'Tire Grip'],
+          dataSource: useRealData ? 'Live Data (Fallback Engine)' : 'Mock Engine'
         }
       }
 
@@ -1456,37 +1465,37 @@ export default function F1Page() {
           return {
             type: 'Sprint Predictions (2026 Format)',
             track: track?.name,
-            note: 'Not a sprint weekend - regular qualifying format applies',
-            sprintWeekends: sprintWeekends.map(id => id.charAt(0).toUpperCase() + id.slice(1)),
+            note: 'Not a sprint weekend',
             outcomes: [
-              { label: 'Regular Qualifying Forecast', probability: '100%' }
+              { label: 'Full Grid Qualifying Forecast', probability: '100%' }
             ],
-            analysis: 'This is not a designated 2026 Sprint Weekend. Simulation results shown are for the standard Qualifying format.',
+            analysis: 'Simulation results shown reflect the standard full-field Qualifying format as this is not a sprint weekend.',
             accuracy: 100,
-            factors: ['Sprint Weekend Schedule'],
-            dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+            dataSource: useRealData ? 'Live Data' : 'Mock'
           }
         }
 
         return {
-          type: 'Sprint Race Predictions (2026 Format)',
+          type: 'Sprint Race (2026 Format)',
           track: track?.name,
-          predictions: [
-            { position: 1, driver: realDrivers[0] || 'Max Verstappen', team: 'Red Bull Racing', points: 8, pole: true },
-            { position: 2, driver: realDrivers[1] || 'Lewis Hamilton', team: 'Mercedes AMG', points: 7, pole: false },
-            { position: 3, driver: realDrivers[2] || 'Charles Leclerc', team: 'Ferrari', points: 6, pole: false },
-            { position: 4, driver: realDrivers[3] || 'Lando Norris', team: 'McLaren', points: 5, pole: false },
-            { position: 5, driver: realDrivers[4] || 'George Russell', team: 'Mercedes AMG', points: 4, pole: false }
-          ],
           outcomes: [
             { label: (realDrivers[0] || 'Max Verstappen') + ' Sprint Pole', probability: '91%' },
-            { label: (realDrivers[1] || 'Lewis Hamilton') + ' Sprint Podium', probability: '78%' }
+            { label: (realDrivers[1] || 'Lewis Hamilton') + ' Sprint Podium', probability: '78%' },
+            { label: 'Mid-field Sprint Charge', probability: '58%' },
+            { label: 'Grid Turnover Prob.', probability: '12%' },
+            { label: 'First Lap Scuffle Prob.', probability: '31%' }
           ],
-          analysis: 'Sprint simulation for 2026 indicates high energy recovery requirements in the 100km race. Overtaking is predicted to be high on the main straight via X-mode aero.',
+          predictions: realDrivers.slice(0, 5).map((d, i) => ({
+            position: i + 1,
+            driver: d,
+            team: apiDrivers.find(dr => dr.name === d)?.team || 'Constructor TBD',
+            points: [8, 7, 6, 5, 4][i] || 0,
+            confidence: (0.91 - i * 0.05).toFixed(2)
+          })),
+          analysis: 'Sprint simulation for the entire grid indicates high energy recovery requirements. Overtaking is predicted to be high across the field via X-mode aero.',
           accuracy: Math.round(baseAccuracy * 100),
-          factors: ['Sprint Qualifying Performance', 'Short Race Strategy', 'Overtaking Opportunities'],
-          rules: '2026 Sprint Format: 100km race, points for top 8 (8-7-6-5-4-3-2-1), pole for race winner',
-          dataSource: useRealData ? 'Real API Data' : 'Mock Data'
+          factors: ['Sprint Qualifying Performance', 'Short Race Strategy', 'Energy Battery Management'],
+          dataSource: useRealData ? 'Live Data (Fallback Engine)' : 'Mock Engine'
         }
 
       default:
@@ -2967,16 +2976,16 @@ export default function F1Page() {
                           <div className="grid md:grid-cols-2 gap-8">
                             <div className="space-y-6">
                               <div>
-                                <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Win/Loss Probabilities</h4>
+                                <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Field Outlook & Scenarios</h4>
                                 <div className="space-y-4">
-                                  {(predictionResults.outcomes || []).slice(0, 3).map((out: any, i: number) => (
+                                  {(predictionResults.outcomes || []).slice(0, 5).map((out: any, i: number) => (
                                     <div key={i} className="space-y-2">
                                       <div className="flex justify-between text-sm">
                                         <span className="font-bold">{out.label}</span>
                                         <span className="font-mono text-racing-red">{out.probability}</span>
                                       </div>
                                       <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-racing-red" style={{ width: out.probability }} />
+                                        <div className="h-full bg-racing-red shadow-[0_0_10px_rgba(211,47,47,0.4)]" style={{ width: out.probability }} />
                                       </div>
                                     </div>
                                   ))}
