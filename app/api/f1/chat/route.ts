@@ -138,9 +138,9 @@ export async function POST(request: NextRequest) {
                 physicsReport = `
 PHYSICS SIMULATION (Determininstic):
 - Base Compound: ${compound.toUpperCase()}
-- Calculated Wear Rate: ${degProfile.rate.toFixed(3)}s/lap
+- Calculated Wear Rate: ${degProfile.degradationRate.toFixed(3)}s/lap
 - Thermal Sensitivity: ${isHot ? 'High (Accelerated Deg)' : 'Stable'}
-- Predicted Stint Limit: ${Math.round(30 / degProfile.rate)} laps
+- Predicted Stint Limit: ${Math.round(30 / degProfile.degradationRate)} laps
                 `.trim()
             }
         } catch (brainErr) {
