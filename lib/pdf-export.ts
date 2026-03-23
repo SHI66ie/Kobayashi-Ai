@@ -9,16 +9,7 @@ export interface ReportData {
   date: string
   drivers: string[]
   sections: ReportSection[]
-}
-
-export interface ReportSection {
-  title: string
-  type: 'text' | 'chart' | 'table' | 'stats'
-  content: any
-  metadata?: {
-    chartImage?: string
-    tableData?: any[]
-    stats?: Record<string, any>
+}ts ?: Record<string, any>
   }
 }
 
@@ -35,195 +26,204 @@ class F1ReportExporter {
     this.margin = 20
   }
 
-  async generateReport(data: ReportData): Promise<Blob> {
-    // Add title page
-    this.addTitlePage(data)
-    
-    // Add sections
-    for (const section of data.sections) {
-      await this.addSection(section)
-    }
-    
-    // Add footer
-    this.addFooter()
-    
-    return new Blob([this.pdf.output('blob')], { type: 'application/pdf' })
+export interface ReportSection {
+  title: string
+  type: 'text' | 'chart' | 'table' | 'stats'
+  content: any
+  metadata?: {
+    chartImage?: string
+    tableData?: any[]
+    sta
+
+    async generateReport(data: ReportData): Promise<Blob> {
+  // Add title page
+  this.addTitlePage(data)
+
+  // Add sections
+  for (const section of data.sections) {
+    await this.addSection(section)
   }
+
+  // Add footer
+  this.addFooter()
+
+  return new Blob([this.pdf.output('blob')], { type: 'application/pdf' })
+}
 
   private addTitlePage(data: ReportData) {
-    // Title
-    this.pdf.setFontSize(24)
-    this.pdf.setFont('helvetica', 'bold')
-    this.pdf.text(data.title, this.margin, this.currentY)
-    
-    // Subtitle
-    this.currentY += 15
-    this.pdf.setFontSize(16)
-    this.pdf.setFont('helvetica', 'normal')
-    this.pdf.text(`Track Analysis Report`, this.margin, this.currentY)
-    
-    // Track info
-    this.currentY += 10
-    this.pdf.setFontSize(12)
-    this.pdf.text(`Track: ${data.track}`, this.margin, this.currentY)
-    
-    this.currentY += 7
-    this.pdf.text(`Date: ${data.date}`, this.margin, this.currentY)
-    
-    this.currentY += 7
-    this.pdf.text(`Drivers: ${data.drivers.join(', ')}`, this.margin, this.currentY)
-    
-    // Add line separator
-    this.currentY += 15
-    this.pdf.setDrawColor(200, 200, 200)
-    this.pdf.line(this.margin, this.currentY, this.pdf.internal.pageSize.width - this.margin, this.currentY)
-    
-    this.currentY += 10
-  }
+  // Title
+  this.pdf.setFontSize(24)
+  this.pdf.setFont('helvetica', 'bold')
+  this.pdf.text(data.title, this.margin, this.currentY)
+
+  // Subtitle
+  this.currentY += 15
+  this.pdf.setFontSize(16)
+  this.pdf.setFont('helvetica', 'normal')
+  this.pdf.text(`Track Analysis Report`, this.margin, this.currentY)
+
+  // Track info
+  this.currentY += 10
+  this.pdf.setFontSize(12)
+  this.pdf.text(`Track: ${data.track}`, this.margin, this.currentY)
+
+  this.currentY += 7
+  this.pdf.text(`Date: ${data.date}`, this.margin, this.currentY)
+
+  this.currentY += 7
+  this.pdf.text(`Drivers: ${data.drivers.join(', ')}`, this.margin, this.currentY)
+
+  // Add line separator
+  this.currentY += 15
+  this.pdf.setDrawColor(200, 200, 200)
+  this.pdf.line(this.margin, this.currentY, this.pdf.internal.pageSize.width - this.margin, this.currentY)
+
+  this.currentY += 10
+}
 
   private async addSection(section: ReportSection) {
-    // Check if we need a new page
-    if (this.currentY > this.pageHeight - 50) {
-      this.addNewPage()
-    }
-    
-    // Section title
-    this.pdf.setFontSize(14)
-    this.pdf.setFont('helvetica', 'bold')
-    this.pdf.text(section.title, this.margin, this.currentY)
-    this.currentY += 10
-    
-    switch (section.type) {
-      case 'text':
-        this.addTextSection(section)
-        break
-      case 'chart':
-        await this.addChartSection(section)
-        break
-      case 'table':
-        this.addTableSection(section)
-        break
-      case 'stats':
-        this.addStatsSection(section)
-        break
-    }
-    
-    this.currentY += 15
+  // Check if we need a new page
+  if (this.currentY > this.pageHeight - 50) {
+    this.addNewPage()
   }
+
+  // Section title
+  this.pdf.setFontSize(14)
+  this.pdf.setFont('helvetica', 'bold')
+  this.pdf.text(section.title, this.margin, this.currentY)
+  this.currentY += 10
+
+  switch (section.type) {
+    case 'text':
+      this.addTextSection(section)
+      break
+    case 'chart':
+      await this.addChartSection(section)
+      break
+    case 'table':
+      this.addTableSection(section)
+      break
+    case 'stats':
+      this.addStatsSection(section)
+      break
+  }
+
+  this.currentY += 15
+}
 
   private addTextSection(section: ReportSection) {
-    this.pdf.setFontSize(10)
-    this.pdf.setFont('helvetica', 'normal')
-    
-    const lines = this.pdf.splitTextToSize(section.content, this.pdf.internal.pageSize.width - (this.margin * 2))
-    lines.forEach((line: string) => {
-      if (this.currentY > this.pageHeight - 20) {
-        this.addNewPage()
-      }
-      this.pdf.text(line, this.margin, this.currentY)
-      this.currentY += 5
-    })
-  }
+  this.pdf.setFontSize(10)
+  this.pdf.setFont('helvetica', 'normal')
+
+  const lines = this.pdf.splitTextToSize(section.content, this.pdf.internal.pageSize.width - (this.margin * 2))
+  lines.forEach((line: string) => {
+    if (this.currentY > this.pageHeight - 20) {
+      this.addNewPage()
+    }
+    this.pdf.text(line, this.margin, this.currentY)
+    this.currentY += 5
+  })
+}
 
   private async addChartSection(section: ReportSection) {
-    if (section.metadata?.chartImage) {
-      try {
-        // Add chart image
-        const imgData = section.metadata.chartImage
-        const imgWidth = this.pdf.internal.pageSize.width - (this.margin * 2)
-        const imgHeight = 100
-        
-        if (this.currentY + imgHeight > this.pageHeight - 20) {
-          this.addNewPage()
-        }
-        
-        this.pdf.addImage(imgData, 'PNG', this.margin, this.currentY, imgWidth, imgHeight)
-        this.currentY += imgHeight + 10
-      } catch (error) {
-        console.error('Error adding chart to PDF:', error)
-        // Fallback to text
-        this.addTextSection({ ...section, content: '[Chart data unavailable for export]' })
+  if (section.metadata?.chartImage) {
+    try {
+      // Add chart image
+      const imgData = section.metadata.chartImage
+      const imgWidth = this.pdf.internal.pageSize.width - (this.margin * 2)
+      const imgHeight = 100
+
+      if (this.currentY + imgHeight > this.pageHeight - 20) {
+        this.addNewPage()
       }
-    } else {
-      // Fallback to chart description
-      this.addTextSection({ ...section, content: section.content || 'Chart section' })
+
+      this.pdf.addImage(imgData, 'PNG', this.margin, this.currentY, imgWidth, imgHeight)
+      this.currentY += imgHeight + 10
+    } catch (error) {
+      console.error('Error adding chart to PDF:', error)
+      // Fallback to text
+      this.addTextSection({ ...section, content: '[Chart data unavailable for export]' })
     }
+  } else {
+    // Fallback to chart description
+    this.addTextSection({ ...section, content: section.content || 'Chart section' })
   }
+}
 
   private addTableSection(section: ReportSection) {
-    if (!section.metadata?.tableData) return
-    
-    const tableData = section.metadata.tableData
-    const headers = Object.keys(tableData[0] || {})
-    const cellWidth = (this.pdf.internal.pageSize.width - (this.margin * 2)) / headers.length
-    
-    // Add table headers
-    this.pdf.setFontSize(9)
-    this.pdf.setFont('helvetica', 'bold')
-    headers.forEach((header, index) => {
-      const x = this.margin + (index * cellWidth)
-      this.pdf.text(header, x, this.currentY)
+  if (!section.metadata?.tableData) return
+
+  const tableData = section.metadata.tableData
+  const headers = Object.keys(tableData[0] || {})
+  const cellWidth = (this.pdf.internal.pageSize.width - (this.margin * 2)) / headers.length
+
+  // Add table headers
+  this.pdf.setFontSize(9)
+  this.pdf.setFont('helvetica', 'bold')
+  headers.forEach((header, index) => {
+    const x = this.margin + (index * cellWidth)
+    this.pdf.text(header, x, this.currentY)
+  })
+
+  this.currentY += 7
+
+  // Add table rows
+  this.pdf.setFont('helvetica', 'normal')
+  tableData.forEach((row: any, rowIndex: number) => {
+    if (this.currentY > this.pageHeight - 20) {
+      this.addNewPage()
+    }
+
+    headers.forEach((header, colIndex) => {
+      const x = this.margin + (colIndex * cellWidth)
+      const cellText = String(row[header] || '').substring(0, 15) // Truncate long text
+      this.pdf.text(cellText, x, this.currentY)
     })
-    
-    this.currentY += 7
-    
-    // Add table rows
-    this.pdf.setFont('helvetica', 'normal')
-    tableData.forEach((row: any, rowIndex: number) => {
-      if (this.currentY > this.pageHeight - 20) {
-        this.addNewPage()
-      }
-      
-      headers.forEach((header, colIndex) => {
-        const x = this.margin + (colIndex * cellWidth)
-        const cellText = String(row[header] || '').substring(0, 15) // Truncate long text
-        this.pdf.text(cellText, x, this.currentY)
-      })
-      
-      this.currentY += 5
-    })
-  }
+
+    this.currentY += 5
+  })
+}
 
   private addStatsSection(section: ReportSection) {
-    if (!section.metadata?.stats) return
-    
-    const stats = section.metadata.stats
-    const statsEntries = Object.entries(stats)
-    
-    this.pdf.setFontSize(10)
-    statsEntries.forEach(([key, value]) => {
-      if (this.currentY > this.pageHeight - 20) {
-        this.addNewPage()
-      }
-      
-      const label = `${key}:`
-      const valueText = String(value)
-      
-      this.pdf.setFont('helvetica', 'bold')
-      this.pdf.text(label, this.margin, this.currentY)
-      
-      this.pdf.setFont('helvetica', 'normal')
-      this.pdf.text(valueText, this.margin + 40, this.currentY)
-      
-      this.currentY += 6
-    })
-  }
+  if (!section.metadata?.stats) return
+
+  const stats = section.metadata.stats
+  const statsEntries = Object.entries(stats)
+
+  this.pdf.setFontSize(10)
+  statsEntries.forEach(([key, value]) => {
+    if (this.currentY > this.pageHeight - 20) {
+      this.addNewPage()
+    }
+
+    const label = `${key}:`
+    const valueText = String(value)
+
+    this.pdf.setFont('helvetica', 'bold')
+    this.pdf.text(label, this.margin, this.currentY)
+
+    this.pdf.setFont('helvetica', 'normal')
+    this.pdf.text(valueText, this.margin + 40, this.currentY)
+
+    this.currentY += 6
+  })
+}
 
   private addNewPage() {
-    this.pdf.addPage()
-    this.currentY = 20
-  }
+  this.pdf.addPage()
+  this.currentY = 20
+}
 
   private addFooter() {
-    const footerY = this.pageHeight - 10
-    this.pdf.setFontSize(8)
-    this.pdf.setFont('helvetica', 'italic')
-    this.pdf.text(
-      `Generated by KobayashiAI F1 Analytics - ${new Date().toLocaleString()}`,
-      this.margin,
-      footerY
-    )
-  }
+  const footerY = this.pageHeight - 10
+  this.pdf.setFontSize(8)
+  this.pdf.setFont('helvetica', 'italic')
+  this.pdf.text(
+    `Generated by KobayashiAI F1 Analytics - ${new Date().toLocaleString()}`,
+    this.margin,
+    footerY
+  )
+}
 }
 
 // Utility function to capture chart as image
@@ -249,7 +249,7 @@ export async function exportF1Report(
   sections: ReportSection[]
 ): Promise<void> {
   const exporter = new F1ReportExporter()
-  
+
   const reportData: ReportData = {
     title,
     track,
@@ -257,10 +257,10 @@ export async function exportF1Report(
     drivers,
     sections
   }
-  
+
   try {
     const pdfBlob = await exporter.generateReport(reportData)
-    
+
     // Download the PDF
     const url = URL.createObjectURL(pdfBlob)
     const link = document.createElement('a')
@@ -318,7 +318,7 @@ export async function exportRaceAnalysisReport(
       metadata: { tableData }
     }
   ]
-  
+
   await exportF1Report('F1 Race Analysis Report', track, ['Simulation Drivers'], sections)
 }
 
@@ -345,6 +345,6 @@ export async function exportWhatIfReport(
       content: recommendations.join('\n\n')
     }
   ]
-  
+
   await exportF1Report('F1 What-If Analysis Report', track, ['Analysis Team'], sections)
 }
