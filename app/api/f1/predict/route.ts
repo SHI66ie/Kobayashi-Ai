@@ -11,6 +11,8 @@ const groq = process.env.GROQ_API_KEY ? new OpenAI({
 
 import fs from 'fs'
 import path from 'path'
+import { F1DecisionEngine } from '@/lib/f1-decision-engine'
+import { findProfileByName } from '@/lib/track-dna'
 
 export async function POST(request: NextRequest) {
     try {
@@ -20,41 +22,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Groq API not configured' }, { status: 503 })
         }
 
-        // --- NEW: Load Historical DNA from local Data directory ---
-        let historicalDNA = ""
+        // --- NEW: Enhanced Neural Core Metrics ---
+        let brainInsights = ""
         try {
-            const dataDir = path.join(process.cwd(), 'Data', 'f1-telemetry')
-            if (fs.existsSync(dataDir)) {
-                const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'))
-
-                // Track-specific results extraction
-                const trackKeywords = track?.name?.split(' ')[0].toLowerCase() || ""
-                let matchingResults: any[] = []
-
-                for (const file of files) {
-                    const filePath = path.join(dataDir, file)
-                    const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-
-                    // Handle different JSON structures found in Data/
-                    const dataArray = Array.isArray(content) ? content : (content[" 2024 Race Data"] || [])
-
-                    if (Array.isArray(dataArray)) {
-                        const match = dataArray.find((r: any) =>
-                            (r.race_name && r.race_name.toLowerCase().includes(trackKeywords)) ||
-                            (r.Race && r.Race.toLowerCase().includes(trackKeywords))
-                        )
-                        if (match) {
-                            matchingResults.push({ file, summary: match.data ? match.data.slice(0, 10) : match })
-                        }
-                    }
-                }
-
-                if (matchingResults.length > 0) {
-                    historicalDNA = JSON.stringify(matchingResults.slice(0, 2))
-                }
+            const engine = F1DecisionEngine.getInstance()
+            const profile = findProfileByName(track?.name || "")
+            
+            if (profile) {
+                const trackDNA = profile.dna
+                const sisterContext = await (engine as any).getSisterRaceContext(f1Data.driverName || "", profile)
+                
+                brainInsights = `
+TRACK DNA: ${trackDNA}
+${sisterContext}
+                `.trim()
             }
-        } catch (dnaErr) {
-            console.warn("Failed to load historical DNA:", dnaErr)
+        } catch (brainErr) {
+            console.warn("Failed to load brain insights:", brainErr)
         }
 
         const systemPrompt = `
@@ -73,7 +57,7 @@ INPUT DATA:
 - Focus Driver/Car (User Input): ${JSON.stringify(f1Data)}
 - Full Field Context (Standings/Drivers): ${JSON.stringify(context?.standings)}
 - Constructors & Teams: ${JSON.stringify(context?.teams?.slice(0, 10))}
-- Historical DNA (Actual Past Results): ${historicalDNA}
+- Kobayashi Brain Insights (Historical/Sister Tracks): ${brainInsights}
 
 TASK:
 Provide a highly detailed, field-wide race prediction in JSON format.
