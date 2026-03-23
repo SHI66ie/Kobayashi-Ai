@@ -5,7 +5,7 @@ import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Fl
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 import Link from 'next/link'
-import { openf1Api, transformOpenF1Data } from '../../lib/openf1-api'
+import { openf1Api, transformOpenF1Data } from '@/lib/openf1-api'
 
 
 // Lazy load heavy components for F1 optimization
