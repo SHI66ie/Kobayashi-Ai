@@ -702,23 +702,50 @@ export default function F1Page() {
       const race = upcomingRacesList.find(r => r.id === raceId);
       if (!race) return;
 
-      // In real scenario, we'd fetch from /api/f1/standings?track=...
-      // For now, let's generate intelligent mock data for the preview
-      // based on the race's known winner if available, or just mock it properly
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate fetch
+      let fetchedResults = [];
+      try {
+        const response = await fetch('/api/f1/race-results?season=2026');
+        const data = await response.json();
+        if (data.success && data.races) {
+          // match by comparing name/track substrings
+          const raceData = data.races.find((r: any) => 
+            r.name.includes(race.name.replace(' GP', '')) || 
+            race.name.includes(r.name.replace(' Grand Prix', '')) ||
+            r.circuit.includes(race.track) || 
+            race.track.includes(r.circuit)
+          );
 
-      const mockStandings = [
-        { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', points: 25, time: '1:34:22.543' },
-        { position: 2, driver: 'Lando Norris', team: 'McLaren', points: 18, time: '+5.234s' },
-        { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', points: 15, time: '+12.556s' },
-        { position: 4, driver: 'Lewis Hamilton', team: 'Ferrari', points: 12, time: '+15.890s' },
-        { position: 5, driver: 'Oscar Piastri', team: 'McLaren', points: 10, time: '+22.112s' },
-        { position: 6, driver: 'George Russell', team: 'Mercedes AMG', points: 8, time: '+25.443s' },
-        { position: 7, driver: 'Carlos Sainz', team: 'Williams', points: 6, time: '+31.229s' },
-        { position: 8, driver: 'Fernando Alonso', team: 'Aston Martin', points: 4, time: '+45.778s' },
-      ];
-      
-      setCalendarStandings(prev => ({ ...prev, [raceId]: mockStandings }));
+          if (raceData && raceData.results) {
+            fetchedResults = raceData.results.map((res: any) => ({
+              position: res.position,
+              driver: res.driver,
+              team: res.team,
+              time: `${res.points} pts`,
+              points: res.points
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch real race-results", e);
+      }
+
+      if (fetchedResults.length > 0) {
+        setCalendarStandings(prev => ({ ...prev, [raceId]: fetchedResults }));
+      } else {
+        // Fallback for races that haven't run or if API fails
+        const mockStandings = [
+          { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', points: 25, time: '1:34:22.543' },
+          { position: 2, driver: 'Lando Norris', team: 'McLaren', points: 18, time: '+5.234s' },
+          { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', points: 15, time: '+12.556s' },
+          { position: 4, driver: 'Lewis Hamilton', team: 'Ferrari', points: 12, time: '+15.890s' },
+          { position: 5, driver: 'Oscar Piastri', team: 'McLaren', points: 10, time: '+22.112s' },
+          { position: 6, driver: 'George Russell', team: 'Mercedes AMG', points: 8, time: '+25.443s' },
+          { position: 7, driver: 'Carlos Sainz', team: 'Williams', points: 6, time: '+31.229s' },
+          { position: 8, driver: 'Fernando Alonso', team: 'Aston Martin', points: 4, time: '+45.778s' },
+        ];
+        
+        setCalendarStandings(prev => ({ ...prev, [raceId]: mockStandings }));
+      }
     } catch (error) {
       console.error("Failed to fetch calendar race standings", error);
     } finally {
@@ -943,79 +970,95 @@ export default function F1Page() {
     setStandingsLoading(true)
     try {
       const year = new Date().getFullYear()
-      const sessions = await openf1Api.getSessions(year)
-      
-      // Get season championship standings by aggregating race results
+      const sessions = await openf1Api.getSessions(year).catch(() => [])
+
+      // Get season championship standings
       let seasonChampionshipData: any[] = []
       try {
-        // Get all race sessions for the current year
-        const raceSessions = sessions.filter(s => s.session_type === 'Race')
-        
-        // Aggregate points from all completed races
-        const driverPoints = new Map<number, { points: number; wins: number; podiums: number; driver: any }>()
-        
-        for (const raceSession of raceSessions) {
-          // Only process races that have completed (past races)
-          if (new Date(raceSession.date_start) < new Date()) {
-            try {
-              const positionData = await openf1Api.getPositionData(raceSession.session_key)
-              const drivers = await openf1Api.getDrivers(raceSession.session_key)
-              
-              if (positionData && positionData.length > 0) {
-                // Sort by final position
-                const sortedPositions = positionData.sort((a: any, b: any) => a.position - b.position)
+        const standingsRes = await fetch('/api/f1/standings?season=2026&type=drivers')
+        const standingsData = await standingsRes.json()
+        if (standingsData.success && standingsData.standings) {
+          seasonChampionshipData = standingsData.standings.map((s: any) => ({
+             position: s.position,
+             driver: s.driver,
+             team: s.team,
+             points: s.points,
+             wins: s.wins,
+             podiums: s.podiums,
+             driverNumber: s.driverCode || s.position
+          }))
+        } else {
+          throw new Error('Fallback to openf1')
+        }
+      } catch (e) {
+        console.warn('Fallback to openf1 for season championship data')
+        try {
+          // Get all race sessions for the current year
+          const raceSessions = sessions.filter((s: any) => s.session_type === 'Race')
+          
+          // Aggregate points from all completed races
+          const driverPoints = new Map<number, { points: number; wins: number; podiums: number; driver: any }>()
+          
+          for (const raceSession of raceSessions) {
+            if (new Date(raceSession.date_start) < new Date()) {
+              try {
+                const positionData = await openf1Api.getPositionData(raceSession.session_key)
+                const drivers = await openf1Api.getDrivers(raceSession.session_key)
                 
-                sortedPositions.forEach((pos: any, index: number) => {
-                  const points = index < 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][index] || 0 : 0
-                  const driver = drivers.find((d: any) => d.driver_number === pos.driver_number)
+                if (positionData && positionData.length > 0) {
+                  const sortedPositions = positionData.sort((a: any, b: any) => a.position - b.position)
                   
-                  if (!driverPoints.has(pos.driver_number)) {
-                    driverPoints.set(pos.driver_number, {
-                      points: 0,
-                      wins: 0,
-                      podiums: 0,
-                      driver: driver
-                    })
-                  }
-                  
-                  const driverData = driverPoints.get(pos.driver_number)!
-                  driverData.points += points
-                  if (index === 0) driverData.wins += 1
-                  if (index < 3) driverData.podiums += 1
-                })
+                  sortedPositions.forEach((pos: any, index: number) => {
+                    const points = index < 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][index] || 0 : 0
+                    const driver = drivers.find((d: any) => d.driver_number === pos.driver_number)
+                    
+                    if (!driverPoints.has(pos.driver_number)) {
+                      driverPoints.set(pos.driver_number, {
+                        points: 0,
+                        wins: 0,
+                        podiums: 0,
+                        driver: driver
+                      })
+                    }
+                    
+                    const driverData = driverPoints.get(pos.driver_number)!
+                    driverData.points += points
+                    if (index === 0) driverData.wins += 1
+                    if (index < 3) driverData.podiums += 1
+                  })
+                }
+              } catch (error) {
+                console.warn(`Failed to process race ${raceSession.session_name}:`, error)
               }
-            } catch (error) {
-              console.warn(`Failed to process race ${raceSession.session_name}:`, error)
             }
           }
-        }
-        
-        // Convert to standings format
-        seasonChampionshipData = Array.from(driverPoints.values())
-          .map((data, index) => ({
-            position: index + 1,
-            driver: data.driver ? data.driver.full_name : `Driver ${index + 1}`,
-            team: data.driver ? data.driver.team_name : 'Unknown',
-            points: data.points,
-            wins: data.wins,
-            podiums: data.podiums,
-            driverNumber: data.driver ? data.driver.driver_number : index + 1
-          }))
-          .sort((a, b) => b.points - a.points)
-          .map((item, index) => ({ ...item, position: index + 1 }))
           
-      } catch (error) {
-        console.warn('Season championship standings aggregation failed:', error)
-        // Use fallback data
-        seasonChampionshipData = apiDrivers.map((driver: any, index: number) => ({
-          position: index + 1,
-          driver: driver.name || `Driver ${index + 1}`,
-          team: driver.team || 'Unknown',
-          points: Math.floor(Math.random() * 100),
-          wins: Math.floor(Math.random() * 3),
-          podiums: Math.floor(Math.random() * 8),
-          driverNumber: driver.id || index + 1
-        }))
+          seasonChampionshipData = Array.from(driverPoints.values())
+            .map((data, index) => ({
+              position: index + 1,
+              driver: data.driver ? data.driver.full_name : `Driver ${index + 1}`,
+              team: data.driver ? data.driver.team_name : 'Unknown',
+              points: data.points,
+              wins: data.wins,
+              podiums: data.podiums,
+              driverNumber: data.driver ? data.driver.driver_number : index + 1
+            }))
+            .sort((a, b) => b.points - a.points)
+            .map((item, index) => ({ ...item, position: index + 1 }))
+            
+        } catch (error) {
+          console.warn('Season championship standings aggregation failed:', error)
+          // Use fallback data
+          seasonChampionshipData = apiDrivers.map((driver: any, index: number) => ({
+            position: index + 1,
+            driver: driver.name || `Driver ${index + 1}`,
+            team: driver.team || 'Unknown',
+            points: Math.floor(Math.random() * 100),
+            wins: Math.floor(Math.random() * 3),
+            podiums: Math.floor(Math.random() * 8),
+            driverNumber: driver.id || index + 1
+          }))
+        }
       }
 
       // Get track-specific standings for the selected track
@@ -1123,61 +1166,36 @@ export default function F1Page() {
             }
 
             // Get race results for this track
-            const positionData = await openf1Api.getPositionData(trackRaceSession.session_key)
-            const lapData = await openf1Api.getLaps(trackRaceSession.session_key)
-            
-            if (positionData && positionData.length > 0) {
-              const finalPositions = new Map()
-              positionData.forEach((pos: any) => {
-                finalPositions.set(pos.driver_number, pos)
-              })
-
-              const sortedPositions = Array.from(finalPositions.values())
-                .sort((a: any, b: any) => a.position - b.position)
-
-              const sessionDrivers = await openf1Api.getDrivers(trackRaceSession.session_key)
-              
-              // Calculate actual lap counts and times from lap data
-              const driverLapStats = new Map<number, { laps: number; bestLapTime?: number; totalTime?: number }>()
-              
-              if (lapData && lapData.length > 0) {
-                lapData.forEach((lap: any) => {
-                  if (!driverLapStats.has(lap.driver_number)) {
-                    driverLapStats.set(lap.driver_number, { laps: 0 })
-                  }
-                  
-                  const stats = driverLapStats.get(lap.driver_number)!
-                  stats.laps = Math.max(stats.laps, lap.lap_number || 0)
-                  
-                  if (lap.lap_duration && lap.lap_duration > 0) {
-                    if (!stats.bestLapTime || lap.lap_duration < stats.bestLapTime) {
-                      stats.bestLapTime = lap.lap_duration
-                    }
-                  }
-                })
+            try {
+              const res = await fetch(`/api/f1/race-results?season=2026`)
+              const data = await res.json()
+              if (data.success && data.races) {
+                const raceData = data.races.find((r: any) => 
+                  r.name.includes(selectedTrackInfo.name.replace(' GP', '')) || 
+                  selectedTrackInfo.name.includes(r.name.replace(' Grand Prix', '')) ||
+                  (selectedTrackInfo.location && r.circuit.includes(selectedTrackInfo.location)) ||
+                  (selectedTrackInfo.country && r.circuit.includes(selectedTrackInfo.country))
+                )
+                if (raceData && raceData.results) {
+                  trackSpecificData.raceResults = [{
+                    sessionName: raceData.name,
+                    circuitName: raceData.circuit,
+                    date: raceData.date,
+                    results: raceData.results.map((res: any) => ({
+                      position: res.position,
+                      driver: res.driver,
+                      team: res.team,
+                      grid: res.position,
+                      laps: 50,
+                      time: `${res.points} pts`,
+                      points: res.points,
+                      status: 'Finished'
+                    }))
+                  }]
+                }
               }
-
-              trackSpecificData.raceResults = [{
-                sessionName: trackRaceSession.session_name,
-                circuitName: trackRaceSession.circuit_short_name,
-                date: trackRaceSession.date_start,
-                results: sortedPositions.map((pos: any) => {
-                  const driver = sessionDrivers.find((d: any) => d.driver_number === pos.driver_number)
-                  const gridPosition = qualifyingGridData.get(pos.driver_number) || pos.position
-                  const lapStats = driverLapStats.get(pos.driver_number) || { laps: 0 }
-                  
-                  return {
-                    position: pos.position,
-                    driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
-                    team: driver ? driver.team_name : 'Unknown',
-                    grid: gridPosition,
-                    laps: lapStats.laps || Math.floor(Math.random() * 70) + 30,
-                    time: lapStats.bestLapTime ? `${(lapStats.bestLapTime / 60).toFixed(3)}` : `${Math.floor(Math.random() * 3600) + 3600}s`,
-                    points: pos.position <= 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][pos.position - 1] || 0 : 0,
-                    status: pos.position <= 20 ? 'Finished' : 'DNF'
-                  }
-                })
-              }]
+            } catch (e) {
+              console.warn("Could not fetch race-results APIs for track", e)
             }
 
             // Check for sprint session at this track
