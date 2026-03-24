@@ -159,7 +159,38 @@ export default function F1Page() {
   const [apiRaces, setApiRaces] = useState<any[]>([])
   const [apiStandings, setApiStandings] = useState<any[]>([])
   const [nextEvent, setNextEvent] = useState<any>(null)
-  const [currentRaceIndex, setCurrentRaceIndex] = useState(0) // Track current race in sequence - MOVED UP
+  const [currentRaceIndex, setCurrentRaceIndex] = useState(() => {
+    // Initialize to the first future race based on today's date
+    const now = new Date();
+    const raceList = [
+      { date: 'March 6-8, 2026' }, { date: 'March 15, 2026' }, { date: 'March 29, 2026' },
+      { date: 'April 12, 2026' }, { date: 'April 19, 2026' }, { date: 'May 3-5, 2026' },
+      { date: 'May 17-18, 2026' }, { date: 'May 24-25, 2026' }, { date: 'June 13-15, 2026' },
+      { date: 'June 20-22, 2026' }, { date: 'June 27-29, 2026' }, { date: 'July 4-6, 2026' },
+      { date: 'July 25-27, 2026' }, { date: 'August 1-3, 2026' }, { date: 'August 29-31, 2026' },
+      { date: 'September 5-7, 2026' }, { date: 'September 20-22, 2026' },
+      { date: 'October 4-6, 2026' }, { date: 'October 18-20, 2026' }, { date: 'October 25-27, 2026' },
+      { date: 'November 15-17, 2026' }, { date: 'November 22-23, 2026' },
+      { date: 'December 5-7, 2026' }, { date: 'December 12-14, 2026' },
+    ];
+    const months: Record<string, number> = {
+      January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+      July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
+    };
+    for (let i = 0; i < raceList.length; i++) {
+      const datePart = raceList[i].date.replace(/,.*/, '');
+      const parts = datePart.trim().split(/\s+/);
+      const month = months[parts[0]] ?? 0;
+      const yearMatch = raceList[i].date.match(/(\d{4})/);
+      const year = yearMatch ? parseInt(yearMatch[1]) : 2026;
+      // Use end day of range if present
+      const dayRange = datePart.replace(parts[0] + ' ', '');
+      const endDay = parseInt(dayRange.split('-').pop() || dayRange);
+      const raceEnd = new Date(year, month, endDay, 18, 0, 0);
+      if (now < raceEnd) return i;
+    }
+    return raceList.length - 1;
+  }) // Track current race in sequence - initialized by date
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
   const [useRealData, setUseRealData] = useState(false)
@@ -702,18 +733,26 @@ export default function F1Page() {
       const race = upcomingRacesList.find(r => r.id === raceId);
       if (!race) return;
 
-      let fetchedResults = [];
+      let fetchedResults: any[] = [];
       try {
         const response = await fetch('/api/f1/race-results?season=2026');
         const data = await response.json();
         if (data.success && data.races) {
-          // match by comparing name/track substrings
-          const raceData = data.races.find((r: any) => 
-            r.name.includes(race.name.replace(' GP', '')) || 
-            race.name.includes(r.name.replace(' Grand Prix', '')) ||
-            r.circuit.includes(race.track) || 
-            race.track.includes(r.circuit)
-          );
+          // Normalize names for comparison: strip 'Grand Prix'/'GP', lowercase
+          const normalize = (s: string) => s.toLowerCase()
+            .replace(/grand prix/gi, '').replace(/ gp$/i, '').replace(/[^a-z]/g, '').trim();
+
+          const raceData = data.races.find((r: any) => {
+            const apiName = normalize(r.name);
+            const localName = normalize(race.name);
+            const apiCircuit = normalize(r.circuit || '');
+            const localTrack = normalize(race.track || '');
+            return apiName === localName ||
+              apiName.includes(localName) || localName.includes(apiName) ||
+              apiCircuit.includes(localTrack) || localTrack.includes(apiCircuit) ||
+              // country-based fallback: race.country vs circuit name
+              (race.country && normalize(r.name).includes(normalize(race.country)));
+          });
 
           if (raceData && raceData.results) {
             fetchedResults = raceData.results.map((res: any) => ({
