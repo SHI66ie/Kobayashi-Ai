@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense, Fragment } from 'react'
-import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, ArrowRight, Calendar, LayoutDashboard, Settings, Info, Cloud, Thermometer, Wind, Droplets, History, Database, Satellite, Activity } from 'lucide-react'
+import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Flag, TrendingUp, ArrowLeft, ArrowRight, Calendar, LayoutDashboard, Settings, Info, Cloud, Thermometer, Wind, Droplets, History, Database, Satellite, Activity, Eye } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 import Link from 'next/link'
@@ -236,10 +236,27 @@ export default function F1Page() {
     },
     allTracks: []
   })
+
+  // Historical standings state
+  const [historicalStandings, setHistoricalStandings] = useState<{
+    availableYears: number[],
+    selectedYear: number,
+    availableRaces: any[],
+    selectedRace: string,
+    seasonStandings: any[],
+    raceResults: any[]
+  }>({
+    availableYears: [2024, 2025, 2026],
+    selectedYear: 2026,
+    availableRaces: [],
+    selectedRace: '',
+    seasonStandings: [],
+    raceResults: []
+  })
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [selectedRaceForStandings, setSelectedRaceForStandings] = useState<string>(selectedTrack) // Use selectedTrack
   const [selectedSessionType, setSelectedSessionType] = useState<'all' | 'qualifying' | 'race' | 'sprint'>('all')
-  const [standingsView, setStandingsView] = useState<'season' | 'track'>('season') // New view toggle
+  const [standingsView, setStandingsView] = useState<'season' | 'track' | 'historical'>('season') // New view toggle
 
   // Calendar Race-Specific Standings Preview State
   const [calendarStandings, setCalendarStandings] = useState<Record<string, any[]>>({});
@@ -258,6 +275,29 @@ export default function F1Page() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [archivesData, setArchivesData] = useState<any[]>([])
   const [archivesLoading, setArchivesLoading] = useState(false)
+  
+  // Detailed race standings state
+  const [detailedRaceStandings, setDetailedRaceStandings] = useState<{
+    raceId: string | null;
+    raceName: string;
+    raceDate: string;
+    loading: boolean;
+    data: {
+      qualifying: any[];
+      race: any[];
+      sprint: any[];
+    };
+  }>({
+    raceId: null,
+    raceName: '',
+    raceDate: '',
+    loading: false,
+    data: {
+      qualifying: [],
+      race: [],
+      sprint: []
+    }
+  })
 
   // UseEffect to fetch historical data
   useEffect(() => {
@@ -301,6 +341,49 @@ export default function F1Page() {
       fetchArchives();
     }
   }, [activeTab, fetchArchives]);
+
+  // Fetch detailed race standings
+  const fetchDetailedRaceStandings = useCallback(async (raceId: string, raceName: string, raceDate: string) => {
+    setDetailedRaceStandings(prev => ({ ...prev, raceId, raceName, raceDate, loading: true }));
+    
+    try {
+      // Mock data for demonstration - in real app, this would fetch from API
+      const mockQualifyingResults = [
+        { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', q1: '1:28.456', q2: '1:27.890', q3: '1:27.234', gap: '0.000' },
+        { position: 2, driver: 'Charles Leclerc', team: 'Ferrari', q1: '1:28.567', q2: '1:28.123', q3: '1:27.456', gap: '0.222' },
+        { position: 3, driver: 'Lando Norris', team: 'McLaren', q1: '1:28.789', q2: '1:28.234', q3: '1:27.678', gap: '0.444' },
+        { position: 4, driver: 'Lewis Hamilton', team: 'Mercedes', q1: '1:28.890', q2: '1:28.345', q3: '1:27.890', gap: '0.656' },
+        { position: 5, driver: 'Sergio Perez', team: 'Red Bull Racing', q1: '1:29.012', q2: '1:28.456', q3: '1:28.012', gap: '0.778' }
+      ];
+      
+      const mockRaceResults = [
+        { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', grid: 1, laps: 58, time: '1:28:45.672', points: 25, status: 'Finished' },
+        { position: 2, driver: 'Charles Leclerc', team: 'Ferrari', grid: 2, laps: 58, time: '+12.345', points: 18, status: 'Finished' },
+        { position: 3, driver: 'Lando Norris', team: 'McLaren', grid: 3, laps: 58, time: '+18.567', points: 15, status: 'Finished' },
+        { position: 4, driver: 'Lewis Hamilton', team: 'Mercedes', grid: 4, laps: 58, time: '+25.678', points: 12, status: 'Finished' },
+        { position: 5, driver: 'Sergio Perez', team: 'Red Bull Racing', grid: 5, laps: 58, time: '+32.890', points: 10, status: 'Finished' }
+      ];
+      
+      const mockSprintResults = raceName.toLowerCase().includes('sprint') ? [
+        { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', laps: 24, time: '28:45.123', points: 8, status: 'Finished' },
+        { position: 2, driver: 'Lando Norris', team: 'McLaren', laps: 24, time: '+5.234', points: 7, status: 'Finished' },
+        { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', laps: 24, time: '+8.567', points: 6, status: 'Finished' }
+      ] : [];
+
+      setDetailedRaceStandings(prev => ({
+        ...prev,
+        loading: false,
+        data: {
+          qualifying: mockQualifyingResults,
+          race: mockRaceResults,
+          sprint: mockSprintResults
+        }
+      }));
+    } catch (error) {
+      console.error('Failed to fetch detailed race standings:', error);
+      setDetailedRaceStandings(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
 
   // UseEffect to organize practice sessions by chronological track order
   useEffect(() => {
@@ -1349,6 +1432,153 @@ export default function F1Page() {
     }
   }, [activeTab, fetchStandingsData])
 
+  // Fetch historical standings data
+  const fetchHistoricalStandings = useCallback(async (year: number, raceId?: string) => {
+    setStandingsLoading(true)
+    try {
+      // Fetch season standings for the selected year
+      let seasonStandings: any[] = []
+      try {
+        const seasonRes = await fetch(`/api/f1/standings?season=${year}&type=drivers`)
+        const seasonData = await seasonRes.json()
+        if (seasonData.success && seasonData.standings) {
+          seasonStandings = seasonData.standings.map((s: any) => ({
+            position: s.position,
+            driver: s.driver,
+            team: s.team,
+            points: s.points,
+            wins: s.wins || 0,
+            podiums: s.podiums || 0,
+            driverNumber: s.driverNumber
+          }))
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch ${year} season standings:`, error)
+        // Use mock data for demonstration
+        seasonStandings = [
+          { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', points: 575, wins: 19, podiums: 21, driverNumber: 1 },
+          { position: 2, driver: 'Sergio Perez', team: 'Red Bull Racing', points: 285, wins: 2, podiums: 8, driverNumber: 11 },
+          { position: 3, driver: 'Lewis Hamilton', team: 'Mercedes', points: 234, wins: 2, podiums: 12, driverNumber: 44 },
+          { position: 4, driver: 'Charles Leclerc', team: 'Ferrari', points: 208, wins: 2, podiums: 10, driverNumber: 16 },
+          { position: 5, driver: 'Lando Norris', team: 'McLaren', points: 205, wins: 1, podiums: 9, driverNumber: 4 }
+        ]
+      }
+
+      // Fetch race results if specific race selected
+      let raceResults: any[] = []
+      if (raceId && raceId !== '') {
+        try {
+          const raceRes = await fetch(`/api/f1/race-results?year=${year}&race=${raceId}`)
+          const raceData = await raceRes.json()
+          if (raceData.success && raceData.results) {
+            raceResults = raceData.results
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch ${year} race results for ${raceId}:`, error)
+          // Use mock race results
+          raceResults = [
+            { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', time: '1:28:45.672', points: 25, status: 'Finished' },
+            { position: 2, driver: 'Sergio Perez', team: 'Red Bull Racing', time: '+12.345', points: 18, status: 'Finished' },
+            { position: 3, driver: 'Lewis Hamilton', team: 'Mercedes', time: '+18.567', points: 15, status: 'Finished' }
+          ]
+        }
+      }
+
+      setHistoricalStandings(prev => ({
+        ...prev,
+        seasonStandings,
+        raceResults
+      }))
+    } catch (error) {
+      console.error('Failed to fetch historical standings:', error)
+    } finally {
+      setStandingsLoading(false)
+    }
+  }, [])
+
+  // Update available races when year changes
+  useEffect(() => {
+    const getRacesForYear = async () => {
+      try {
+        // Mock race calendar for different years
+        const raceCalendars: Record<number, any[]> = {
+          2024: [
+            { id: 'bahrain-2024', name: 'Bahrain Grand Prix', date: '2024-03-02', track: 'Bahrain International Circuit' },
+            { id: 'saudi-2024', name: 'Saudi Arabian Grand Prix', date: '2024-03-09', track: 'Jeddah Corniche Circuit' },
+            { id: 'australia-2024', name: 'Australian Grand Prix', date: '2024-03-24', track: 'Albert Park Circuit' },
+            { id: 'japan-2024', name: 'Japanese Grand Prix', date: '2024-04-07', track: 'Suzuka International Racing Course' },
+            { id: 'china-2024', name: 'Chinese Grand Prix', date: '2024-04-21', track: 'Shanghai International Circuit' },
+            { id: 'miami-2024', name: 'Miami Grand Prix', date: '2024-05-05', track: 'Miami International Autodrome' },
+            { id: 'emilia-romagna-2024', name: 'Emilia Romagna Grand Prix', date: '2024-05-19', track: 'Autodromo Enzo e Dino Ferrari' },
+            { id: 'monaco-2024', name: 'Monaco Grand Prix', date: '2024-05-26', track: 'Circuit de Monaco' },
+            { id: 'canada-2024', name: 'Canadian Grand Prix', date: '2024-06-09', track: 'Circuit Gilles Villeneuve' },
+            { id: 'spain-2024', name: 'Spanish Grand Prix', date: '2024-06-23', track: 'Circuit de Barcelona-Catalunya' },
+            { id: 'austria-2024', name: 'Austrian Grand Prix', date: '2024-06-30', track: 'Red Bull Ring' },
+            { id: 'great-britain-2024', name: 'British Grand Prix', date: '2024-07-07', track: 'Silverstone Circuit' },
+            { id: 'hungary-2024', name: 'Hungarian Grand Prix', date: '2024-07-21', track: 'Hungaroring' },
+            { id: 'belgium-2024', name: 'Belgian Grand Prix', date: '2024-07-28', track: 'Circuit de Spa-Francorchamps' },
+            { id: 'netherlands-2024', name: 'Dutch Grand Prix', date: '2024-08-25', track: 'Circuit Zandvoort' },
+            { id: 'italy-2024', name: 'Italian Grand Prix', date: '2024-09-01', track: 'Autodromo Nazionale Monza' },
+            { id: 'azerbaijan-2024', name: 'Azerbaijan Grand Prix', date: '2024-09-15', track: 'Baku City Circuit' },
+            { id: 'singapore-2024', name: 'Singapore Grand Prix', date: '2024-09-22', track: 'Marina Bay Street Circuit' },
+            { id: 'united-states-2024', name: 'United States Grand Prix', date: '2024-10-20', track: 'Circuit of the Americas' },
+            { id: 'mexico-2024', name: 'Mexico City Grand Prix', date: '2024-10-27', track: 'Autódromo Hermanos Rodríguez' },
+            { id: 'brazil-2024', name: 'São Paulo Grand Prix', date: '2024-11-03', track: 'Autódromo José Carlos Pace' },
+            { id: 'vegas-2024', name: 'Las Vegas Grand Prix', date: '2024-11-23', track: 'Las Vegas Strip Circuit' },
+            { id: 'abu-dhabi-2024', name: 'Abu Dhabi Grand Prix', date: '2024-12-08', track: 'Yas Marina Circuit' }
+          ],
+          2025: [
+            { id: 'australia-2025', name: 'Australian Grand Prix', date: '2025-03-16', track: 'Albert Park Circuit' },
+            { id: 'china-2025', name: 'Chinese Grand Prix', date: '2025-03-23', track: 'Shanghai International Circuit' },
+            { id: 'japan-2025', name: 'Japanese Grand Prix', date: '2025-04-06', track: 'Suzuka International Racing Course' },
+            { id: 'bahrain-2025', name: 'Bahrain Grand Prix', date: '2025-04-13', track: 'Bahrain International Circuit' },
+            { id: 'saudi-2025', name: 'Saudi Arabian Grand Prix', date: '2025-04-20', track: 'Jeddah Corniche Circuit' },
+            { id: 'miami-2025', name: 'Miami Grand Prix', date: '2025-05-04', track: 'Miami International Autodrome' },
+            { id: 'emilia-romagna-2025', name: 'Emilia Romagna Grand Prix', date: '2025-05-18', track: 'Autodromo Enzo e Dino Ferrari' },
+            { id: 'monaco-2025', name: 'Monaco Grand Prix', date: '2025-05-25', track: 'Circuit de Monaco' },
+            { id: 'canada-2025', name: 'Canadian Grand Prix', date: '2025-06-08', track: 'Circuit Gilles Villeneuve' },
+            { id: 'spain-2025', name: 'Spanish Grand Prix', date: '2025-06-22', track: 'Circuit de Barcelona-Catalunya' },
+            { id: 'austria-2025', name: 'Austrian Grand Prix', date: '2025-06-29', track: 'Red Bull Ring' },
+            { id: 'great-britain-2025', name: 'British Grand Prix', date: '2025-07-06', track: 'Silverstone Circuit' },
+            { id: 'hungary-2025', name: 'Hungarian Grand Prix', date: '2025-07-20', track: 'Hungaroring' },
+            { id: 'belgium-2025', name: 'Belgian Grand Prix', date: '2025-07-27', track: 'Circuit de Spa-Francorchamps' },
+            { id: 'netherlands-2025', name: 'Dutch Grand Prix', date: '2025-08-24', track: 'Circuit Zandvoort' },
+            { id: 'italy-2025', name: 'Italian Grand Prix', date: '2025-08-31', track: 'Autodromo Nazionale Monza' },
+            { id: 'azerbaijan-2025', name: 'Azerbaijan Grand Prix', date: '2025-09-14', track: 'Baku City Circuit' },
+            { id: 'singapore-2025', name: 'Singapore Grand Prix', date: '2025-09-21', track: 'Marina Bay Street Circuit' },
+            { id: 'united-states-2025', name: 'United States Grand Prix', date: '2025-10-19', track: 'Circuit of the Americas' },
+            { id: 'mexico-2025', name: 'Mexico City Grand Prix', date: '2025-10-26', track: 'Autódromo Hermanos Rodríguez' },
+            { id: 'brazil-2025', name: 'São Paulo Grand Prix', date: '2025-11-02', track: 'Autódromo José Carlos Pace' },
+            { id: 'vegas-2025', name: 'Las Vegas Grand Prix', date: '2025-11-22', track: 'Las Vegas Strip Circuit' },
+            { id: 'abu-dhabi-2025', name: 'Abu Dhabi Grand Prix', date: '2025-12-07', track: 'Yas Marina Circuit' }
+          ],
+          2026: upcomingRacesList.map(race => ({
+            id: `${race.id}-2026`,
+            name: race.name,
+            date: race.date,
+            track: race.track
+          }))
+        }
+
+        const races = raceCalendars[historicalStandings.selectedYear] || []
+        setHistoricalStandings(prev => ({
+          ...prev,
+          availableRaces: races,
+          selectedRace: races.length > 0 ? races[0].id : ''
+        }))
+        
+        // Fetch standings for the selected year
+        await fetchHistoricalStandings(historicalStandings.selectedYear)
+      } catch (error) {
+        console.error('Failed to fetch races for year:', error)
+      }
+    }
+
+    if (historicalStandings.selectedYear) {
+      getRacesForYear()
+    }
+  }, [historicalStandings.selectedYear, fetchHistoricalStandings, upcomingRacesList])
+
   const generatePredictionResults = (type: string, track: any) => {
     const baseAccuracy = 0.78 + Math.random() * 0.17 // 78-95% accuracy
 
@@ -2282,6 +2512,35 @@ export default function F1Page() {
                             </div>
 
                             <div className="flex flex-col items-end space-y-3">
+                              {/* Top 3 Positions Preview */}
+                              <div className="bg-black/60 border border-white/10 rounded-lg p-3 min-w-[200px]">
+                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Top 3 Finishers</div>
+                                <div className="space-y-1">
+                                  {/* Mock top 3 results - in real app, this would be fetched from API */}
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-mono font-bold text-yellow-500">1</span>
+                                      <span className="text-white font-medium">Max Verstappen</span>
+                                    </div>
+                                    <span className="text-gray-400">Red Bull</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-mono font-bold text-gray-400">2</span>
+                                      <span className="text-white font-medium">Charles Leclerc</span>
+                                    </div>
+                                    <span className="text-gray-400">Ferrari</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-mono font-bold text-orange-600">3</span>
+                                      <span className="text-white font-medium">Lando Norris</span>
+                                    </div>
+                                    <span className="text-gray-400">McLaren</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
                               <div className="flex items-center gap-1.5">
                                 <button 
                                   onClick={(e) => toggleRaceStandingsExpansion(e, race.id)}
@@ -2291,10 +2550,14 @@ export default function F1Page() {
                                   <span>Results</span>
                                 </button>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); handleViewSession(race.id, 'all'); }}
-                                  className="px-2 py-1 bg-white/5 hover:bg-gray-500/20 border border-white/10 rounded text-[10px] font-black text-gray-400 hover:text-white transition-all uppercase"
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    fetchDetailedRaceStandings(race.id, race.name, race.date);
+                                  }}
+                                  className="px-2 py-1 bg-racing-red hover:bg-red-600 border border-racing-red/50 rounded text-[10px] font-black text-white transition-all uppercase flex items-center gap-1"
                                 >
-                                  Details
+                                  <Eye className="w-3 h-3" />
+                                  <span>Full Standings</span>
                                 </button>
                               </div>
                             </div>
@@ -2514,7 +2777,174 @@ export default function F1Page() {
           </div>
         )}
 
+        {/* Detailed Race Standings Modal */}
+        {detailedRaceStandings.raceId && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-racing-red" />
+                    {detailedRaceStandings.raceName}
+                  </h3>
+                  <p className="text-sm text-gray-400">{detailedRaceStandings.raceDate}</p>
+                </div>
+                <button
+                  onClick={() => setDetailedRaceStandings(prev => ({ ...prev, raceId: null }))}
+                  className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
 
+              {/* Modal Content */}
+              <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+                {/* Qualifying Results */}
+                {detailedRaceStandings.data.qualifying.length > 0 && (
+                  <div className="border-b border-gray-700">
+                    <div className="px-6 py-4 bg-gray-800/50">
+                      <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-blue-500" />
+                        Qualifying Results
+                      </h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="text-gray-500 border-b border-gray-700 uppercase text-[10px] font-black bg-gray-800/50">
+                            <th className="px-6 py-3">Pos</th>
+                            <th className="px-6 py-3">Driver</th>
+                            <th className="px-6 py-3 hidden md:table-cell">Team</th>
+                            <th className="px-6 py-3 text-right">Q1</th>
+                            <th className="px-6 py-3 text-right">Q2</th>
+                            <th className="px-6 py-3 text-right">Q3</th>
+                            <th className="px-6 py-3 text-right">Gap</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {detailedRaceStandings.data.qualifying.map((result, index) => (
+                            <tr key={index} className="hover:bg-gray-800/50 transition-colors">
+                              <td className="px-6 py-3">
+                                <span className={`font-mono font-bold ${index < 3 ? 'text-racing-red' : 'text-gray-400'}`}>
+                                  {result.position}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 font-bold text-white">{result.driver}</td>
+                              <td className="px-6 py-3 text-gray-400 hidden md:table-cell">{result.team}</td>
+                              <td className="px-6 py-3 text-right font-mono text-gray-400">{result.q1}</td>
+                              <td className="px-6 py-3 text-right font-mono text-gray-400">{result.q2}</td>
+                              <td className="px-6 py-3 text-right font-mono text-gray-400">{result.q3}</td>
+                              <td className="px-6 py-3 text-right font-mono text-gray-400">{result.gap}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Race Results */}
+                {detailedRaceStandings.data.race.length > 0 && (
+                  <div className="border-b border-gray-700">
+                    <div className="px-6 py-4 bg-gray-800/50">
+                      <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Flag className="w-5 h-5 text-green-500" />
+                        Race Results
+                      </h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="text-gray-500 border-b border-gray-700 uppercase text-[10px] font-black bg-gray-800/50">
+                            <th className="px-6 py-3">Pos</th>
+                            <th className="px-6 py-3">Driver</th>
+                            <th className="px-6 py-3 hidden md:table-cell">Team</th>
+                            <th className="px-6 py-3 text-center">Grid</th>
+                            <th className="px-6 py-3 text-center">Laps</th>
+                            <th className="px-6 py-3 text-right">Time</th>
+                            <th className="px-6 py-3 text-right font-bold text-racing-red">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {detailedRaceStandings.data.race.map((result, index) => (
+                            <tr key={index} className="hover:bg-gray-800/50 transition-colors">
+                              <td className="px-6 py-3">
+                                <span className={`font-mono font-bold ${index < 3 ? 'text-racing-red' : 'text-gray-400'}`}>
+                                  {result.position}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 font-bold text-white">{result.driver}</td>
+                              <td className="px-6 py-3 text-gray-400 hidden md:table-cell">{result.team}</td>
+                              <td className="px-6 py-3 text-center font-mono text-gray-400">{result.grid}</td>
+                              <td className="px-6 py-3 text-center font-mono text-gray-400">{result.laps}</td>
+                              <td className="px-6 py-3 text-right font-mono text-gray-400">{result.time}</td>
+                              <td className="px-6 py-3 text-right font-mono font-black text-racing-red">{result.points}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sprint Results */}
+                {detailedRaceStandings.data.sprint.length > 0 && (
+                  <div>
+                    <div className="px-6 py-4 bg-gray-800/50">
+                      <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-purple-500" />
+                        Sprint Results
+                      </h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="text-gray-500 border-b border-gray-700 uppercase text-[10px] font-black bg-gray-800/50">
+                            <th className="px-6 py-3">Pos</th>
+                            <th className="px-6 py-3">Driver</th>
+                            <th className="px-6 py-3 hidden md:table-cell">Team</th>
+                            <th className="px-6 py-3 text-center">Laps</th>
+                            <th className="px-6 py-3 text-right">Time</th>
+                            <th className="px-6 py-3 text-right font-bold text-racing-red">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {detailedRaceStandings.data.sprint.map((result, index) => (
+                            <tr key={index} className="hover:bg-gray-800/50 transition-colors">
+                              <td className="px-6 py-3">
+                                <span className={`font-mono font-bold ${index < 3 ? 'text-racing-red' : 'text-gray-400'}`}>
+                                  {result.position}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 font-bold text-white">{result.driver}</td>
+                              <td className="px-6 py-3 text-gray-400 hidden md:table-cell">{result.team}</td>
+                              <td className="px-6 py-3 text-center font-mono text-gray-400">{result.laps}</td>
+                              <td className="px-6 py-3 text-right font-mono text-gray-400">{result.time}</td>
+                              <td className="px-6 py-3 text-right font-mono font-black text-racing-red">{result.points}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-gray-700 bg-gray-800/50">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setDetailedRaceStandings(prev => ({ ...prev, raceId: null }))}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* PREDICTION BUILDER */}
         {activeTab === 'builder' && (
@@ -4075,7 +4505,54 @@ export default function F1Page() {
                     >
                       Track
                     </button>
+                    <button
+                      onClick={() => setStandingsView('historical')}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        standingsView === 'historical' 
+                          ? 'bg-racing-red text-white' 
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      Historical
+                    </button>
                   </div>
+                   
+                  {/* Historical Controls (only for historical view) */}
+                  {standingsView === 'historical' && (
+                    <>
+                      <select
+                        value={historicalStandings.selectedYear}
+                        onChange={(e) => {
+                          const newYear = parseInt(e.target.value)
+                          setHistoricalStandings(prev => ({ ...prev, selectedYear: newYear }))
+                        }}
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      >
+                        {historicalStandings.availableYears.map(year => (
+                          <option key={year} value={year}>
+                            {year} Season
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <select
+                        value={historicalStandings.selectedRace}
+                        onChange={(e) => {
+                          const newRace = e.target.value
+                          setHistoricalStandings(prev => ({ ...prev, selectedRace: newRace }))
+                          fetchHistoricalStandings(historicalStandings.selectedYear, newRace)
+                        }}
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
+                      >
+                        <option value="">All Races</option>
+                        {historicalStandings.availableRaces.map(race => (
+                          <option key={race.id} value={race.id}>
+                            {race.name}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
                   
                   {/* Track Selector (only for track view) */}
                   {standingsView === 'track' && (
@@ -4400,20 +4877,162 @@ export default function F1Page() {
               </div>
             )}
 
+            {/* Historical Standings View */}
+            {standingsView === 'historical' && (
+              <div className="space-y-6">
+                {/* Historical Season Standings */}
+                <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white flex items-center">
+                      <Trophy className="w-5 h-5 mr-2 text-racing-red" />
+                      {historicalStandings.selectedYear} Season Championship
+                    </h3>
+                    <span className="text-xs text-gray-400">
+                      {historicalStandings.seasonStandings.length} drivers
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="text-gray-500 border-b border-white/5 uppercase text-[10px] font-black bg-black/20">
+                          <th className="px-6 py-4 rounded-tl-xl">Pos</th>
+                          <th className="px-6 py-4">Driver</th>
+                          <th className="px-6 py-4 hidden md:table-cell">Team</th>
+                          <th className="px-6 py-4 text-center">Wins</th>
+                          <th className="px-6 py-4 text-center hidden md:table-cell">Podiums</th>
+                          <th className="px-6 py-4 text-right font-bold text-racing-red rounded-tr-xl">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {historicalStandings.seasonStandings.map((driver, index) => (
+                          <tr key={index} className="hover:bg-white/5 transition-colors">
+                            <td className="px-6 py-4">
+                              <span className={`font-mono font-bold ${index < 3 ? 'text-racing-red' : 'text-gray-400'}`}>
+                                {driver.position}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 font-bold text-white">{driver.driver}</td>
+                            <td className="px-6 py-4 text-gray-400 hidden md:table-cell">{driver.team}</td>
+                            <td className="px-6 py-4 text-center font-mono text-gray-400">{driver.wins}</td>
+                            <td className="px-6 py-4 text-center font-mono text-gray-400 hidden md:table-cell">{driver.podiums}</td>
+                            <td className="px-6 py-4 text-right font-mono font-black text-racing-red">{driver.points}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Historical Race Results */}
+                {historicalStandings.selectedRace && historicalStandings.raceResults.length > 0 && (
+                  <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden">
+                    <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-white flex items-center">
+                        <Flag className="w-5 h-5 mr-2 text-green-500" />
+                        {historicalStandings.availableRaces.find(r => r.id === historicalStandings.selectedRace)?.name} Results
+                      </h3>
+                      <span className="text-xs text-gray-400">
+                        {historicalStandings.raceResults.length} finishers
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="text-gray-500 border-b border-white/5 uppercase text-[10px] font-black bg-black/20">
+                            <th className="px-6 py-4 rounded-tl-xl">Pos</th>
+                            <th className="px-6 py-4">Driver</th>
+                            <th className="px-6 py-4 hidden md:table-cell">Team</th>
+                            <th className="px-6 py-4 text-right">Time</th>
+                            <th className="px-6 py-4 text-right font-bold text-racing-red rounded-tr-xl">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {historicalStandings.raceResults.map((result, index) => (
+                            <tr key={index} className="hover:bg-white/5 transition-colors">
+                              <td className="px-6 py-4">
+                                <span className={`font-mono font-bold ${index < 3 ? 'text-racing-red' : 'text-gray-400'}`}>
+                                  {result.position}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 font-bold text-white">{result.driver}</td>
+                              <td className="px-6 py-4 text-gray-400 hidden md:table-cell">{result.team}</td>
+                              <td className="px-6 py-4 text-right font-mono text-gray-400">{result.time}</td>
+                              <td className="px-6 py-4 text-right font-mono font-black text-racing-red">{result.points}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Historical Stats Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-white mb-2">Season Champion</h4>
+                    {historicalStandings.seasonStandings.length > 0 ? (
+                      <div>
+                        <p className="text-racing-red font-bold text-lg">
+                          {historicalStandings.seasonStandings[0].driver}
+                        </p>
+                        <p className="text-gray-400 text-sm">{historicalStandings.seasonStandings[0].team}</p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          {historicalStandings.seasonStandings[0].points} points
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">No data available</p>
+                    )}
+                  </div>
+                  
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-white mb-2">Most Wins</h4>
+                    {historicalStandings.seasonStandings.length > 0 ? (
+                      <div>
+                        <p className="text-racing-red font-bold text-lg">
+                          {historicalStandings.seasonStandings.reduce((max, driver) => 
+                            driver.wins > max.wins ? driver : max
+                          ).driver}
+                        </p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          {Math.max(...historicalStandings.seasonStandings.map(d => d.wins))} wins
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">No data available</p>
+                    )}
+                  </div>
+                  
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-white mb-2">Total Races</h4>
+                    <p className="text-racing-red font-bold text-lg">
+                      {historicalStandings.availableRaces.length}
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {historicalStandings.selectedYear} season
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* No Data Message */}
             {!standingsLoading && 
              ((standingsView === 'season' && standingsData.season.length === 0) ||
               (standingsView === 'track' && 
                standingsData.track.qualifying.length === 0 && 
                standingsData.track.raceResults.length === 0 && 
-               standingsData.track.sprintResults.length === 0)) && (
+               standingsData.track.sprintResults.length === 0) ||
+              (standingsView === 'historical' && historicalStandings.seasonStandings.length === 0)) && (
               <div className="text-center py-12 bg-gray-900/50 rounded-2xl border border-white/5 border-dashed">
                 <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                 <p className="text-xl font-bold text-gray-300 mb-2">No Standings Data Available</p>
                 <p className="text-gray-500 max-w-md text-center">
                   {standingsView === 'season' 
                     ? 'Season championship data will appear here when races are completed.'
-                    : 'Track-specific data will appear here when races are completed at this circuit.'
+                    : standingsView === 'track'
+                    ? 'Track-specific data will appear here when races are completed at this circuit.'
+                    : 'Historical data will appear here when you select a year and race.'
                   }
                 </p>
               </div>
