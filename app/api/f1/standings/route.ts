@@ -7,244 +7,54 @@ export async function GET(request: NextRequest) {
     const season = searchParams.get('season') || '2026'
     const type = searchParams.get('type') || 'drivers' // 'drivers' or 'constructors'
 
-    // Fetch race results to calculate standings
-    let raceData: any
-    try {
-      const raceResultsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/f1/race-results?season=${season}`)
-      raceData = await raceResultsResponse.json()
-
-      if (!raceData.success) {
-        throw new Error('Failed to fetch race results')
-      }
-    } catch (error) {
-      console.error('Race results API error, using fallback data:', error)
-      // Use fallback race results if API fails
-      raceData = {
-        success: true,
-        season,
-        races: [
-          {
-            round: 1,
-            name: 'Bahrain Grand Prix',
-            date: '2026-03-08',
-            circuit: 'Bahrain International Circuit',
-            results: [
-              { position: 1, driver: 'G. Russell', team: 'Mercedes', points: 25 },
-              { position: 2, driver: 'A.K. Antonelli', team: 'Mercedes', points: 18 },
-              { position: 3, driver: 'C. Leclerc', team: 'Ferrari', points: 15 },
-              { position: 4, driver: 'L. Hamilton', team: 'Ferrari', points: 12 },
-              { position: 5, driver: 'L. Norris', team: 'McLaren', points: 10 },
-              { position: 6, driver: 'M. Verstappen', team: 'Red Bull', points: 8 },
-              { position: 7, driver: 'O. Bearman', team: 'Haas', points: 6 },
-              { position: 8, driver: 'A. Lindblad', team: 'RB', points: 4 },
-              { position: 9, driver: 'G. Bortoleto', team: 'Audi', points: 2 },
-              { position: 10, driver: 'P. Gasly', team: 'Alpine', points: 1 }
-            ],
-            fastestLap: { driver: 'G. Russell', team: 'Mercedes' },
-            status: 'completed'
-          },
-          {
-            round: 2,
-            name: 'Saudi Arabian Grand Prix',
-            date: '2026-03-15',
-            circuit: 'Jeddah Corniche Circuit',
-            results: [
-              { position: 1, driver: 'G. Russell', team: 'Mercedes', points: 25 },
-              { position: 2, driver: 'A.K. Antonelli', team: 'Mercedes', points: 18 },
-              { position: 3, driver: 'C. Leclerc', team: 'Ferrari', points: 15 },
-              { position: 4, driver: 'L. Hamilton', team: 'Ferrari', points: 12 },
-              { position: 5, driver: 'L. Norris', team: 'McLaren', points: 10 },
-              { position: 6, driver: 'M. Verstappen', team: 'Red Bull', points: 8 },
-              { position: 7, driver: 'O. Bearman', team: 'Haas', points: 6 },
-              { position: 8, driver: 'A. Lindblad', team: 'RB', points: 4 },
-              { position: 9, driver: 'G. Bortoleto', team: 'Audi', points: 2 },
-              { position: 10, driver: 'P. Gasly', team: 'Alpine', points: 1 }
-            ],
-            fastestLap: { driver: 'A.K. Antonelli', team: 'Mercedes' },
-            status: 'completed'
-          },
-          {
-            round: 3,
-            name: 'Australian Grand Prix',
-            date: '2026-03-22',
-            circuit: 'Albert Park Circuit, Melbourne',
-            results: [
-              { position: 1, driver: 'G. Russell', team: 'Mercedes', points: 25 },
-              { position: 2, driver: 'A.K. Antonelli', team: 'Mercedes', points: 18 },
-              { position: 3, driver: 'C. Leclerc', team: 'Ferrari', points: 15 },
-              { position: 4, driver: 'L. Hamilton', team: 'Ferrari', points: 12 },
-              { position: 5, driver: 'L. Norris', team: 'McLaren', points: 10 },
-              { position: 6, driver: 'M. Verstappen', team: 'Red Bull', points: 8 },
-              { position: 7, driver: 'O. Bearman', team: 'Haas', points: 6 },
-              { position: 8, driver: 'A. Lindblad', team: 'RB', points: 4 },
-              { position: 9, driver: 'G. Bortoleto', team: 'Audi', points: 2 },
-              { position: 10, driver: 'P. Gasly', team: 'Alpine', points: 1 }
-            ],
-            fastestLap: { driver: 'M. Verstappen', team: 'Red Bull' },
-            status: 'completed'
-          }
-        ],
-        nextRace: {
-          round: 4,
-          name: 'Japanese Grand Prix',
-          date: '2026-04-05',
-          circuit: 'Suzuka International Circuit'
-        }
-      }
-    }
-
-    const completedRaces = raceData.races.filter((race: any) => race.status === 'completed')
-
-    // Calculate driver standings based on race results
-    const driverPointsMap = new Map<string, {
-      driver: string,
-      team: string,
-      nationality: string,
-      countryFlag: string,
-      points: number,
-      wins: number,
-      podiums: number
-    }>()
-
-    // Initialize all drivers
-    const allDrivers = [
-      { driver: 'G. Russell', team: 'Mercedes', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { driver: 'A.K. Antonelli', team: 'Mercedes', nationality: 'Italy', countryFlag: '🇮🇹' },
-      { driver: 'C. Leclerc', team: 'Ferrari', nationality: 'Monaco', countryFlag: '🇲🇨' },
-      { driver: 'L. Hamilton', team: 'Ferrari', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { driver: 'L. Norris', team: 'McLaren', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { driver: 'M. Verstappen', team: 'Red Bull', nationality: 'Netherlands', countryFlag: '🇳🇱' },
-      { driver: 'O. Bearman', team: 'Haas', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { driver: 'A. Lindblad', team: 'RB', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { driver: 'G. Bortoleto', team: 'Audi', nationality: 'Brazil', countryFlag: '🇧🇷' },
-      { driver: 'P. Gasly', team: 'Alpine', nationality: 'France', countryFlag: '🇫🇷' },
-      { driver: 'E. Ocon', team: 'Haas', nationality: 'France', countryFlag: '🇫🇷' },
-      { driver: 'A. Albon', team: 'Williams', nationality: 'Thailand', countryFlag: '🇹🇭' },
-      { driver: 'L. Lawson', team: 'RB', nationality: 'New Zealand', countryFlag: '🇳🇿' },
-      { driver: 'F. Colapinto', team: 'Alpine', nationality: 'Argentina', countryFlag: '🇦🇷' },
-      { driver: 'C. Sainz Jr.', team: 'Williams', nationality: 'Spain', countryFlag: '🇪🇸' },
-      { driver: 'S. Pérez', team: 'Cadillac', nationality: 'Mexico', countryFlag: '🇲🇽' },
-      { driver: 'I. Hadjar', team: 'Red Bull', nationality: 'France', countryFlag: '🇫🇷' },
-      { driver: 'O. Piastri', team: 'McLaren', nationality: 'Australia', countryFlag: '🇦🇺' },
-      { driver: 'N. Hülkenberg', team: 'Audi', nationality: 'Germany', countryFlag: '🇩🇪' },
-      { driver: 'F. Alonso', team: 'Aston Martin', nationality: 'Spain', countryFlag: '🇪🇸' },
-      { driver: 'V. Bottas', team: 'Cadillac', nationality: 'Finland', countryFlag: '🇫🇮' }
-    ]
-
-    // Initialize driver stats
-    allDrivers.forEach(driver => {
-      driverPointsMap.set(driver.driver, {
-        ...driver,
-        points: 0,
-        wins: 0,
-        podiums: 0
-      })
-    })
-
-    // Calculate points from completed races
-    completedRaces.forEach((race: any) => {
-      race.results.forEach((result: any) => {
-        const driverStats = driverPointsMap.get(result.driver)
-        if (driverStats) {
-          driverStats.points += result.points
-          if (result.position === 1) driverStats.wins++
-          if (result.position <= 3) driverStats.podiums++
-        }
-      })
-    })
-
-    // Convert to array and sort by points
-    const driverStandings = Array.from(driverPointsMap.values())
-      .sort((a, b) => b.points - a.points)
-      .map((driver, index) => ({
-        ...driver,
-        position: index + 1,
-        driverCode: driver.driver.split(' ').map((n: string) => n[0]).join('')
+    if (type === 'drivers') {
+      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/driverStandings.json`)
+      const data = await response.json()
+      
+      const standingsList = data.MRData?.StandingsTable?.StandingsLists?.[0] || { DriverStandings: [] }
+      const driverStandings = standingsList.DriverStandings.map((s: any) => ({
+        position: parseInt(s.position),
+        points: parseFloat(s.points),
+        wins: parseInt(s.wins),
+        driver: `${s.Driver.givenName} ${s.Driver.familyName}`,
+        driverCode: s.Driver.code || s.Driver.familyName.substring(0, 3).toUpperCase(),
+        team: s.Constructors?.[0]?.name || 'Unknown',
+        nationality: s.Driver.nationality,
+        countryFlag: s.Driver.nationality === 'British' ? '🇬🇧' : s.Driver.nationality === 'Monégasque' ? '🇲🇨' : s.Driver.nationality === 'Italian' ? '🇮🇹' : '' // Fallback map could be added
       }))
 
-    if (type === 'drivers') {
       return NextResponse.json({
         success: true,
         season,
         type: 'drivers',
         lastUpdated: new Date().toISOString(),
-        completedRaces: completedRaces.length,
-        nextRace: raceData.nextRace,
         standings: driverStandings,
         totalDrivers: driverStandings.length
       })
-    }
+    } else {
+      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/constructorStandings.json`)
+      const data = await response.json()
 
-    // Calculate constructor standings
-    const constructorPointsMap = new Map<string, {
-      team: string,
-      nationality: string,
-      countryFlag: string,
-      points: number,
-      wins: number,
-      podiums: number,
-      drivers: string[]
-    }>()
-
-    // Initialize constructors
-    const constructors = [
-      { team: 'Mercedes', nationality: 'Germany', countryFlag: '🇩🇪' },
-      { team: 'Ferrari', nationality: 'Italy', countryFlag: '🇮🇹' },
-      { team: 'McLaren', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { team: 'Red Bull', nationality: 'Austria', countryFlag: '🇦🇹' },
-      { team: 'Haas', nationality: 'United States', countryFlag: '🇺🇸' },
-      { team: 'RB', nationality: 'Italy', countryFlag: '🇮🇹' },
-      { team: 'Audi', nationality: 'Germany', countryFlag: '🇩🇪' },
-      { team: 'Alpine', nationality: 'France', countryFlag: '🇫🇷' },
-      { team: 'Williams', nationality: 'United Kingdom', countryFlag: '🇬🇧' },
-      { team: 'Cadillac', nationality: 'United States', countryFlag: '🇺🇸' },
-      { team: 'Aston Martin', nationality: 'United Kingdom', countryFlag: '🇬🇧' }
-    ]
-
-    constructors.forEach(constructor => {
-      constructorPointsMap.set(constructor.team, {
-        ...constructor,
-        points: 0,
-        wins: 0,
-        podiums: 0,
-        drivers: []
-      })
-    })
-
-    // Calculate constructor points from driver standings
-    driverStandings.forEach(driver => {
-      const constructorStats = constructorPointsMap.get(driver.team)
-      if (constructorStats) {
-        constructorStats.points += driver.points
-        constructorStats.wins += driver.wins
-        constructorStats.podiums += driver.podiums
-        constructorStats.drivers.push(driver.driver)
-      }
-    })
-
-    // Convert to array and sort by points
-    const constructorStandings = Array.from(constructorPointsMap.values())
-      .sort((a, b) => b.points - a.points)
-      .map((constructor, index) => ({
-        ...constructor,
-        position: index + 1
+      const standingsList = data.MRData?.StandingsTable?.StandingsLists?.[0] || { ConstructorStandings: [] }
+      const constructorStandings = standingsList.ConstructorStandings.map((s: any) => ({
+        position: parseInt(s.position),
+        points: parseFloat(s.points),
+        wins: parseInt(s.wins),
+        team: s.Constructor.name,
+        nationality: s.Constructor.nationality
       }))
 
-    if (type === 'constructors') {
       return NextResponse.json({
         success: true,
         season,
         type: 'constructors',
         lastUpdated: new Date().toISOString(),
-        completedRaces: completedRaces.length,
-        nextRace: raceData.nextRace,
         standings: constructorStandings,
         totalTeams: constructorStandings.length
       })
     }
-
   } catch (error) {
-    console.error('Error fetching F1 standings:', error)
+    console.error('Error fetching F1 standings from Jolpica:', error)
     return NextResponse.json(
       {
         success: false,

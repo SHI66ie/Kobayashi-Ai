@@ -7,75 +7,32 @@ export async function GET(request: NextRequest) {
     const season = searchParams.get('season') || '2026'
     const round = searchParams.get('round')
 
-    // Real 2026 race results (Melbourne GP has happened)
-    const raceResults = [
-      {
-        round: 1,
-        name: 'Bahrain Grand Prix',
-        date: '2026-03-08',
-        circuit: 'Bahrain International Circuit',
-        results: [
-          { position: 1, driver: 'G. Russell', team: 'Mercedes', points: 25 },
-          { position: 2, driver: 'A.K. Antonelli', team: 'Mercedes', points: 18 },
-          { position: 3, driver: 'C. Leclerc', team: 'Ferrari', points: 15 },
-          { position: 4, driver: 'L. Hamilton', team: 'Ferrari', points: 12 },
-          { position: 5, driver: 'L. Norris', team: 'McLaren', points: 10 },
-          { position: 6, driver: 'M. Verstappen', team: 'Red Bull', points: 8 },
-          { position: 7, driver: 'O. Bearman', team: 'Haas', points: 6 },
-          { position: 8, driver: 'A. Lindblad', team: 'RB', points: 4 },
-          { position: 9, driver: 'G. Bortoleto', team: 'Audi', points: 2 },
-          { position: 10, driver: 'P. Gasly', team: 'Alpine', points: 1 }
-        ],
-        fastestLap: { driver: 'G. Russell', team: 'Mercedes' },
+    const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/results.json`)
+    const data = await response.json()
+    
+    let races = []
+    if (data.MRData?.RaceTable?.Races) {
+      races = data.MRData.RaceTable.Races.map((race: any) => ({
+        round: parseInt(race.round),
+        name: race.raceName,
+        date: race.date,
+        circuit: race.Circuit?.circuitName,
+        results: race.Results?.map((res: any) => ({
+          position: parseInt(res.position),
+          driver: `${res.Driver.givenName?.charAt(0) || ''}. ${res.Driver.familyName}`,
+          team: res.Constructor?.name,
+          points: parseFloat(res.points),
+          status: res.status
+        })) || [],
         status: 'completed'
-      },
-      {
-        round: 2,
-        name: 'Saudi Arabian Grand Prix',
-        date: '2026-03-15',
-        circuit: 'Jeddah Corniche Circuit',
-        results: [
-          { position: 1, driver: 'G. Russell', team: 'Mercedes', points: 25 },
-          { position: 2, driver: 'A.K. Antonelli', team: 'Mercedes', points: 18 },
-          { position: 3, driver: 'C. Leclerc', team: 'Ferrari', points: 15 },
-          { position: 4, driver: 'L. Hamilton', team: 'Ferrari', points: 12 },
-          { position: 5, driver: 'L. Norris', team: 'McLaren', points: 10 },
-          { position: 6, driver: 'M. Verstappen', team: 'Red Bull', points: 8 },
-          { position: 7, driver: 'O. Bearman', team: 'Haas', points: 6 },
-          { position: 8, driver: 'A. Lindblad', team: 'RB', points: 4 },
-          { position: 9, driver: 'G. Bortoleto', team: 'Audi', points: 2 },
-          { position: 10, driver: 'P. Gasly', team: 'Alpine', points: 1 }
-        ],
-        fastestLap: { driver: 'A.K. Antonelli', team: 'Mercedes' },
-        status: 'completed'
-      },
-      {
-        round: 3,
-        name: 'Australian Grand Prix',
-        date: '2026-03-22',
-        circuit: 'Albert Park Circuit, Melbourne',
-        results: [
-          { position: 1, driver: 'G. Russell', team: 'Mercedes', points: 25 },
-          { position: 2, driver: 'A.K. Antonelli', team: 'Mercedes', points: 18 },
-          { position: 3, driver: 'C. Leclerc', team: 'Ferrari', points: 15 },
-          { position: 4, driver: 'L. Hamilton', team: 'Ferrari', points: 12 },
-          { position: 5, driver: 'L. Norris', team: 'McLaren', points: 10 },
-          { position: 6, driver: 'M. Verstappen', team: 'Red Bull', points: 8 },
-          { position: 7, driver: 'O. Bearman', team: 'Haas', points: 6 },
-          { position: 8, driver: 'A. Lindblad', team: 'RB', points: 4 },
-          { position: 9, driver: 'G. Bortoleto', team: 'Audi', points: 2 },
-          { position: 10, driver: 'P. Gasly', team: 'Alpine', points: 1 }
-        ],
-        fastestLap: { driver: 'M. Verstappen', team: 'Red Bull' },
-        status: 'completed'
-      }
-    ]
+      }))
+    }
 
     if (round) {
-      const specificRace = raceResults.find(race => race.round === parseInt(round))
+      const specificRace = races.find((race: any) => race.round === parseInt(round))
       if (!specificRace) {
         return NextResponse.json(
-          { success: false, error: 'Race not found' },
+          { success: false, error: 'Race not found in Jolpica dataset' },
           { status: 404 }
         )
       }
@@ -89,19 +46,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       season,
-      totalRaces: raceResults.length,
-      completedRaces: raceResults.filter(r => r.status === 'completed').length,
-      nextRace: {
-        round: 4,
-        name: 'Japanese Grand Prix',
-        date: '2026-04-05',
-        circuit: 'Suzuka International Circuit'
-      },
-      races: raceResults
+      totalRaces: races.length,
+      completedRaces: races.length, 
+      races: races
     })
 
   } catch (error) {
-    console.error('Error fetching race results:', error)
+    console.error('Error fetching race results from Jolpica:', error)
     return NextResponse.json(
       { 
         success: false, 
