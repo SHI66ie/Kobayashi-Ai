@@ -17,7 +17,7 @@ const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonP
 const LiveDataTicker = lazy(() => import('../components/LiveDataTicker'))
 const RaceVisualization = lazy(() => import('../components/RaceVisualization'))
 const WhatIfSimulator = lazy(() => import('../components/WhatIfSimulator'))
-const LiveFeedProvider = lazy(() => import('../components/LiveFeedProvider'))
+const LiveFeedProvider = lazy(() => import('../components/LiveFeedProvider').then(mod => ({ default: mod.LiveFeedProvider })))
 const LiveFeedToggle = lazy(() => import('../components/LiveFeedToggle'))
 
 // Performance monitoring hook
@@ -4402,40 +4402,42 @@ export default function F1Page() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5">
-                <Info className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                <p className="text-gray-400 font-bold tracking-widest uppercase">No Practice Data Found</p>
-                <p className="text-2xl font-bold text-white">Real-time</p>
-                <p className="text-xs text-gray-500">Event Updates</p>
-              </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <Play className="w-5 h-5 text-green-500" />
-                  <span className="text-xs text-gray-400">Control</span>
+              <div className="space-y-4">
+                <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5">
+                  <Info className="w-8 h-8 text-gray-700 mx-auto mb-2" />
+                  <p className="text-gray-400 font-bold tracking-widest uppercase">No Practice Data Found</p>
+                  <p className="text-2xl font-bold text-white">Real-time</p>
+                  <p className="text-xs text-gray-500">Event Updates</p>
                 </div>
-                <p className="text-2xl font-bold text-white">Pause/Play</p>
-                <p className="text-xs text-gray-500">Performance Mode</p>
-              </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <TrendingUp className="w-5 h-5 text-racing-blue" />
-                  <span className="text-xs text-gray-400">Analytics</span>
+                
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <Play className="w-5 h-5 text-green-500" />
+                    <span className="text-xs text-gray-400">Control</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">Pause/Play</p>
+                  <p className="text-xs text-gray-500">Performance Mode</p>
                 </div>
-                <p className="text-2xl font-bold text-white">7 Types</p>
-                <p className="text-xs text-gray-500">Event Categories</p>
-              </div>
-              
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <Settings className="w-5 h-5 text-orange-500" />
-                  <span className="text-xs text-gray-400">Config</span>
+                
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <TrendingUp className="w-5 h-5 text-racing-blue" />
+                    <span className="text-xs text-gray-400">Analytics</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">7 Types</p>
+                  <p className="text-xs text-gray-500">Event Categories</p>
                 </div>
-                <p className="text-2xl font-bold text-white">5-30s</p>
-                <p className="text-xs text-gray-500">Update Frequency</p>
+                
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <Settings className="w-5 h-5 text-orange-500" />
+                    <span className="text-xs text-gray-400">Config</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">5-30s</p>
+                  <p className="text-xs text-gray-500">Update Frequency</p>
+                </div>
               </div>
-            </div>
+            )}
             
             <div className="mt-6 flex items-center justify-center">
               <Link 
@@ -4447,7 +4449,6 @@ export default function F1Page() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
-          </div>
           </div>
         )}
 
@@ -4631,122 +4632,6 @@ export default function F1Page() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* PRACTICE & TESTING DASHBOARD */}
-        {activeTab === 'practice' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-black tracking-tight text-white flex items-center">
-                <Clock className="w-8 h-8 mr-3 text-racing-red" />
-                Practice & Testing Analysis
-              </h2>
-              <div className="flex items-center gap-4">
-                {/* Track Selector */}
-                <select
-                  value={selectedTrackForPractice}
-                  onChange={(e) => setSelectedTrackForPractice(e.target.value)}
-                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-racing-red"
-                >
-                  {upcomingRacesList.map(track => (
-                    <option key={track.id} value={track.id}>
-                      {track.name}
-                    </option>
-                  ))}
-                </select>
-                
-                {/* Session Selector */}
-                {practiceSessions.length > 0 && (
-                  <select
-                    className="bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2 font-semibold focus:outline-none focus:border-racing-red"
-                    value={selectedPracticeSession || ''}
-                    onChange={(e) => setSelectedPracticeSession(Number(e.target.value))}
-                  >
-                    {practiceSessions
-                      .filter(s => s.trackInfo.id === selectedTrackForPractice)
-                      .map(s => (
-                        <option key={s.session_key} value={s.session_key}>
-                          {s.session_name} ({new Date(s.date_start).toLocaleDateString()})
-                        </option>
-                      ))}
-                  </select>
-                )}
-              </div>
-            </div>
-
-            {/* Track Info Header */}
-            <div className="bg-gray-900 border border-white/5 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white">
-                    {upcomingRacesList.find(t => t.id === selectedTrackForPractice)?.name || 'Selected Track'}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    Practice & Testing Sessions
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Location</p>
-                  <p className="text-sm font-medium text-gray-300">
-                    {tracks.find(t => t.id === selectedTrackForPractice)?.location || upcomingRacesList.find(t => t.id === selectedTrackForPractice)?.country || 'Unknown'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {practiceLoading ? (
-              <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-racing-red mb-4"></div>
-                <p className="text-gray-400 font-bold tracking-widest uppercase">Fetching Telemetry & Lap Data...</p>
-              </div>
-            ) : practiceData.length > 0 ? (
-              <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                  <h4 className="text-sm font-black uppercase tracking-widest">Fastest Laps Leaderboard</h4>
-                  <span className="text-xs text-gray-400 bg-black/50 px-3 py-1 rounded-full border border-white/10">{practiceData.length} Drivers Logged</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="text-gray-500 border-b border-white/5 uppercase text-[10px] font-black bg-black/20">
-                        <th className="px-6 py-4 rounded-tl-xl">Pos</th>
-                        <th className="px-6 py-4">Driver</th>
-                        <th className="px-6 py-4 hidden md:table-cell">Team</th>
-                        <th className="px-6 py-4 text-right">Best Lap</th>
-                        <th className="px-6 py-4 text-right border-l border-white/5">Gap</th>
-                        <th className="px-6 py-4 text-right hidden md:table-cell rounded-tr-xl">Speed Trap</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {practiceData.map((lap, i) => (
-                        <tr key={i} className="hover:bg-white/5 transition-colors group">
-                          <td className="px-6 py-4 bg-racing-red/0 group-hover:bg-racing-red/10 transition-colors">
-                            <span className={`font-mono font-bold ${i === 0 ? 'text-racing-red' : 'text-gray-400'}`}>{lap.position}</span>
-                          </td>
-                          <td className="px-6 py-4 font-bold text-white flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs border border-white/10 font-mono">
-                              {lap.driverNumber}
-                            </div>
-                            <span>{lap.driver}</span>
-                          </td>
-                          <td className="px-6 py-4 text-gray-400 hidden md:table-cell font-semibold">{lap.team}</td>
-                          <td className="px-6 py-4 text-right font-mono font-black text-white">{lap.timeStr}</td>
-                          <td className="px-6 py-4 text-right font-mono text-gray-500 text-xs border-l border-white/5">{lap.gapToFirst}</td>
-                          <td className="px-6 py-4 text-right font-mono text-gray-400 text-xs hidden md:table-cell">{lap.speedSt}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5 border-dashed">
-                <Clock className="w-16 h-16 text-gray-600 mb-4" />
-                <p className="text-xl font-bold text-gray-300 mb-2">No Practice Data Available</p>
-                <p className="text-gray-500 max-w-md text-center">Session data might not be logged yet, or telemetry is currently unavailable from OpenF1.</p>
-              </div>
-            )}
           </div>
         )}
 
