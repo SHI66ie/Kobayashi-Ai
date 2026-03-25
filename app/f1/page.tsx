@@ -354,23 +354,54 @@ export default function F1Page() {
       // Get the year from the race date or use current year
       const year = new Date(raceDate).getFullYear() || new Date().getFullYear();
       
-      // Find the session for this race
+      // Find the session for this race with improved matching
       const sessions = await openf1Api.getSessions(year);
-      console.log(`Found ${sessions.length} sessions for ${year}`);
+      console.log(`Available sessions:`, sessions.map(s => ({ 
+        name: s.session_name, 
+        circuit: s.circuit_short_name, 
+        type: s.session_type,
+        key: s.session_key 
+      })));
       
-      const raceSession = sessions.find(s => 
-        s.session_type === 'Race' && 
-        (s.circuit_short_name.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim()) ||
-         s.session_name.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim()))
-      );
+      // Normalize race name for better matching
+      const normalizedRaceName = raceName.toLowerCase()
+        .replace(/ grand prix/gi, '')
+        .replace(/ gp$/i, '')
+        .replace(/[^a-z]/g, '')
+        .trim();
+      
+      console.log(`Looking for race: "${raceName}" (normalized: "${normalizedRaceName}")`);
+      
+      const raceSession = sessions.find(s => {
+        if (s.session_type !== 'Race') return false;
+        
+        const normalizedSessionName = s.session_name.toLowerCase()
+          .replace(/ grand prix/gi, '')
+          .replace(/ gp$/i, '')
+          .replace(/[^a-z]/g, '')
+          .trim();
+          
+        const normalizedCircuitName = s.circuit_short_name.toLowerCase()
+          .replace(/[^a-z]/g, '')
+          .trim();
+        
+        console.log(`Checking session: "${s.session_name}" -> "${normalizedSessionName}" vs "${normalizedRaceName}"`);
+        console.log(`Checking circuit: "${s.circuit_short_name}" -> "${normalizedCircuitName}" vs "${normalizedRaceName}"`);
+        
+        return normalizedSessionName.includes(normalizedRaceName) || 
+               normalizedRaceName.includes(normalizedSessionName) ||
+               normalizedCircuitName.includes(normalizedRaceName) || 
+               normalizedRaceName.includes(normalizedCircuitName);
+      });
       
       if (!raceSession) {
         console.warn(`No race session found for ${raceName} in ${year}`);
-        // Return fallback data
+        console.log('Available race sessions:', sessions.filter(s => s.session_type === 'Race').map(s => s.session_name));
+        // Return fallback data with different drivers to indicate fallback
         return [
-          { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing' },
-          { position: 2, driver: 'Charles Leclerc', team: 'Ferrari' },
-          { position: 3, driver: 'Lando Norris', team: 'McLaren' }
+          { position: 1, driver: 'No Data Available', team: 'API Issue' },
+          { position: 2, driver: 'Check Console', team: 'For Details' },
+          { position: 3, driver: 'API Error', team: 'Try Again' }
         ];
       }
       
@@ -618,9 +649,9 @@ export default function F1Page() {
               // Use fallback data if API returns null or empty
               console.log(`Using fallback data for ${race.name}`);
               const fallbackData = [
-                { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing' },
-                { position: 2, driver: 'Charles Leclerc', team: 'Ferrari' },
-                { position: 3, driver: 'Lando Norris', team: 'McLaren' }
+                { position: 1, driver: 'No Data Available', team: 'API Issue' },
+                { position: 2, driver: 'Check Console', team: 'For Details' },
+                { position: 3, driver: 'API Error', team: 'Try Again' }
               ];
               setTop3Results(prev => ({ ...prev, [race.id]: fallbackData }));
             }
@@ -628,9 +659,9 @@ export default function F1Page() {
             console.error(`Failed to fetch top 3 results for ${race.name}:`, error);
             // Use fallback data on error
             const fallbackData = [
-              { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing' },
-              { position: 2, driver: 'Charles Leclerc', team: 'Ferrari' },
-              { position: 3, driver: 'Lando Norris', team: 'McLaren' }
+              { position: 1, driver: 'API Error', team: 'Check Console' },
+              { position: 2, driver: 'Network Issue', team: 'Try Refresh' },
+              { position: 3, driver: 'Data Missing', team: 'API Down' }
             ];
             setTop3Results(prev => ({ ...prev, [race.id]: fallbackData }));
           } finally {
