@@ -17,8 +17,8 @@ const DriverComparisonPanel = lazy(() => import('../components/DriverComparisonP
 const LiveDataTicker = lazy(() => import('../components/LiveDataTicker'))
 const RaceVisualization = lazy(() => import('../components/RaceVisualization'))
 const WhatIfSimulator = lazy(() => import('../components/WhatIfSimulator'))
-const LiveFeedSection = lazy(() => import('../components/LiveFeedSection'))
-
+const LiveFeedProvider = lazy(() => import('../components/LiveFeedProvider'))
+const LiveFeedToggle = lazy(() => import('../components/LiveFeedToggle'))
 
 // Performance monitoring hook
 import { usePerformanceMonitoring } from '../hooks/usePerformanceMonitoring'
@@ -2281,9 +2281,10 @@ export default function F1Page() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
-      {/* Simplified Header */}
-      <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10">
+    <LiveFeedProvider activeTab={activeTab} drivers={apiDrivers.map(d => d.name)} trackId={selectedTrack}>
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
+        {/* Simplified Header */}
+        <header className="bg-black/80 backdrop-blur-md border-b border-racing-red/30 shadow-lg shadow-racing-red/10">
         <div className="container mx-auto px-4 md:px-6 py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
@@ -5441,6 +5442,7 @@ export default function F1Page() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </LiveFeedProvider>
   )
 }
