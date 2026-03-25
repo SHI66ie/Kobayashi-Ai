@@ -6,7 +6,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 
 import Link from 'next/link'
 import { openf1Api, transformOpenF1Data } from '@/lib/openf1-api'
-
+import { getHistoricalResults } from '@/lib/historical-f1-data'
 
 // Lazy load heavy components for F1 optimization
 const TrackMapViewer = lazy(() => import('../components/TrackMapViewer'))
@@ -353,6 +353,13 @@ export default function F1Page() {
       
       // Get the year from the race date or use current year
       const year = new Date(raceDate).getFullYear() || new Date().getFullYear();
+      
+      // Try to get historical data first (more reliable for past races)
+      const historicalResults = getHistoricalResults(raceName, raceDate);
+      if (historicalResults) {
+        console.log(`Using historical data for ${raceName}:`, historicalResults);
+        return historicalResults;
+      }
       
       // Find the session for this race with improved matching
       const sessions = await openf1Api.getSessions(year);
