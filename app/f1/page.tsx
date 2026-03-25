@@ -2349,6 +2349,11 @@ export default function F1Page() {
         </div>
       </header>
 
+      {/* Live Feed Toggle Button */}
+      <Suspense fallback={<div />}>
+        <LiveFeedToggle />
+      </Suspense>
+
       {/* Network Error Toast / Banner */}
       {apiError && (
         <div className="bg-red-500/10 border-b border-red-500/20 text-red-400 py-3 px-6 flex justify-between items-center text-sm font-semibold z-50">
@@ -4400,40 +4405,6 @@ export default function F1Page() {
               <div className="flex flex-col items-center justify-center p-20 bg-gray-900/50 rounded-2xl border border-white/5">
                 <Info className="w-8 h-8 text-gray-700 mx-auto mb-2" />
                 <p className="text-gray-400 font-bold tracking-widest uppercase">No Practice Data Found</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* LIVE DATA FEED - Link to dedicated section - Only in analysis sections */}
-        {(activeTab === 'builder' || activeTab === 'analytics' || activeTab === 'practice') && (
-          <div className="space-y-8 animate-in fade-in duration-700">
-          <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 rounded-xl p-6 border border-racing-red/20 shadow-xl backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-racing-red rounded-lg shadow-lg shadow-racing-red/20">
-                  <Satellite className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Live Feed Visualizations</h3>
-                  <p className="text-gray-400">Real-time F1 data stream with performance controls</p>
-                </div>
-              </div>
-              <Link 
-                href="/live-feed"
-                className="flex items-center space-x-2 px-4 py-2 bg-racing-red hover:bg-red-600 rounded-lg transition-all text-white font-medium"
-              >
-                <span>Open Live Feed</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <Activity className="w-5 h-5 text-racing-red" />
-                  <span className="text-xs text-gray-400">Live</span>
-                </div>
                 <p className="text-2xl font-bold text-white">Real-time</p>
                 <p className="text-xs text-gray-500">Event Updates</p>
               </div>
