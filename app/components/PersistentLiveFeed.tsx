@@ -545,4 +545,3 @@ const PersistentLiveFeed: React.FC<PersistentLiveFeedProps> = ({
 }
 
 export default PersistentLiveFeed
-export { useLiveFeed }
