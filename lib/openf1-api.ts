@@ -81,7 +81,7 @@ async function openf1Fetch<T>(endpoint: string, params: Record<string, any> = {}
     const query = new URLSearchParams(params).toString()
     const url = `${OPENF1_BASE_URL}${endpoint}${query ? `?${query}` : ''}`
 
-    const response = await fetch(url)
+    const response = await fetch(url, { cache: 'no-store' })
     if (!response.ok) {
         throw new Error(`OpenF1 API request failed: ${response.status} ${response.statusText}`)
     }
