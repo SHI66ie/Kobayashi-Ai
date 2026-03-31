@@ -310,7 +310,7 @@ export default function F1Page() {
       setHistoryLoading(true);
       try {
         const track = upcomingRacesList.find(t => t.id === selectedTrack)?.name || selectedTrack;
-        const res = await fetch(`/api/f1/history?track=${encodeURIComponent(track)}`);
+        const res = await fetch(`/api/f1/history?track=${encodeURIComponent(track)}&t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.success) {
           setHistoricalData(data.history);
@@ -328,7 +328,7 @@ export default function F1Page() {
   const fetchArchives = useCallback(async () => {
     setArchivesLoading(true);
     try {
-      const res = await fetch('/api/f1/archives');
+      const res = await fetch(`/api/f1/archives?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
         setArchivesData(data.archives);
@@ -1066,6 +1066,7 @@ export default function F1Page() {
       const response = await fetch('/api/f1/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
         body: JSON.stringify({
           session_key: nextEvent?.session_key || 'unknown',
           session_name: nextEvent?.session_name || 'session',
@@ -1100,12 +1101,12 @@ export default function F1Page() {
 
       let fetchedResults: any[] = [];
       try {
-        const response = await fetch('/api/f1/race-results?season=2026');
+        const response = await fetch(`/api/f1/race-results?season=2026&t=${Date.now()}`, { cache: 'no-store' });
         const data = await response.json();
-        if (data.success && data.races) {
+        if (data.success && data.races && data.races.length > 0) {
           // Normalize names for comparison: strip 'Grand Prix'/'GP', lowercase
           const normalize = (s: string) => s.toLowerCase()
-            .replace(/grand prix/gi, '').replace(/ gp$/i, '').replace(/[^a-z]/g, '').trim();
+            .replace(/grand prix| grand prix| grandprix/gi, '').replace(/ gp$/i, '').replace(/[^a-z]/g, '').trim();
 
           const raceData = data.races.find((r: any) => {
             const apiName = normalize(r.name);
@@ -1119,7 +1120,7 @@ export default function F1Page() {
               (race.country && normalize(r.name).includes(normalize(race.country)));
           });
 
-          if (raceData && raceData.results) {
+          if (raceData && raceData.results && raceData.results.length > 0) {
             fetchedResults = raceData.results.map((res: any) => ({
               position: res.position,
               driver: res.driver,
@@ -1133,25 +1134,72 @@ export default function F1Page() {
         console.warn("Could not fetch real race-results", e);
       }
 
+      // If Jolpica failed or returned empty results for 2026 (likely), try OpenF1 directly
+      if (fetchedResults.length === 0) {
+          try {
+              console.log(`Trying OpenF1 fallback for ${race.name} (2026)...`);
+              const year = 2026;
+              const sessions = await openf1Api.getSessions(year);
+              
+              const normalize = (s: string) => s.toLowerCase()
+                .replace(/grand prix| grand prix| grandprix/gi, '').replace(/ gp$/i, '').replace(/[^a-z]/g, '').trim();
+                
+              const localName = normalize(race.name);
+              const raceSession = sessions.find(s => 
+                s.session_type === 'Race' && 
+                (normalize(s.session_name).includes(localName) || 
+                 localName.includes(normalize(s.session_name)) ||
+                 normalize(s.circuit_short_name).includes(localName) ||
+                 localName.includes(normalize(s.circuit_short_name)))
+              );
+
+              if (raceSession) {
+                  const [posData, drvData] = await Promise.all([
+                      openf1Api.getPositionData(raceSession.session_key),
+                      openf1Api.getDrivers(raceSession.session_key)
+                  ]);
+
+                  if (posData && posData.length > 0) {
+                    const finalPositions = new Map();
+                    posData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                           .forEach((pos: any) => finalPositions.set(pos.driver_number, pos));
+                    
+                    const sorted = Array.from(finalPositions.values())
+                                       .sort((a: any, b: any) => a.position - b.position)
+                                       .slice(0, 8);
+                    
+                    fetchedResults = sorted.map(pos => {
+                      const driver = drvData.find(d => d.driver_number === pos.driver_number);
+                      return {
+                        position: pos.position,
+                        driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
+                        team: driver ? driver.team_name : 'TBD',
+                        points: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][pos.position - 1] || 0,
+                        time: '--'
+                      };
+                    });
+                  }
+              }
+          } catch (openF1Err) {
+              console.warn("OpenF1 fallback failed too:", openF1Err);
+          }
+      }
+
       if (fetchedResults.length > 0) {
         setCalendarStandings(prev => ({ ...prev, [raceId]: fetchedResults }));
       } else {
-        // Fallback for races that haven't run or if API fails
-        const mockStandings = [
-          { position: 1, driver: 'Max Verstappen', team: 'Red Bull Racing', points: 25, time: '1:34:22.543' },
-          { position: 2, driver: 'Lando Norris', team: 'McLaren', points: 18, time: '+5.234s' },
-          { position: 3, driver: 'Charles Leclerc', team: 'Ferrari', points: 15, time: '+12.556s' },
-          { position: 4, driver: 'Lewis Hamilton', team: 'Ferrari', points: 12, time: '+15.890s' },
-          { position: 5, driver: 'Oscar Piastri', team: 'McLaren', points: 10, time: '+22.112s' },
-          { position: 6, driver: 'George Russell', team: 'Mercedes AMG', points: 8, time: '+25.443s' },
-          { position: 7, driver: 'Carlos Sainz', team: 'Williams', points: 6, time: '+31.229s' },
-          { position: 8, driver: 'Fernando Alonso', team: 'Aston Martin', points: 4, time: '+45.778s' },
-        ];
-        
-        setCalendarStandings(prev => ({ ...prev, [raceId]: mockStandings }));
+        // Fallback for future races
+        const isFuture = new Date() < new Date(race.date.split(',').pop() || '2027');
+        if (!isFuture) {
+           // This was a past race but we have no data - show error
+           setCalendarStandings(prev => ({ ...prev, [raceId]: [{ position: '?', driver: 'No Data Found', team: 'Check Connection', points: 0 }]}));
+        } else {
+           // Future race - show TBD or predicted
+           setCalendarStandings(prev => ({ ...prev, [raceId]: [{ position: '-', driver: 'Race Future', team: 'TBD', points: 0 }]}));
+        }
       }
     } catch (error) {
-      console.error("Failed to fetch calendar race standings", error);
+      console.error("Critical failure in fetchCalendarRaceStandings", error);
     } finally {
       setLoadingCalendarStandings(prev => {
         const next = new Set(prev);
@@ -1210,6 +1258,7 @@ export default function F1Page() {
       const response = await fetch('/api/f1/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
         body: JSON.stringify({
           type: predictionType,
           track: track,
@@ -1259,16 +1308,15 @@ export default function F1Page() {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (Date.now() - parsed.timestamp < 1000 * 60 * 15) { // 15 min cache
-            setApiDrivers(parsed.drivers);
-            setApiTeams(parsed.teams);
-            setApiStandings(parsed.standings);
-            setApiSessions(parsed.sessions);
-            setApiRaces(parsed.races);
+          if (parsed && parsed.timestamp) { // Use cached data for immediate UI, but proceed to fetch live data
+            setApiDrivers(parsed.drivers || []);
+            setApiTeams(parsed.teams || []);
+            setApiStandings(parsed.standings || []);
+            setApiSessions(parsed.sessions || []);
+            setApiRaces(parsed.races || []);
             setNextEvent(parsed.nextEvent);
             setUseRealData(true);
-            setApiLoading(false);
-            return;
+            // DO NOT RETURN: Continue to fetch live data to ensure accuracy
           }
         } catch (e) {
           localStorage.removeItem('kobayashi_f1_api_cache');
@@ -1379,7 +1427,7 @@ export default function F1Page() {
       // Get season championship standings
       let seasonChampionshipData: any[] = []
       try {
-        const standingsRes = await fetch('/api/f1/standings?season=2026&type=drivers')
+        const standingsRes = await fetch(`/api/f1/standings?season=2026&type=drivers&t=${Date.now()}`, { cache: 'no-store' })
         const standingsData = await standingsRes.json()
         if (standingsData.success && standingsData.standings) {
           seasonChampionshipData = standingsData.standings.map((s: any) => ({

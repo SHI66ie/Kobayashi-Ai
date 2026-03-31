@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const season = searchParams.get('season') || '2026'
     const round = searchParams.get('round')
 
-    const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/results.json`)
+    const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/results.json`, { cache: 'no-store' })
     const data = await response.json()
     
     let races = []

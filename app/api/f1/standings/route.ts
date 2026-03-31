@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'drivers' // 'drivers' or 'constructors'
 
     if (type === 'drivers') {
-      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/driverStandings.json`)
+      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/driverStandings.json`, { cache: 'no-store' })
       const data = await response.json()
       
       const standingsList = data.MRData?.StandingsTable?.StandingsLists?.[0] || { DriverStandings: [] }
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         totalDrivers: driverStandings.length
       })
     } else {
-      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/constructorStandings.json`)
+      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/constructorStandings.json`, { cache: 'no-store' })
       const data = await response.json()
 
       const standingsList = data.MRData?.StandingsTable?.StandingsLists?.[0] || { ConstructorStandings: [] }
