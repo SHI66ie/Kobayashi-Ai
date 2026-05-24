@@ -122,6 +122,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">KobayashiAI</h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Racing Analytics</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">by Shi66ie</p>
               </div>
             </div>
             <button
