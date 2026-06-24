@@ -38,6 +38,7 @@ interface StandingsResponse {
   totalTeams?: number
   error?: string
   message?: string
+  source?: string
 }
 
 export function useF1Standings(season: string = '2025') {
@@ -48,77 +49,63 @@ export function useF1Standings(season: string = '2025') {
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [actualSeason, setActualSeason] = useState<string>(season)
   const [dataNote, setDataNote] = useState<string>('')
+  const [isLiveData, setIsLiveData] = useState<boolean>(false)
 
-  const fetchStandings = async (targetSeason: string) => {
+  const fetchStandings = async (targetSeason: string, isRetry = false) => {
     try {
       setLoading(true)
-      setError(null)
-      setDataNote('')
+      if (!isRetry) {
+        setError(null)
+        setDataNote('')
+      }
 
-      // Fetch driver standings - full grid
       const driverResponse = await fetch(`/api/f1/standings?season=${targetSeason}&type=drivers`)
-      if (!driverResponse.ok) {
-        throw new Error('Failed to fetch driver standings')
-      }
+      if (!driverResponse.ok) throw new Error('Driver standings fetch failed')
+      
       const driverData: StandingsResponse = await driverResponse.json()
+      if (!driverData.success) throw new Error(driverData.error || 'Driver standings error')
 
-      if (!driverData.success) {
-        throw new Error(driverData.error || 'Failed to fetch driver standings')
-      }
-
-      // Fetch constructor standings - full grid
       const constructorResponse = await fetch(`/api/f1/standings?season=${targetSeason}&type=constructors`)
-      if (!constructorResponse.ok) {
-        throw new Error('Failed to fetch constructor standings')
-      }
+      if (!constructorResponse.ok) throw new Error('Constructor standings fetch failed')
+      
       const constructorData: StandingsResponse = await constructorResponse.json()
+      if (!constructorData.success) throw new Error(constructorData.error || 'Constructor standings error')
 
-      if (!constructorData.success) {
-        throw new Error(constructorData.error || 'Failed to fetch constructor standings')
-      }
-
+      // Success path - real data
       setDriverStandings(driverData.standings as Driver[])
       setConstructorStandings(constructorData.standings as Constructor[])
       setLastUpdated(driverData.lastUpdated)
       setActualSeason(targetSeason)
+      setIsLiveData(true)
 
-      // If we had to fall back to an older season, show a note
-      if (targetSeason !== season && parseInt(season) > 2025) {
-        setDataNote(`2026 season standings not yet published — showing ${targetSeason} data`)
+      if (targetSeason !== season) {
+        setDataNote(`Showing ${targetSeason} data — ${season} standings not yet available`)
       }
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-      console.error('Error fetching F1 standings:', errorMessage)
-      setError(errorMessage)
-      
-      // Graceful fallback only for very recent/future seasons
-      if (parseInt(targetSeason) >= 2025) {
-        // Try previous year automatically
-        if (targetSeason === '2026' || targetSeason === '2025') {
-          console.log('[useF1Standings] Auto-falling back to 2024 for real data')
-          return fetchStandings('2024')
-        }
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.error('[useF1Standings] Error:', errorMessage)
+
+      // Auto fallback for future seasons
+      if (!isRetry && (targetSeason === '2026' || targetSeason === '2025')) {
+        console.log('[useF1Standings] Falling back to 2024 for real data')
+        return fetchStandings('2024', true)
       }
-      
-      // Last resort static fallback (clearly marked)
+
+      // Only use mock as absolute last resort
+      setError(errorMessage)
+      setIsLiveData(false)
       setDataNote('Using demo data — live API unavailable')
+      
       setDriverStandings([
         { position: 1, driver: 'Max Verstappen', driverCode: 'VER', team: 'Red Bull', teamColor: '#1E41FF', nationality: 'Netherlands', countryFlag: '🇳🇱', points: 437, wins: 9, podiums: 14 },
         { position: 2, driver: 'Lando Norris', driverCode: 'NOR', team: 'McLaren', teamColor: '#FF8700', nationality: 'United Kingdom', countryFlag: '🇬🇧', points: 374, wins: 3, podiums: 12 },
         { position: 3, driver: 'Charles Leclerc', driverCode: 'LEC', team: 'Ferrari', teamColor: '#DC143C', nationality: 'Monaco', countryFlag: '🇲🇨', points: 356, wins: 3, podiums: 11 },
-        { position: 4, driver: 'Oscar Piastri', driverCode: 'PIA', team: 'McLaren', teamColor: '#FF8700', nationality: 'Australia', countryFlag: '🇦🇺', points: 292, wins: 2, podiums: 8 },
-        { position: 5, driver: 'Carlos Sainz', driverCode: 'SAI', team: 'Ferrari', teamColor: '#DC143C', nationality: 'Spain', countryFlag: '🇪🇸', points: 290, wins: 2, podiums: 8 },
       ])
-      
       setConstructorStandings([
         { position: 1, team: 'McLaren', teamColor: '#FF8700', nationality: 'United Kingdom', countryFlag: '🇬🇧', points: 666, wins: 5, podiums: 20, drivers: ['L. Norris', 'O. Piastri'] },
         { position: 2, team: 'Ferrari', teamColor: '#DC143C', nationality: 'Italy', countryFlag: '🇮🇹', points: 652, wins: 5, podiums: 19, drivers: ['C. Leclerc', 'C. Sainz'] },
-        { position: 3, team: 'Red Bull', teamColor: '#1E41FF', nationality: 'Austria', countryFlag: '🇦🇹', points: 589, wins: 9, podiums: 16, drivers: ['M. Verstappen', 'S. Perez'] },
-        { position: 4, team: 'Mercedes', teamColor: '#00D2BE', nationality: 'Germany', countryFlag: '🇩🇪', points: 468, wins: 0, podiums: 6, drivers: ['L. Hamilton', 'G. Russell'] },
-        { position: 5, team: 'Aston Martin', teamColor: '#006F62', nationality: 'United Kingdom', countryFlag: '🇬🇧', points: 94, wins: 0, podiums: 0, drivers: ['F. Alonso', 'L. Stroll'] },
       ])
-      
       setLastUpdated(new Date().toISOString())
       setActualSeason(targetSeason)
     } finally {
@@ -130,12 +117,11 @@ export function useF1Standings(season: string = '2025') {
     fetchStandings(season)
   }, [season])
 
-  // Auto-refresh every 5 minutes
+  // Auto refresh
   useEffect(() => {
     const interval = setInterval(() => {
       fetchStandings(actualSeason || season)
     }, 5 * 60 * 1000)
-
     return () => clearInterval(interval)
   }, [actualSeason, season])
 
@@ -147,12 +133,11 @@ export function useF1Standings(season: string = '2025') {
     lastUpdated,
     actualSeason,
     dataNote,
-    refetch: () => fetchStandings(actualSeason || season),
-    season
+    isLiveData,
+    refetch: () => fetchStandings(actualSeason || season)
   }
 }
 
-// Legacy helpers kept for backward compat in other components (now recommend using full grid)
 export function getTopDrivers(drivers: Driver[], count: number = 10): Driver[] {
   return [...drivers].sort((a, b) => a.position - b.position).slice(0, count)
 }
