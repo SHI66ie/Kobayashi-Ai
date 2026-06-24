@@ -5,6 +5,7 @@ import { Trophy, Zap, Target, Brain, Clock, Play, Pause, BarChart3, Download, Fl
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 import Link from 'next/link'
+import { hybridF1Api, transformHybridData } from '@/lib/hybrid-f1-api'
 import { openf1Api, transformOpenF1Data } from '@/lib/openf1-api'
 import { getHistoricalResults } from '@/lib/historical-f1-data'
 
@@ -362,7 +363,7 @@ export default function F1Page() {
       }
       
       // Find the session for this race with improved matching
-      const sessions = await openf1Api.getSessions(year);
+      const sessions = await hybridF1Api.getSessions(year);
       console.log(`Available sessions:`, sessions.map(s => ({ 
         name: s.session_name, 
         circuit: s.circuit_short_name, 
@@ -414,11 +415,11 @@ export default function F1Page() {
       
       console.log(`Found race session: ${raceSession.session_name} (${raceSession.session_key})`);
       
-      // Fetch real position data from OpenF1 API
-      const positionData = await openf1Api.getPositionData(raceSession.session_key);
+      // Fetch real position data from Hybrid API
+      const positionData = await hybridF1Api.getPositionData(raceSession.session_key);
       console.log(`Found ${positionData.length} position records`);
       
-      const drivers = await openf1Api.getDrivers(raceSession.session_key);
+      const drivers = await hybridF1Api.getDrivers(raceSession.session_key);
       console.log(`Found ${drivers.length} drivers`);
       
       if (positionData && positionData.length > 0) {
@@ -473,7 +474,7 @@ export default function F1Page() {
       const year = new Date(raceDate).getFullYear() || new Date().getFullYear();
       
       // Find the session for this race
-      const sessions = await openf1Api.getSessions(year);
+      const sessions = await hybridF1Api.getSessions(year);
       const raceSession = sessions.find(s => 
         s.session_type === 'Race' && 
         (s.circuit_short_name.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim()) ||
@@ -486,17 +487,17 @@ export default function F1Page() {
         return;
       }
       
-      // Fetch real data from OpenF1 API
+      // Fetch real data from Hybrid API
       const [qualifyingLapData, positionData, sprintPositionData] = await Promise.all([
-        raceSession ? openf1Api.getLaps(raceSession.session_key) : [],
-        raceSession ? openf1Api.getPositionData(raceSession.session_key) : [],
-        raceSession ? openf1Api.getSessions(year).then(sessions => 
+        raceSession ? hybridF1Api.getLaps(raceSession.session_key) : [],
+        raceSession ? hybridF1Api.getPositionData(raceSession.session_key) : [],
+        raceSession ? hybridF1Api.getSessions(year).then(sessions => 
           sessions.find(s => s.session_type === 'Sprint' && s.circuit_short_name === raceSession.circuit_short_name)
-        ).then(sprintSession => sprintSession ? openf1Api.getPositionData(sprintSession.session_key) : []) : []
+        ).then(sprintSession => sprintSession ? hybridF1Api.getPositionData(sprintSession.session_key) : []) : []
       ]);
       
       // Get driver information
-      const drivers = await openf1Api.getDrivers(raceSession.session_key);
+      const drivers = await hybridF1Api.getDrivers(raceSession.session_key);
       
       // Process qualifying results
       const qualifyingResults: any[] = [];
@@ -726,7 +727,7 @@ export default function F1Page() {
       if (!selectedPracticeSession) return;
       setPracticeLoading(true);
       try {
-        const laps = await openf1Api.getLaps(selectedPracticeSession);
+        const laps = await hybridF1Api.getLaps(selectedPracticeSession);
         // Group by driver and find fastest lap
         const driverLaps = new Map();
         laps.forEach(lap => {
@@ -1139,7 +1140,7 @@ export default function F1Page() {
           try {
               console.log(`Trying OpenF1 fallback for ${race.name} (2026)...`);
               const year = 2026;
-              const sessions = await openf1Api.getSessions(year);
+              const sessions = await hybridF1Api.getSessions(year);
               
               const normalize = (s: string) => s.toLowerCase()
                 .replace(/grand prix| grand prix| grandprix/gi, '').replace(/ gp$/i, '').replace(/[^a-z]/g, '').trim();
@@ -1155,8 +1156,8 @@ export default function F1Page() {
 
               if (raceSession) {
                   const [posData, drvData] = await Promise.all([
-                      openf1Api.getPositionData(raceSession.session_key),
-                      openf1Api.getDrivers(raceSession.session_key)
+                      hybridF1Api.getPositionData(raceSession.session_key),
+                      hybridF1Api.getDrivers(raceSession.session_key)
                   ]);
 
                   if (posData && posData.length > 0) {
@@ -1326,22 +1327,24 @@ export default function F1Page() {
 
     try {
       // 1. Get latest session to find the active context
-      const sessions = await openf1Api.getLatestSession()
+      const sessions = await hybridF1Api.getLatestSession()
       if (!sessions || sessions.length === 0) throw new Error('No active sessions')
 
       const latestSession = sessions[0]
       const sessionKey = latestSession.session_key
 
       // 2. Get drivers for this session
-      const driversData = await openf1Api.getDrivers(sessionKey)
-      const mappedDrivers = driversData.map(transformOpenF1Data.driver)
+      const driversData = await hybridF1Api.getDrivers(sessionKey)
+      const mappedDrivers = driversData.map(transformHybridData.driver)
       setApiDrivers(mappedDrivers)
 
       // Extract teams from drivers
       const teamsMap = new Map()
       driversData.forEach(d => {
-        if (!teamsMap.has(d.team_name)) {
-          teamsMap.set(d.team_name, { id: d.team_name, name: d.team_name, color: d.team_colour })
+        const teamName = d.team_name || d.team || 'Unknown'
+        const teamColor = d.team_colour || d.color || '#888888'
+        if (!teamsMap.has(teamName)) {
+          teamsMap.set(teamName, { id: teamName, name: teamName, color: teamColor })
         }
       })
       const mappedTeams = Array.from(teamsMap.values())
@@ -1350,16 +1353,18 @@ export default function F1Page() {
       // 3. Get standings (if available for this session)
       let mappedStandings = []
       try {
-        const standingsData = await openf1Api.getDriverStandings(sessionKey)
-        if (standingsData && standingsData.length > 0) {
-          mappedStandings = standingsData.map(s => transformOpenF1Data.standing(s, driversData))
-          setApiStandings(mappedStandings)
+        if (sessionKey) {
+          const standingsData = await hybridF1Api.getDriverStandings(sessionKey)
+          if (standingsData && standingsData.length > 0) {
+            mappedStandings = standingsData.map(s => transformHybridData.standing(s, driversData))
+            setApiStandings(mappedStandings)
+          }
         }
       } catch (standingErr) {
         mappedStandings = driversData.map((d, i) => ({
           position: i + 1,
-          driver: transformOpenF1Data.driver(d),
-          team: { name: d.team_name },
+          driver: transformHybridData.driver(d),
+          team: { name: d.team_name || d.team || 'Unknown' },
           points: 0
         }))
         setApiStandings(mappedStandings)
@@ -1367,15 +1372,16 @@ export default function F1Page() {
 
       // 4. Get and deduplicate season sessions
       const year = new Date().getFullYear()
-      const allSessions = await openf1Api.getSessions(year)
+      const allSessions = await hybridF1Api.getSessions(year)
       setApiSessions(allSessions)
 
       const racesMap = new Map()
       allSessions.forEach(s => {
         if (s.session_type === 'Race') {
-          const key = s.circuit_short_name.toLowerCase()
-          if (!racesMap.has(key) || new Date(s.date_start) > new Date(racesMap.get(key).date)) {
-            racesMap.set(key, transformOpenF1Data.session(s))
+          const key = s.circuit_short_name?.toLowerCase() || s.circuit.toLowerCase()
+          const sessionDate = s.date_start || s.date
+          if (!racesMap.has(key) || new Date(sessionDate) > new Date(racesMap.get(key).date)) {
+            racesMap.set(key, transformHybridData.session(s))
           }
         }
       })
@@ -1422,7 +1428,7 @@ export default function F1Page() {
     setStandingsLoading(true)
     try {
       const year = new Date().getFullYear()
-      const sessions = await openf1Api.getSessions(year).catch(() => [])
+      const sessions = await hybridF1Api.getSessions(year).catch(() => [])
 
       // Get season championship standings
       let seasonChampionshipData: any[] = []
@@ -1452,10 +1458,12 @@ export default function F1Page() {
           const driverPoints = new Map<number, { points: number; wins: number; podiums: number; driver: any }>()
           
           for (const raceSession of raceSessions) {
-            if (new Date(raceSession.date_start) < new Date()) {
+            const sessionDate = raceSession.date_start || raceSession.date
+            if (sessionDate && new Date(sessionDate) < new Date()) {
               try {
-                const positionData = await openf1Api.getPositionData(raceSession.session_key)
-                const drivers = await openf1Api.getDrivers(raceSession.session_key)
+                if (raceSession.session_key) {
+                  const positionData = await hybridF1Api.getPositionData(raceSession.session_key)
+                  const drivers = await hybridF1Api.getDrivers(raceSession.session_key)
                 
                 if (positionData && positionData.length > 0) {
                   const sortedPositions = positionData.sort((a: any, b: any) => a.position - b.position)
@@ -1527,7 +1535,7 @@ export default function F1Page() {
         const trackSessions = sessions.filter(s => 
           s.circuit_short_name === selectedTrackInfo.name || 
           s.location === selectedTrackInfo.location ||
-          s.country_name === selectedTrackInfo.country
+          s.country_name === selectedTrackInfo.country || s.country === selectedTrackInfo.country
         )
 
         // Get the most recent race session for this track
@@ -1541,10 +1549,10 @@ export default function F1Page() {
             let qualifyingGridData: Map<number, number> = new Map()
             
             // Get qualifying data for grid positions and session times
-            if (qualifyingSession) {
+            if (qualifyingSession && qualifyingSession.session_key) {
               try {
-                const qualifyingLapData = await openf1Api.getLaps(qualifyingSession.session_key)
-                const sessionDrivers = await openf1Api.getDrivers(qualifyingSession.session_key)
+                const qualifyingLapData = await hybridF1Api.getLaps(qualifyingSession.session_key)
+                const sessionDrivers = await hybridF1Api.getDrivers(qualifyingSession.session_key)
                 
                 if (qualifyingLapData && qualifyingLapData.length > 0) {
                   // Group laps by driver and find best times for each session
@@ -1591,8 +1599,8 @@ export default function F1Page() {
                     
                     return {
                       position: index + 1,
-                      driver: driver ? driver.full_name : `Driver ${driverNumber}`,
-                      team: driver ? driver.team_name : 'Unknown',
+                      driver: driver ? (driver.full_name || driver.name) : `Driver ${driverNumber}`,
+                      team: driver ? (driver.team_name || driver.team) : 'Unknown',
                       q1: laps.q1 ? `${(laps.q1 / 60).toFixed(3)}` : 'N/A',
                       q2: laps.q2 ? `${(laps.q2 / 60).toFixed(3)}` : 'N/A',
                       q3: laps.q3 ? `${(laps.q3 / 60).toFixed(3)}` : 'N/A',
@@ -1606,9 +1614,9 @@ export default function F1Page() {
                   })
 
                   trackSpecificData.qualifying = [{
-                    sessionName: qualifyingSession.session_name,
-                    circuitName: qualifyingSession.circuit_short_name,
-                    date: qualifyingSession.date_start,
+                    sessionName: qualifyingSession.session_name || qualifyingSession.name,
+                    circuitName: qualifyingSession.circuit_short_name || qualifyingSession.circuit,
+                    date: qualifyingSession.date_start || qualifyingSession.date,
                     results: qualifyingResults
                   }]
                 }
@@ -1652,10 +1660,10 @@ export default function F1Page() {
 
             // Check for sprint session at this track
             const sprintSession = trackSessions.find((s: any) => s.session_type === 'Sprint')
-            if (sprintSession) {
+            if (sprintSession && sprintSession.session_key) {
               try {
-                const sprintPositionData = await openf1Api.getPositionData(sprintSession.session_key)
-                const sprintLapData = await openf1Api.getLaps(sprintSession.session_key)
+                const sprintPositionData = await hybridF1Api.getPositionData(sprintSession.session_key)
+                const sprintLapData = await hybridF1Api.getLaps(sprintSession.session_key)
                 
                 if (sprintPositionData && sprintPositionData.length > 0) {
                   const finalSprintPositions = new Map()
@@ -1666,7 +1674,7 @@ export default function F1Page() {
                   const sortedSprintPositions = Array.from(finalSprintPositions.values())
                     .sort((a: any, b: any) => a.position - b.position)
 
-                  const sprintDrivers = await openf1Api.getDrivers(sprintSession.session_key)
+                  const sprintDrivers = await hybridF1Api.getDrivers(sprintSession.session_key)
                   
                   // Calculate sprint lap statistics
                   const sprintDriverLapStats = new Map<number, { laps: number; bestLapTime?: number }>()
@@ -1689,17 +1697,17 @@ export default function F1Page() {
                   }
 
                   trackSpecificData.sprintResults = [{
-                    sessionName: sprintSession.session_name,
-                    circuitName: sprintSession.circuit_short_name,
-                    date: sprintSession.date_start,
+                    sessionName: sprintSession.session_name || sprintSession.name,
+                    circuitName: sprintSession.circuit_short_name || sprintSession.circuit,
+                    date: sprintSession.date_start || sprintSession.date,
                     results: sortedSprintPositions.map((pos: any) => {
                       const driver = sprintDrivers.find((d: any) => d.driver_number === pos.driver_number)
                       const lapStats = sprintDriverLapStats.get(pos.driver_number) || { laps: 0 }
                       
                       return {
                         position: pos.position,
-                        driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
-                        team: driver ? driver.team_name : 'Unknown',
+                        driver: driver ? (driver.full_name || driver.name) : `Driver ${pos.driver_number}`,
+                        team: driver ? (driver.team_name || driver.team) : 'Unknown',
                         laps: lapStats.laps || Math.floor(Math.random() * 30) + 15,
                         time: lapStats.bestLapTime ? `${(lapStats.bestLapTime / 60).toFixed(3)}` : `${Math.floor(Math.random() * 1800) + 1800}s`,
                         points: pos.position <= 8 ? [8, 7, 6, 5, 4, 3, 2, 1][pos.position - 1] || 0 : 0,
@@ -2169,9 +2177,9 @@ export default function F1Page() {
         if (currentSession) {
           try {
             const [laps, weather, drivers] = await Promise.all([
-              openf1Api.getLaps(currentSession.session_key),
-              openf1Api.getWeatherData(currentSession.session_key),
-              openf1Api.getDrivers(currentSession.session_key)
+              hybridF1Api.getLaps(currentSession.session_key),
+              hybridF1Api.getWeatherData(currentSession.session_key),
+              hybridF1Api.getDrivers(currentSession.session_key)
             ]);
 
             if (laps && laps.length > 0) {
