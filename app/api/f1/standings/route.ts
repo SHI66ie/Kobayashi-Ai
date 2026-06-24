@@ -1,65 +1,192 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { f1ApiDev, safeF1ApiCall, transformF1ApiData } from '../../../../lib/f1api-dev'
+import { ergastApi } from '../../../../lib/ergast-api'
 
-// F1 Standings API endpoint
+// Nationality → flag emoji map for Ergast/Jolpica data
+const NATIONALITY_FLAG: Record<string, string> = {
+  British: '🇬🇧', German: '🇩🇪', Spanish: '🇪🇸', Finnish: '🇫🇮',
+  Brazilian: '🇧🇷', Australian: '🇦🇺', French: '🇫🇷', Italian: '🇮🇹',
+  Austrian: '🇦🇹', Dutch: '🇳🇱', Canadian: '🇨🇦', American: '🇺🇸',
+  Japanese: '🇯🇵', Mexican: '🇲🇽', Thai: '🇹🇭', Monegasque: '🇲🇨',
+  New_Zealander: '🇳🇿', Polish: '🇵🇱', Russian: '🇷🇺', Danish: '🇩🇰',
+  Chinese: '🇨🇳', Colombian: '🇨🇴', Swiss: '🇨🇭', Belgian: '🇧🇪',
+  'New Zealander': '🇳🇿', Argentine: '🇦🇷', Indonesian: '🇮🇩',
+  Hungarian: '🇭🇺', Portuguese: '🇵🇹', South_African: '🇿🇦',
+  'South African': '🇿🇦', Venezuelan: '🇻🇪', Irish: '🇮🇪',
+  Malaysian: '🇲🇾', Indian: '🇮🇳', Emirati: '🇦🇪',
+  Saudi: '🇸🇦', Czech: '🇨🇿', Swedish: '🇸🇪', Estonian: '🇪🇪',
+}
+
+function getFlag(nationality: string): string {
+  return NATIONALITY_FLAG[nationality] ?? '🏁'
+}
+
+// Team colour accent for visual flair
+const TEAM_COLORS: Record<string, string> = {
+  Mercedes: '#00D2BE', Ferrari: '#DC143C', 'Red Bull': '#1E41FF',
+  McLaren: '#FF8700', Alpine: '#0090FF', 'Aston Martin': '#006F62',
+  Haas: '#B6BABD', Williams: '#005AFF', 'Alfa Romeo': '#900000',
+  AlphaTauri: '#2B4562', 'Racing Bulls': '#2B4562', Sauber: '#900000',
+  Renault: '#FFF500', Jordan: '#FFB800', BAR: '#4B0082',
+  Minardi: '#191919', Jaguar: '#006400', Toyota: '#CC0001',
+  'Super Aguri': '#CC0001','Spyker MF1': '#F94900',
+  'Force India': '#FF80C7', Brawn: '#B5F135', HRT: '#B2945A',
+  Marussia: '#6E0000', Caterham: '#005030', Manor: '#6E0000',
+  'Racing Point': '#F596C8', 'Toro Rosso': '#469BFF',
+}
+
+// F1 Standings API endpoint — smart routing: Jolpica (historical) vs f1api.dev (current)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const season = searchParams.get('season') || '2026'
-    const type = searchParams.get('type') || 'drivers' // 'drivers' or 'constructors'
+    const type = searchParams.get('type') || 'drivers'
+    const seasonYear = parseInt(season)
+
+    // Use Jolpica/Ergast for historical data (pre-2024), f1api.dev for 2024+
+    const useHistorical = seasonYear < 2024
 
     if (type === 'drivers') {
-      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/driverStandings.json`, { cache: 'no-store' })
-      const data = await response.json()
-      
-      const standingsList = data.MRData?.StandingsTable?.StandingsLists?.[0] || { DriverStandings: [] }
-      const driverStandings = standingsList.DriverStandings.map((s: any) => ({
-        position: parseInt(s.position),
-        points: parseFloat(s.points),
-        wins: parseInt(s.wins),
-        driver: `${s.Driver.givenName} ${s.Driver.familyName}`,
-        driverCode: s.Driver.code || s.Driver.familyName.substring(0, 3).toUpperCase(),
-        team: s.Constructors?.[0]?.name || 'Unknown',
-        nationality: s.Driver.nationality,
-        countryFlag: s.Driver.nationality === 'British' ? '🇬🇧' : s.Driver.nationality === 'Monégasque' ? '🇲🇨' : s.Driver.nationality === 'Italian' ? '🇮🇹' : '' // Fallback map could be added
-      }))
+      if (useHistorical) {
+        // ── Jolpica / Ergast path ─────────────────────────────────────────
+        const data = await ergastApi.getDriverStandings(season)
+        const standingsList = data.MRData.StandingsTable.StandingsLists[0]
 
-      return NextResponse.json({
-        success: true,
-        season,
-        type: 'drivers',
-        lastUpdated: new Date().toISOString(),
-        standings: driverStandings,
-        totalDrivers: driverStandings.length
-      })
+        if (!standingsList || !standingsList.DriverStandings.length) {
+          throw new Error(`No driver standings available for ${season}`)
+        }
+
+        const standings = standingsList.DriverStandings.map((s) => {
+          const nat = s.Driver.nationality
+          const teamName = s.Constructors[0]?.name ?? 'Unknown'
+          const firstName = s.Driver.givenName
+          const lastName = s.Driver.familyName
+          return {
+            position: parseInt(s.position),
+            driver: `${firstName} ${lastName}`,
+            driverCode: s.Driver.code ?? lastName.slice(0, 3).toUpperCase(),
+            driverId: s.Driver.driverId,
+            team: teamName,
+            teamColor: TEAM_COLORS[teamName] ?? '#888888',
+            nationality: nat,
+            countryFlag: getFlag(nat),
+            points: parseFloat(s.points),
+            wins: parseInt(s.wins),
+            podiums: 0, // Ergast doesn't return podiums directly
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          season,
+          type: 'drivers',
+          lastUpdated: new Date().toISOString(),
+          source: 'jolpica',
+          standings,
+          totalDrivers: standings.length,
+        })
+      } else {
+        // ── f1api.dev path ────────────────────────────────────────────────
+        const result = await safeF1ApiCall(() => f1ApiDev.getDriverChampionship(season))
+
+        if (result.error || !result.data) {
+          throw new Error(result.error?.message || 'Failed to fetch driver standings from f1api.dev')
+        }
+
+        const standings = result.data.drivers_championship.map((entry) => {
+          const nat = entry.driver.nationality
+          const teamName = entry.team.teamName
+          return {
+            ...transformF1ApiData.driverStanding(entry),
+            teamColor: TEAM_COLORS[teamName] ?? '#888888',
+            countryFlag: getFlag(nat),
+            podiums: 0, // f1api.dev doesn't provide podiums directly
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          season,
+          type: 'drivers',
+          lastUpdated: new Date().toISOString(),
+          source: 'f1api.dev',
+          standings,
+          totalDrivers: standings.length,
+        })
+      }
     } else {
-      const response = await fetch(`http://api.jolpi.ca/ergast/f1/${season}/constructorStandings.json`, { cache: 'no-store' })
-      const data = await response.json()
+      // ── CONSTRUCTORS ─────────────────────────────────────────────────────
+      if (useHistorical) {
+        const data = await ergastApi.getConstructorStandings(season)
+        const standingsList = data.MRData.StandingsTable.StandingsLists[0]
 
-      const standingsList = data.MRData?.StandingsTable?.StandingsLists?.[0] || { ConstructorStandings: [] }
-      const constructorStandings = standingsList.ConstructorStandings.map((s: any) => ({
-        position: parseInt(s.position),
-        points: parseFloat(s.points),
-        wins: parseInt(s.wins),
-        team: s.Constructor.name,
-        nationality: s.Constructor.nationality
-      }))
+        if (!standingsList || !standingsList.ConstructorStandings.length) {
+          throw new Error(`No constructor standings available for ${season}`)
+        }
 
-      return NextResponse.json({
-        success: true,
-        season,
-        type: 'constructors',
-        lastUpdated: new Date().toISOString(),
-        standings: constructorStandings,
-        totalTeams: constructorStandings.length
-      })
+        const standings = standingsList.ConstructorStandings.map((s) => {
+          const nat = s.Constructor.nationality
+          const teamName = s.Constructor.name
+          return {
+            position: parseInt(s.position),
+            team: teamName,
+            teamId: s.Constructor.constructorId,
+            teamColor: TEAM_COLORS[teamName] ?? '#888888',
+            nationality: nat,
+            countryFlag: getFlag(nat),
+            points: parseFloat(s.points),
+            wins: parseInt(s.wins),
+            podiums: 0,
+            drivers: [],
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          season,
+          type: 'constructors',
+          lastUpdated: new Date().toISOString(),
+          source: 'jolpica',
+          standings,
+          totalTeams: standings.length,
+        })
+      } else {
+        const result = await safeF1ApiCall(() => f1ApiDev.getConstructorChampionship(season))
+
+        if (result.error || !result.data) {
+          throw new Error(result.error?.message || 'Failed to fetch constructor standings from f1api.dev')
+        }
+
+        const standings = result.data.constructors_championship.map((entry) => {
+          const teamName = entry.team.teamName
+          const nat = entry.team.country
+          return {
+            ...transformF1ApiData.constructorStanding(entry),
+            teamColor: TEAM_COLORS[teamName] ?? '#888888',
+            countryFlag: getFlag(nat),
+            podiums: 0,
+            drivers: [],
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          season,
+          type: 'constructors',
+          lastUpdated: new Date().toISOString(),
+          source: 'f1api.dev',
+          standings,
+          totalTeams: standings.length,
+        })
+      }
     }
   } catch (error) {
-    console.error('Error fetching F1 standings from Jolpica:', error)
+    console.error('Error fetching F1 standings:', error)
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to fetch standings data',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
@@ -72,7 +199,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { season, type, standings } = body
 
-    // Validate the request
     if (!season || !type || !standings) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields: season, type, standings' },
@@ -80,23 +206,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // In a real implementation, this would update a database
-    // For now, just return success
     return NextResponse.json({
       success: true,
       message: 'Standings updated successfully',
       season,
       type,
-      updatedCount: standings.length
+      updatedCount: standings.length,
     })
-
   } catch (error) {
     console.error('Error updating F1 standings:', error)
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to update standings',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
