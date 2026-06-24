@@ -55,6 +55,56 @@ export async function POST(request: NextRequest) {
 
     console.log(`⚙️ Using ${useGroq ? 'Groq' : 'Gemini'} for strategy optimization...`)
 
+    // 1. Fetch simulation results from the MATLAB/Python microservice
+    let simulationResult = null;
+    let tyreGripCurve = [];
+    
+    try {
+      const numLaps = lapTimes?.length || 50;
+      const trackTemp = weather?.trackTemp || weather?.temp || 35.0;
+      
+      const simResponse = await fetch('http://127.0.0.1:8000/api/strategy/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          num_laps: numLaps,
+          track_temp: trackTemp,
+          base_lap_time: 95.0,
+          fuel_effect: 0.05,
+          pit_stop_loss: 22.0,
+          num_simulations: 500
+        })
+      });
+      
+      if (simResponse.ok) {
+        simulationResult = await simResponse.json();
+      }
+
+      // Fetch tyre degradation curve for first 20 laps
+      const gripPromises = Array.from({ length: 20 }, (_, idx) => 
+        fetch('http://127.0.0.1:8000/api/tyre/degradation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            compound: tireCompound || 'Medium',
+            track_temp: trackTemp,
+            lap: idx + 1,
+            fuel_load: fuelLoad === 'Full' ? 80.0 : 40.0,
+            safety_car_laps: []
+          })
+        }).then(res => res.ok ? res.json() : null)
+      );
+
+      const gripResults = await Promise.all(gripPromises);
+      tyreGripCurve = gripResults.map((r, idx) => ({
+        lap: idx + 1,
+        grip: r?.success ? r.grip : null
+      })).filter(item => item.grip !== null);
+
+    } catch (e) {
+      console.warn("⚠️ MATLAB microservice offline, proceeding with AI standalone prediction:", e);
+    }
+
     const prompt = `You are a Toyota GR Cup race strategist. Optimize race strategy:
 
 RACE PARAMETERS:
@@ -64,6 +114,17 @@ Total Laps: ${lapTimes?.length || 'TBD'}
 Weather: ${JSON.stringify(weather)}
 Tire Compound: ${tireCompound || 'Medium'}
 Fuel Load: ${fuelLoad || 'Full'}
+
+${simulationResult ? `MATLAB MONTE CARLO SIMULATION RESULTS:
+- Simulation Engine: ${simulationResult.engine}
+- Optimal Pit Stop Lap: Lap ${simulationResult.optimal_pit_lap}
+- Projected Total Race Time: ${simulationResult.optimal_race_time.toFixed(2)} seconds
+- Sweep Results: Pit Laps Swept [${simulationResult.sweep_laps.join(', ')}]
+- Risk Standard Deviation: ${simulationResult.risk_std.map((r: number) => r.toFixed(2)).join(', ')}
+
+PROJECTED TYRE GRIP CURVE (MATLAB Core Temperature wear model):
+${tyreGripCurve.map(t => `Lap ${t.lap}: Grip ${(t.grip * 100).toFixed(1)}%`).join(', ')}
+` : ''}
 
 TOP 5 RESULTS:
 ${raceResults?.slice(0, 5).map((r: any, i: number) =>
@@ -75,16 +136,17 @@ ${lapTimes?.slice(0, 10).map((l: any) => l.lapTime || l.time).join(', ')}
 
 Provide strategic recommendations:
 
-1. **Optimal Pit Window**: When to pit (lap range with reasoning)
-2. **Tire Strategy**: Compound selection and management
+1. **Optimal Pit Window**: When to pit (lap range with reasoning, referencing the MATLAB simulation results if available)
+2. **Tire Strategy**: Compound selection and management (reference the projected Tyre Grip Curve)
 3. **Fuel Strategy**: Optimal fuel load vs lap time trade-off
 4. **Weather Strategy**: Adjustments for conditions
 5. **Overtaking Windows**: Best laps/sectors for passes
-6. **Risk vs Reward**: Conservative vs aggressive approach
+6. **Risk vs Reward**: Conservative vs aggressive approach (citing the risk standard deviations)
 7. **Position-Specific Tactics**: Lead vs chase vs holding position
 8. **Contingency Plans**: Alternative strategies if conditions change
 
-Provide data-driven, specific recommendations with confidence levels.`
+Provide data-driven, specific recommendations with confidence levels. Include the MATLAB simulation parameters and output directly in your strategic response to highlight the mathematical justification.`
+
 
     let strategy = ''
     let modelUsed = ''

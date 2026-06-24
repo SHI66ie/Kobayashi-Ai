@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: mat_tyre_models
+Version: 1.0.0
+Summary: Native Python wheel wrapping MATLAB Tyre Degradation Optimization Toolbox logic
+Author: KobayashiAI Team
+Dynamic: author
+Dynamic: summary
