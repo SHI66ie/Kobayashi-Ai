@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Fetch simulation results from the MATLAB/Python microservice
     let simulationResult = null;
-    let tyreGripCurve = [];
+    let tyreGripCurve: { lap: number; grip: number }[] = [];
     
     try {
       const numLaps = lapTimes?.length || 50;
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       tyreGripCurve = gripResults.map((r, idx) => ({
         lap: idx + 1,
         grip: r?.success ? r.grip : null
-      })).filter(item => item.grip !== null);
+      })).filter((item): item is { lap: number; grip: number } => item.grip !== null);
 
     } catch (e) {
       console.warn("⚠️ MATLAB microservice offline, proceeding with AI standalone prediction:", e);
