@@ -365,8 +365,8 @@ export default function F1Page() {
       // Find the session for this race with improved matching
       const sessions = await hybridF1Api.getSessions(year);
       console.log(`Available sessions:`, sessions.map(s => ({ 
-        name: s.session_name, 
-        circuit: s.circuit_short_name, 
+        name: s.session_name ?? '', 
+        circuit: s.circuit_short_name ?? '', 
         type: s.session_type,
         key: s.session_key 
       })));
@@ -382,19 +382,22 @@ export default function F1Page() {
       
       const raceSession = sessions.find(s => {
         if (s.session_type !== 'Race') return false;
+
+        const sessionName = s.session_name ?? '';
+        const circuitName = s.circuit_short_name ?? '';
         
-        const normalizedSessionName = s.session_name.toLowerCase()
+        const normalizedSessionName = sessionName.toLowerCase()
           .replace(/ grand prix/gi, '')
           .replace(/ gp$/i, '')
           .replace(/[^a-z]/g, '')
           .trim();
           
-        const normalizedCircuitName = s.circuit_short_name.toLowerCase()
+        const normalizedCircuitName = circuitName.toLowerCase()
           .replace(/[^a-z]/g, '')
           .trim();
         
-        console.log(`Checking session: "${s.session_name}" -> "${normalizedSessionName}" vs "${normalizedRaceName}"`);
-        console.log(`Checking circuit: "${s.circuit_short_name}" -> "${normalizedCircuitName}" vs "${normalizedRaceName}"`);
+        console.log(`Checking session: "${sessionName}" -> "${normalizedSessionName}" vs "${normalizedRaceName}"`);
+        console.log(`Checking circuit: "${circuitName}" -> "${normalizedCircuitName}" vs "${normalizedRaceName}"`);
         
         return normalizedSessionName.includes(normalizedRaceName) || 
                normalizedRaceName.includes(normalizedSessionName) ||
@@ -404,7 +407,7 @@ export default function F1Page() {
       
       if (!raceSession) {
         console.warn(`No race session found for ${raceName} in ${year}`);
-        console.log('Available race sessions:', sessions.filter(s => s.session_type === 'Race').map(s => s.session_name));
+        console.log('Available race sessions:', sessions.filter(s => s.session_type === 'Race').map(s => s.session_name ?? ''));
         // Return fallback data with different drivers to indicate fallback
         return [
           { position: 1, driver: 'No Data Available', team: 'API Issue' },
@@ -413,13 +416,23 @@ export default function F1Page() {
         ];
       }
       
-      console.log(`Found race session: ${raceSession.session_name} (${raceSession.session_key})`);
+      console.log(`Found race session: ${raceSession.session_name ?? 'Unknown'} (${raceSession.session_key ?? 'n/a'})`);
+      
+      const sessionKey = raceSession.session_key;
+      if (typeof sessionKey !== 'number') {
+        console.warn(`No valid session key for ${raceName} in ${year}`);
+        return [
+          { position: 1, driver: 'No Data Available', team: 'API Issue' },
+          { position: 2, driver: 'Check Console', team: 'For Details' },
+          { position: 3, driver: 'API Error', team: 'Try Again' }
+        ];
+      }
       
       // Fetch real position data from Hybrid API
-      const positionData = await hybridF1Api.getPositionData(raceSession.session_key);
+      const positionData = await hybridF1Api.getPositionData(sessionKey);
       console.log(`Found ${positionData.length} position records`);
       
-      const drivers = await hybridF1Api.getDrivers(raceSession.session_key);
+      const drivers = await hybridF1Api.getDrivers(sessionKey);
       console.log(`Found ${drivers.length} drivers`);
       
       if (positionData && positionData.length > 0) {
@@ -475,11 +488,14 @@ export default function F1Page() {
       
       // Find the session for this race
       const sessions = await hybridF1Api.getSessions(year);
-      const raceSession = sessions.find(s => 
-        s.session_type === 'Race' && 
-        (s.circuit_short_name.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim()) ||
-         s.session_name.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim()))
-      );
+      const raceSession = sessions.find(s => {
+        const circuitName = s.circuit_short_name ?? '';
+        const sessionName = s.session_name ?? '';
+        return s.session_type === 'Race' && (
+          circuitName.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim()) ||
+          sessionName.toLowerCase().includes(raceName.toLowerCase().replace(/ grand prix/gi, '').trim())
+        );
+      });
       
       if (!raceSession) {
         console.warn(`No race session found for ${raceName} in ${year}`);
@@ -487,17 +503,24 @@ export default function F1Page() {
         return;
       }
       
+      const sessionKey = raceSession.session_key;
+      if (typeof sessionKey !== 'number') {
+        console.warn(`No valid session key for ${raceName} in ${year}`);
+        setDetailedRaceStandings(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
       // Fetch real data from Hybrid API
       const [qualifyingLapData, positionData, sprintPositionData] = await Promise.all([
-        raceSession ? hybridF1Api.getLaps(raceSession.session_key) : [],
-        raceSession ? hybridF1Api.getPositionData(raceSession.session_key) : [],
-        raceSession ? hybridF1Api.getSessions(year).then(sessions => 
+        hybridF1Api.getLaps(sessionKey),
+        hybridF1Api.getPositionData(sessionKey),
+        hybridF1Api.getSessions(year).then(sessions => 
           sessions.find(s => s.session_type === 'Sprint' && s.circuit_short_name === raceSession.circuit_short_name)
-        ).then(sprintSession => sprintSession ? hybridF1Api.getPositionData(sprintSession.session_key) : []) : []
+        ).then(sprintSession => sprintSession ? hybridF1Api.getPositionData(sprintSession.session_key ?? 0) : [])
       ]);
       
       // Get driver information
-      const drivers = await hybridF1Api.getDrivers(raceSession.session_key);
+      const drivers = await hybridF1Api.getDrivers(sessionKey);
       
       // Process qualifying results
       const qualifyingResults: any[] = [];
@@ -1146,41 +1169,52 @@ export default function F1Page() {
                 .replace(/grand prix| grand prix| grandprix/gi, '').replace(/ gp$/i, '').replace(/[^a-z]/g, '').trim();
                 
               const localName = normalize(race.name);
-              const raceSession = sessions.find(s => 
-                s.session_type === 'Race' && 
-                (normalize(s.session_name).includes(localName) || 
-                 localName.includes(normalize(s.session_name)) ||
-                 normalize(s.circuit_short_name).includes(localName) ||
-                 localName.includes(normalize(s.circuit_short_name)))
-              );
+              const raceSession = sessions.find(s => {
+                const sessionName = s.session_name ?? '';
+                const circuitName = s.circuit_short_name ?? '';
+                return s.session_type === 'Race' && (
+                  normalize(sessionName).includes(localName) || 
+                  localName.includes(normalize(sessionName)) ||
+                  normalize(circuitName).includes(localName) ||
+                  localName.includes(normalize(circuitName))
+                );
+              });
 
               if (raceSession) {
-                  const [posData, drvData] = await Promise.all([
-                      hybridF1Api.getPositionData(raceSession.session_key),
-                      hybridF1Api.getDrivers(raceSession.session_key)
-                  ]);
+                  const sessionKey = raceSession.session_key;
+                  if (typeof sessionKey !== 'number') {
+                    console.warn(`No valid session key for fallback race ${race.name}`);
+                  } else {
+                    const [posData, drvData] = await Promise.all([
+                      hybridF1Api.getPositionData(sessionKey),
+                      hybridF1Api.getDrivers(sessionKey)
+                    ]);
 
-                  if (posData && posData.length > 0) {
-                    const finalPositions = new Map();
-                    posData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                           .forEach((pos: any) => finalPositions.set(pos.driver_number, pos));
-                    
-                    const sorted = Array.from(finalPositions.values())
-                                       .sort((a: any, b: any) => a.position - b.position)
-                                       .slice(0, 8);
-                    
-                    fetchedResults = sorted.map(pos => {
-                      const driver = drvData.find(d => d.driver_number === pos.driver_number);
-                      return {
-                        position: pos.position,
-                        driver: driver ? driver.full_name : `Driver ${pos.driver_number}`,
-                        team: driver ? driver.team_name : 'TBD',
-                        points: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][pos.position - 1] || 0,
-                        time: '--'
-                      };
-                    });
+                    if (posData && posData.length > 0) {
+                      const finalPositions = new Map();
+                      posData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                             .forEach((pos: any) => finalPositions.set(pos.driver_number, pos));
+                      
+                      const sorted = Array.from(finalPositions.values())
+                                         .sort((a: any, b: any) => a.position - b.position)
+                                         .slice(0, 8);
+                      
+                      const fallbackResults = sorted.map((pos: any) => {
+                        const driver = drvData.find((d: any) => d.driver_number === pos.driver_number);
+                        return {
+                          position: pos.position,
+                          driver: driver ? (driver.full_name || driver.name || `Driver ${pos.driver_number}`) : `Driver ${pos.driver_number}`,
+                          team: driver ? (driver.team_name || driver.team || 'Unknown') : 'Unknown',
+                          time: `${pos.points || 0} pts`,
+                          points: pos.points || 0
+                        };
+                      });
+                      
+                      fetchedResults = fallbackResults;
+                    }
                   }
               }
+
           } catch (openF1Err) {
               console.warn("OpenF1 fallback failed too:", openF1Err);
           }
@@ -1464,28 +1498,29 @@ export default function F1Page() {
                 if (raceSession.session_key) {
                   const positionData = await hybridF1Api.getPositionData(raceSession.session_key)
                   const drivers = await hybridF1Api.getDrivers(raceSession.session_key)
-                
-                if (positionData && positionData.length > 0) {
-                  const sortedPositions = positionData.sort((a: any, b: any) => a.position - b.position)
-                  
-                  sortedPositions.forEach((pos: any, index: number) => {
-                    const points = index < 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][index] || 0 : 0
-                    const driver = drivers.find((d: any) => d.driver_number === pos.driver_number)
-                    
-                    if (!driverPoints.has(pos.driver_number)) {
-                      driverPoints.set(pos.driver_number, {
-                        points: 0,
-                        wins: 0,
-                        podiums: 0,
-                        driver: driver
-                      })
-                    }
-                    
-                    const driverData = driverPoints.get(pos.driver_number)!
-                    driverData.points += points
-                    if (index === 0) driverData.wins += 1
-                    if (index < 3) driverData.podiums += 1
-                  })
+
+                  if (positionData && positionData.length > 0) {
+                    const sortedPositions = positionData.sort((a: any, b: any) => a.position - b.position)
+
+                    sortedPositions.forEach((pos: any, index: number) => {
+                      const points = index < 10 ? [25, 18, 15, 12, 10, 8, 6, 4, 2, 1][index] || 0 : 0
+                      const driver = drivers.find((d: any) => d.driver_number === pos.driver_number)
+
+                      if (!driverPoints.has(pos.driver_number)) {
+                        driverPoints.set(pos.driver_number, {
+                          points: 0,
+                          wins: 0,
+                          podiums: 0,
+                          driver: driver
+                        })
+                      }
+
+                      const driverData = driverPoints.get(pos.driver_number)!
+                      driverData.points += points
+                      if (index === 0) driverData.wins += 1
+                      if (index < 3) driverData.podiums += 1
+                    })
+                  }
                 }
               } catch (error) {
                 console.warn(`Failed to process race ${raceSession.session_name}:`, error)

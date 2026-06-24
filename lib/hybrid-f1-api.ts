@@ -294,7 +294,7 @@ export const hybridF1Api = {
 
 // Export transform functions for compatibility
 export const transformHybridData = {
-  driver: transformOpenF1Data.driver,
-  session: transformOpenF1Data.session,
-  standing: transformOpenF1Data.standing
+  driver: (driver: any) => transformOpenF1Data.driver(driver as OpenF1Driver),
+  session: (session: any) => transformOpenF1Data.session(session as OpenF1Session),
+  standing: (standing: any, drivers: any[]) => transformOpenF1Data.standing(standing as any, drivers as OpenF1Driver[])
 }
